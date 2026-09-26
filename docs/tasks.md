@@ -135,24 +135,24 @@ PostgreSQL
 
 対象:
 
-- [ ] `users`
-- [ ] `connections`
-- [ ] `connection_credentials`
-- [ ] `connection_sync_states`
-- [ ] `sync_runs`
-- [ ] `sync_run_results`
-- [ ] `asset_balances`
-- [ ] `perpetual_positions`
-- [ ] `provider_account_states`
-- [ ] `activities`
-- [ ] `activity_legs`
-- [ ] `portfolio_snapshots`
-- [ ] CHECK Constraint
-- [ ] Foreign Key
-- [ ] Composite Foreign Key
-- [ ] Unique Constraint
-- [ ] Partial Unique Index
-- [ ] Query用Index
+- [x] `users`
+- [x] `connections`
+- [x] `connection_credentials`
+- [x] `connection_sync_states`
+- [x] `sync_runs`
+- [x] `sync_run_results`
+- [x] `asset_balances`
+- [x] `perpetual_positions`
+- [x] `provider_account_states`
+- [x] `activities`
+- [x] `activity_legs`
+- [x] `portfolio_snapshots`
+- [x] CHECK Constraint
+- [x] Foreign Key
+- [x] Composite Foreign Key
+- [x] Unique Constraint
+- [x] Partial Unique Index
+- [x] Query用Index
 
 ### User ownership
 
@@ -196,13 +196,13 @@ CredentialはConnection削除時に即時削除する方針を維持する。
 
 ### 完了条件
 
-- [ ] Testcontainersの空DBからMigrationが成功する
-- [ ] 複合FK・必須FK・CHECK制約の拒否ケースをIntegration Testで確認する
-- [ ] Backend再起動時にMigrationが安全に検証される
-- [ ] Hibernate Schema自動生成に依存しない
-- [ ] 想定外のcross-user組み合わせをComposite FKが拒否する
-- [ ] `sync_run_results` が存在しない `sync_runs` を参照できない
-- [ ] `activity_legs` が存在しないActivityを参照できない
+- [x] Testcontainersの空DBからMigrationが成功する
+- [x] 複合FK・必須FK・CHECK制約の拒否ケースをIntegration Testで確認する
+- [x] Backend再起動時にMigrationが安全に検証される
+- [x] Hibernate Schema自動生成に依存しない
+- [x] 想定外のcross-user組み合わせをComposite FKが拒否する
+- [x] `sync_run_results` が存在しない `sync_runs` を参照できない
+- [x] `activity_legs` が存在しないActivityを参照できない
 
 ---
 
@@ -1841,8 +1841,8 @@ Database設計レビューは完了している。
 次は以下から開始する。
 
 ```text
-Phase 1
-Step 1-1: Spring Bootプロジェクト作成
+Phase 2
+Step 2-1: Error Handling
 ```
 
-Step 1-1だけを実装し、完了後はStep 1-2へ勝手に進まない。
+今回の連続実装では、完了条件を満たしたStepごとにCommitし、次の未完了Stepへ進む。

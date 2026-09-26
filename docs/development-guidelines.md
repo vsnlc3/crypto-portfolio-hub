@@ -31,8 +31,8 @@
 - **Existing:** ルートのDocker ComposeでFrontend、Backend、PostgreSQLを同一Networkへ接続する。Hostへ公開するのはFrontendの3000番Portのみで、PostgreSQLはNamed Volumeへ保存する。`frontend/Dockerfile` はNode.js 22とpnpmを使う開発起動設定、`backend/Dockerfile` はMaven buildとJava 25 runtimeのmulti-stage buildである。
 - **Existing:** `frontend/package.json` は `pnpm@12.3.4` を指定し、lockfileもpnpm 12.3.4である。
 - **Existing:** `frontend/tsconfig.json` は `strict: true`。一方、`frontend/next.config.mjs` の `typescript.ignoreBuildErrors` は `true` で、Frontendのlint・test scriptやGitHub Actions workflowは見当たらない。
-- **Existing:** `backend/` にJava 25 / Spring Boot 4.1.1のMavenプロジェクトがあり、Spring MVC、JPA、PostgreSQL Driver、Flyway、Security、OAuth2 Client、Validation、Actuator、JUnit、Testcontainersを設定している。`/actuator/health` のHTTP応答をPostgreSQL Testcontainers付きで検証する。
-- **未実装:** BackendのGoogle OAuth設定とアプリケーション認証、DB Migrationと業務Entity、API、Provider連携、同期処理、Credential暗号化、業務機能のテスト、デプロイ環境。ComposeへのBackend / PostgreSQL追加も未実装。
+- **Existing:** `backend/` にJava 25 / Spring Boot 4.1.1のMavenプロジェクトがあり、Spring MVC、JPA、PostgreSQL Driver、Flyway、Security、OAuth2 Client、Validation、Actuator、JUnit、Testcontainersを設定している。`/actuator/health` のHTTP応答、8本のFlyway Migration、主要FK / CHECK制約をPostgreSQL Testcontainers付きで検証する。
+- **未実装:** BackendのGoogle OAuth設定とアプリケーション認証、業務Entity / Repository、API、Provider連携、同期処理、Credential暗号化、業務機能のテスト、デプロイ環境。
 
 この一覧は本リポジトリのファイル・設定に基づく。以下の採用方針は、別途Existingと記載したものを除き、実装済みであることを意味しない。
 
@@ -51,13 +51,13 @@
 | Backend security | Spring Security / OAuth2 Login | Adopted | Googleログインとサーバー管理の認証セッションを一元化する。依存は導入済みだが、OAuth設定とログイン処理は未実装 |
 | Backend persistence | Spring Data JPA / Hibernate | Adopted | RDBの永続化とドメイン処理を分ける標準的な構成にする。依存は導入済みだが、Entity / Repositoryは未実装 |
 | Backend API | REST / JSON | Adopted | Next.jsとの責務境界を明確にし、HTTPで確認・テストしやすくする |
-| Database | PostgreSQL | Adopted | PostgreSQL DriverとTestcontainersを導入済み。アプリDBとCompose接続はこれから構成する |
-| Database migration | Flyway | Adopted | Flywayを導入済み。SQL migrationをGitで追跡し、環境間でSchema変更を再現する |
+| Database | PostgreSQL | Existing | PostgreSQL Driver、Testcontainers、Compose上のPostgreSQLを構成済み。Named Volumeにデータを保持する |
+| Database migration | Flyway | Existing | 8本の初期SQL Migrationを導入済み。起動時に検証・適用し、HibernateはSchema validateのみ行う |
 | External integrations | Provider / Adapter | Adopted | bitbank、Solana、Hyperliquid固有形式をアプリの共通モデルから隔離する |
 | Local runtime | Docker Compose | Existing | Frontend、Backend、PostgreSQLを内部Networkで起動する。Host公開PortはFrontendのみ |
 | First deployment target | AWS Lightsail + Docker Compose | Planned | 個人開発の単一環境から始め、運用負荷と費用を抑える候補とする |
 | Public reverse proxy | Caddy | Planned | HTTPS終端とFrontend / APIの経路振り分けを単純化する |
-| Backend tests | JUnit 5 / Spring Boot Test / Testcontainers PostgreSQL | Existing | 初期構成済み。DB Migration、Repository等のIntegration Testを追加していく |
+| Backend tests | JUnit 5 / Spring Boot Test / Testcontainers PostgreSQL | Existing | 起動health checkと初期Migration / 制約のIntegration Testを実装済み。Repository等のTestは後続Stepで追加する |
 | Frontend tests | Vitest / React Testing Library | Planned | UI状態と金額表示などをブラウザー全体のE2Eに依存せず確認する |
 | CI | GitHub Actions | Planned | まず検査とbuildを自動化し、deployは後段にする |
 | Queue / cache / orchestration | Kafka、Redis、Kubernetes等 | Future / MVPでは不採用 | 現在の規模・要件では運用対象を増やす明確な必要がない |
