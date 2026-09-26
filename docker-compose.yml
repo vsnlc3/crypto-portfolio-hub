@@ -8,3 +8,52 @@ services:
     init: true
     environment:
       NEXT_TELEMETRY_DISABLED: "1"
+    networks:
+      - app
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-crypto_portfolio_hub}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-crypto_portfolio_hub}
+      SPRING_DATASOURCE_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env (copy .env.example first)}"
+    expose:
+      - "8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    init: true
+    networks:
+      - app
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-crypto_portfolio_hub}
+      POSTGRES_USER: ${POSTGRES_USER:-crypto_portfolio_hub}
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env (copy .env.example first)}"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app
+
+volumes:
+  postgres_data:
+
+networks:
+  app:
+    driver: bridge

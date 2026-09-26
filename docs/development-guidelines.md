@@ -28,7 +28,7 @@
 
 - **Existing:** `frontend/` にNext.js、React、TypeScript、Tailwind CSS、shadcn/uiを使ったDashboard、Assets、Activity、Connections画面がある。
 - **Existing:** `frontend/lib/mock-data.ts` の静的モックを画面で参照している。API接続、永続化、Google認証、Sign in画面はない。
-- **Existing:** ルートのDocker ComposeはFrontendのみを起動し、3000番ポートを公開している。`frontend/Dockerfile` はNode.js 22とpnpmを使う開発起動設定である。
+- **Existing:** ルートのDocker ComposeでFrontend、Backend、PostgreSQLを同一Networkへ接続する。Hostへ公開するのはFrontendの3000番Portのみで、PostgreSQLはNamed Volumeへ保存する。`frontend/Dockerfile` はNode.js 22とpnpmを使う開発起動設定、`backend/Dockerfile` はMaven buildとJava 25 runtimeのmulti-stage buildである。
 - **Existing:** `frontend/package.json` は `pnpm@12.3.4` を指定し、lockfileもpnpm 12.3.4である。
 - **Existing:** `frontend/tsconfig.json` は `strict: true`。一方、`frontend/next.config.mjs` の `typescript.ignoreBuildErrors` は `true` で、Frontendのlint・test scriptやGitHub Actions workflowは見当たらない。
 - **Existing:** `backend/` にJava 25 / Spring Boot 4.1.1のMavenプロジェクトがあり、Spring MVC、JPA、PostgreSQL Driver、Flyway、Security、OAuth2 Client、Validation、Actuator、JUnit、Testcontainersを設定している。`/actuator/health` のHTTP応答をPostgreSQL Testcontainers付きで検証する。
@@ -54,7 +54,7 @@
 | Database | PostgreSQL | Adopted | PostgreSQL DriverとTestcontainersを導入済み。アプリDBとCompose接続はこれから構成する |
 | Database migration | Flyway | Adopted | Flywayを導入済み。SQL migrationをGitで追跡し、環境間でSchema変更を再現する |
 | External integrations | Provider / Adapter | Adopted | bitbank、Solana、Hyperliquid固有形式をアプリの共通モデルから隔離する |
-| Local runtime | Docker Compose | Existing | 現状はFrontendのみ。MVP実装時にBackend、PostgreSQL等を追加する |
+| Local runtime | Docker Compose | Existing | Frontend、Backend、PostgreSQLを内部Networkで起動する。Host公開PortはFrontendのみ |
 | First deployment target | AWS Lightsail + Docker Compose | Planned | 個人開発の単一環境から始め、運用負荷と費用を抑える候補とする |
 | Public reverse proxy | Caddy | Planned | HTTPS終端とFrontend / APIの経路振り分けを単純化する |
 | Backend tests | JUnit 5 / Spring Boot Test / Testcontainers PostgreSQL | Existing | 初期構成済み。DB Migration、Repository等のIntegration Testを追加していく |
@@ -332,9 +332,10 @@ Net Worth、Market Exposure、Position Value、Unrealized PnLの意味と二重�
 
 ### 15.1 現状と採用目標
 
-- **Existing:** Docker ComposeでFrontendコンテナを起動する開発構成がある。Backend、DB、Reverse Proxy、本番用Compose、Lightsail環境はない。
+- **Existing:** Docker ComposeでFrontend、Backend、PostgreSQLを起動する開発構成がある。Reverse Proxy、本番用Compose、Lightsail環境はない。
 - **Planned:** 初回の公開環境はAWS Lightsail上の単一VMとDocker Composeを候補・目標とする。Region、OS、RAM、CPU、公開設定は本プロジェクトでは未確定であり、契約前に必要リソース・費用・バックアップを決める。
-- **Planned:** Root Compose構成をFrontend、Backend、PostgreSQLへ拡張する。開発用Composeと本番設定は分け、必要に応じてoverride fileまたはproduction用Compose fileを使う。
+- **Existing:** Root ComposeではPostgreSQL health check後にBackendを起動し、Frontend / Backend / PostgreSQLを共通Networkへ接続する。PostgreSQLの開発用PasswordはGit管理外の`.env`から注入し、DBはNamed Volumeへ保存する。
+- **Planned:** 本番設定は開発用Composeと分け、必要に応じてoverride fileまたはproduction用Compose fileを使う。
 - **Planned:** 公開入口にCaddyを配置し、`/api/*` と認証EndpointをBackend、その他をNext.jsへ転送する。自動HTTPSを利用し、ドメイン・DNS・Firewall条件は公開前に確認する。
 
 ### 15.2 Networkとデータ保持

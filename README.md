@@ -10,6 +10,18 @@ This repository is linked to a [v0](https://v0.app) project. You can continue de
 
 ## Getting Started
 
+### Docker Compose
+
+Copy `.env.example` to `.env` and set a local development password for PostgreSQL, then run:
+
+```bash
+docker compose up --build
+```
+
+Open [http://localhost:3000](http://localhost:3000). The Backend and PostgreSQL are available only to services on the Compose network. Stop the services with `docker compose down`; the PostgreSQL named volume is retained.
+
+### Run the frontend without Docker
+
 First, run the development server:
 
 ```bash

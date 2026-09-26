@@ -104,14 +104,14 @@ Provider API、Event ID、履歴取得範囲、Rate Limit等はProvider仕様確
 
 ## Step 1-2: PostgreSQL / Docker Compose
 
-- [ ] Root Docker ComposeへBackendを追加する
-- [ ] PostgreSQLコンテナを追加する
-- [ ] BackendからPostgreSQLへ接続する
-- [ ] DB接続値を環境変数化する
-- [ ] PostgreSQLのNamed Volumeを設定する
-- [ ] Frontend / Backend / PostgreSQLを内部Networkで接続する
-- [ ] Backend / PostgreSQLをブラウザーから直接利用する構成にしない
-- [ ] 開発用SecretをGit管理しない
+- [x] Root Docker ComposeへBackendを追加する
+- [x] PostgreSQLコンテナを追加する
+- [x] BackendからPostgreSQLへ接続する
+- [x] DB接続値を環境変数化する
+- [x] PostgreSQLのNamed Volumeを設定する
+- [x] Frontend / Backend / PostgreSQLを内部Networkで接続する
+- [x] Backend / PostgreSQLをブラウザーから直接利用する構成にしない
+- [x] 開発用SecretをGit管理しない
 
 ### 完了条件
 
@@ -123,9 +123,9 @@ Backend
 PostgreSQL
 ```
 
-- [ ] Backend health checkが成功する
-- [ ] PostgreSQL接続が成功する
-- [ ] Container再作成でDB Volumeが失われない
+- [x] Backend health checkが成功する
+- [x] PostgreSQL接続が成功する
+- [x] Container再作成でDB Volumeが失われない
 
 ---
 
