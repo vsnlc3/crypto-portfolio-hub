@@ -31,8 +31,8 @@
 - **Existing:** ルートのDocker ComposeでFrontend、Backend、PostgreSQLを同一Networkへ接続する。Hostへ公開するのはFrontendの3000番Portのみで、PostgreSQLはNamed Volumeへ保存する。`frontend/Dockerfile` はNode.js 22とpnpmを使う開発起動設定、`backend/Dockerfile` はMaven buildとJava 25 runtimeのmulti-stage buildである。
 - **Existing:** `frontend/package.json` は `pnpm@12.3.4` を指定し、lockfileもpnpm 12.3.4である。
 - **Existing:** `frontend/tsconfig.json` は `strict: true`。一方、`frontend/next.config.mjs` の `typescript.ignoreBuildErrors` は `true` で、Frontendのlint・test scriptやGitHub Actions workflowは見当たらない。
-- **Existing:** `backend/` にJava 25 / Spring Boot 4.1.1のMavenプロジェクトがあり、Spring MVC、JPA、PostgreSQL Driver、Flyway、Security、OAuth2 Client、Validation、Actuator、JUnit、Testcontainersを設定している。`/actuator/health` のHTTP応答、8本のFlyway Migration、主要FK / CHECK制約をPostgreSQL Testcontainers付きで検証する。
-- **未実装:** BackendのGoogle OAuth設定とアプリケーション認証、業務Entity / Repository、API、Provider連携、同期処理、Credential暗号化、業務機能のテスト、デプロイ環境。
+- **Existing:** `backend/` にJava 25 / Spring Boot 4.1.1のMavenプロジェクトがあり、Spring MVC、Jackson 3、JPA、PostgreSQL Driver、Flyway、Security、OAuth2 Client、Validation、Actuator、JUnit、Testcontainersを設定している。`/actuator/health` のHTTP応答、8本のFlyway Migration、主要FK / CHECK制約、Problem DetailsとRequest IDをPostgreSQL Testcontainers付きで検証する。
+- **未実装:** BackendのGoogle OAuth設定とアプリケーション認証、業務Entity / Repository、業務API、Provider連携、同期処理、Credential暗号化、デプロイ環境。
 
 この一覧は本リポジトリのファイル・設定に基づく。以下の採用方針は、別途Existingと記載したものを除き、実装済みであることを意味しない。
 
@@ -50,14 +50,14 @@
 | Backend build | Maven Wrapper 3.9.12 | Existing | `backend/mvnw` とWrapper設定でビルドツールを固定する |
 | Backend security | Spring Security / OAuth2 Login | Adopted | Googleログインとサーバー管理の認証セッションを一元化する。依存は導入済みだが、OAuth設定とログイン処理は未実装 |
 | Backend persistence | Spring Data JPA / Hibernate | Adopted | RDBの永続化とドメイン処理を分ける標準的な構成にする。依存は導入済みだが、Entity / Repositoryは未実装 |
-| Backend API | REST / JSON | Adopted | Next.jsとの責務境界を明確にし、HTTPで確認・テストしやすくする |
+| Backend API | REST / JSON、Jackson 3 | Adopted | Next.jsとの責務境界を明確にし、HTTPで確認・テストしやすくする。Problem Detailsの共通エラー基盤は実装済み。業務Endpointは未実装 |
 | Database | PostgreSQL | Existing | PostgreSQL Driver、Testcontainers、Compose上のPostgreSQLを構成済み。Named Volumeにデータを保持する |
 | Database migration | Flyway | Existing | 8本の初期SQL Migrationを導入済み。起動時に検証・適用し、HibernateはSchema validateのみ行う |
 | External integrations | Provider / Adapter | Adopted | bitbank、Solana、Hyperliquid固有形式をアプリの共通モデルから隔離する |
 | Local runtime | Docker Compose | Existing | Frontend、Backend、PostgreSQLを内部Networkで起動する。Host公開PortはFrontendのみ |
 | First deployment target | AWS Lightsail + Docker Compose | Planned | 個人開発の単一環境から始め、運用負荷と費用を抑える候補とする |
 | Public reverse proxy | Caddy | Planned | HTTPS終端とFrontend / APIの経路振り分けを単純化する |
-| Backend tests | JUnit 5 / Spring Boot Test / Testcontainers PostgreSQL | Existing | 起動health checkと初期Migration / 制約のIntegration Testを実装済み。Repository等のTestは後続Stepで追加する |
+| Backend tests | JUnit 5 / Spring Boot Test / Testcontainers PostgreSQL | Existing | 起動health check、初期Migration / 制約、Error ResponseのIntegration Testを実装済み。Repository等のTestは後続Stepで追加する |
 | Frontend tests | Vitest / React Testing Library | Planned | UI状態と金額表示などをブラウザー全体のE2Eに依存せず確認する |
 | CI | GitHub Actions | Planned | まず検査とbuildを自動化し、deployは後段にする |
 | Queue / cache / orchestration | Kafka、Redis、Kubernetes等 | Future / MVPでは不採用 | 現在の規模・要件では運用対象を増やす明確な必要がない |
@@ -292,6 +292,8 @@ Net Worth、Market Exposure、Position Value、Unrealized PnLの意味と二重�
 ### 13.1 例外境界
 
 - Controller Advice等の単一境界でApplication / Validation / Security / Persistence例外をHTTP応答へ変換する。
+- HTTP Errorは `application/problem+json` のRFC 9457 Problem Detailsを返し、共通拡張として安定した `code` とサーバー生成の `requestId` を含める。Validation Errorは安全なfield別error一覧、Provider Errorは `providerCategory` を追加する。
+- `X-Request-ID` Response HeaderとProblem Details内の `requestId` は同じUUIDとする。Client supplied IDは相関IDとして信頼せず、毎回サーバーで生成する。
 - Validation Errorはfield別の安全な説明、Unauthenticatedは401、権限不足は403または情報漏えいを防ぐ404、存在しないResourceは404、想定外の失敗は汎用500にする。
 - External API Errorは少なくともtimeout、rate limit、authentication/permission、provider unavailable、invalid responseへ分類し、Connection単位の同期状態に反映する。
 - DB障害は安全な共通応答と相関可能なRequest IDで記録する。SQLやStack TraceをFrontendへ返さない。
@@ -306,7 +308,7 @@ Net Worth、Market Exposure、Position Value、Unrealized PnLの意味と二重�
 
 ## 14. Testing
 
-現在、Frontendにtest scriptはなく、Backendも未作成である。テスト基盤は実装開始時に追加し、以下を基準にする。
+現在、Frontendにtest scriptはない。Backendには起動・Migration・Error HandlingのIntegration Testがあり、機能追加に合わせて以下のTestを加える。
 
 ### Backend
 

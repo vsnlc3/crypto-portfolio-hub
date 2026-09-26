@@ -210,15 +210,15 @@ CredentialはConnection削除時に即時削除する方針を維持する。
 
 ## Step 2-1: Error Handling
 
-- [ ] RFC 9457 Problem Detailsを基準としたError Responseを実装する
-- [ ] Validation Error
-- [ ] Authentication Error
-- [ ] Authorization Error
-- [ ] Resource Not Found
-- [ ] Provider Error
-- [ ] Persistence Error
-- [ ] Unexpected Error
-- [ ] Request IDを導入する
+- [x] RFC 9457 Problem Detailsを基準としたError Responseを実装する
+- [x] Validation Error
+- [x] Authentication Error
+- [x] Authorization Error
+- [x] Resource Not Found
+- [x] Provider Error
+- [x] Persistence Error
+- [x] Unexpected Error
+- [x] Request IDを導入する
 
 ### Provider Error分類候補
 
@@ -235,12 +235,12 @@ Provider固有の生Error ResponseをFrontendへ直接公開しない。
 
 ### 完了条件
 
-- [ ] Stack TraceをFrontendへ返さない
-- [ ] SQLをFrontendへ返さない
-- [ ] CredentialをFrontendへ返さない
-- [ ] Providerの認証ResponseをFrontendへ返さない
-- [ ] 安定したApplication error codeを返せる
-- [ ] Error mapping / Request IDの単体またはController Testがある
+- [x] Stack TraceをFrontendへ返さない
+- [x] SQLをFrontendへ返さない
+- [x] CredentialをFrontendへ返さない
+- [x] Providerの認証ResponseをFrontendへ返さない
+- [x] 安定したApplication error codeを返せる
+- [x] Error mapping / Request IDの単体またはController Testがある
 
 ---
 
