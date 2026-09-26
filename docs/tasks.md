@@ -246,13 +246,13 @@ Provider固有の生Error ResponseをFrontendへ直接公開しない。
 
 ## Step 2-2: Numeric / Money基盤
 
-- [ ] `BigDecimal` を使った数量・金額処理方針を実装する
-- [ ] Money / Price / Quantity / FX等、必要なDomain Valueを定義する
-- [ ] Currencyを明示して異通貨の暗黙加算を防ぐ
-- [ ] JPY換算を実装できる基盤を作る
-- [ ] 表示用丸めと内部計算を分離する
-- [ ] DB設計のprecision / scaleとJava型を一致させる
-- [ ] 取得不能値を0へ変換しない
+- [x] `BigDecimal` を使った数量・金額処理方針を実装する
+- [x] Money / Price / Quantity / FX等、必要なDomain Valueを定義する
+- [x] Currencyを明示して異通貨の暗黙加算を防ぐ
+- [x] JPY換算を実装できる基盤を作る
+- [x] 表示用丸めと内部計算を分離する
+- [x] DB設計のprecision / scaleとJava型を一致させる
+- [x] 取得不能値を0へ変換しない
 
 ### Perpetual FX
 
@@ -268,16 +268,16 @@ PnL FX    → Unrealized PnL
 
 ### テスト対象
 
-- [ ] JPY換算
-- [ ] JPY → JPY identity conversion
-- [ ] PnL正負
-- [ ] Position Value
-- [ ] Margin換算
-- [ ] Unrealized PnL換算
-- [ ] Price / Margin / PnLの異なるCurrency
-- [ ] FX取得不能
-- [ ] 小数精度
-- [ ] Rounding
+- [x] JPY換算
+- [x] JPY → JPY identity conversion
+- [x] PnL正負
+- [x] Position Value
+- [x] Margin換算
+- [x] Unrealized PnL換算
+- [x] Price / Margin / PnLの異なるCurrency
+- [x] FX取得不能
+- [x] 小数精度
+- [x] Rounding
 
 ---
 
@@ -1842,7 +1842,7 @@ Database設計レビューは完了している。
 
 ```text
 Phase 2
-Step 2-1: Error Handling
+Step 2-3: JPA Entity / Repository基盤
 ```
 
 今回の連続実装では、完了条件を満たしたStepごとにCommitし、次の未完了Stepへ進む。

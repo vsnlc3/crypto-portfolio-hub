@@ -32,6 +32,7 @@
 - **Existing:** `frontend/package.json` は `pnpm@12.3.4` を指定し、lockfileもpnpm 12.3.4である。
 - **Existing:** `frontend/tsconfig.json` は `strict: true`。一方、`frontend/next.config.mjs` の `typescript.ignoreBuildErrors` は `true` で、Frontendのlint・test scriptやGitHub Actions workflowは見当たらない。
 - **Existing:** `backend/` にJava 25 / Spring Boot 4.1.1のMavenプロジェクトがあり、Spring MVC、Jackson 3、JPA、PostgreSQL Driver、Flyway、Security、OAuth2 Client、Validation、Actuator、JUnit、Testcontainersを設定している。`/actuator/health` のHTTP応答、8本のFlyway Migration、主要FK / CHECK制約、Problem DetailsとRequest IDをPostgreSQL Testcontainers付きで検証する。
+- **Existing:** `backend/src/main/java/com/cryptoportfoliohub/domain/money/` に通貨付きMoney / Price / Quantity / FX Value、JPY換算、PerpetualのPosition Value / 線形Unrealized PnL、表示用丸め基盤がある。Javaの計算には `BigDecimal` を使い、金融数値のUnit Testを持つ。
 - **未実装:** BackendのGoogle OAuth設定とアプリケーション認証、業務Entity / Repository、業務API、Provider連携、同期処理、Credential暗号化、デプロイ環境。
 
 この一覧は本リポジトリのファイル・設定に基づく。以下の採用方針は、別途Existingと記載したものを除き、実装済みであることを意味しない。
@@ -57,7 +58,7 @@
 | Local runtime | Docker Compose | Existing | Frontend、Backend、PostgreSQLを内部Networkで起動する。Host公開PortはFrontendのみ |
 | First deployment target | AWS Lightsail + Docker Compose | Planned | 個人開発の単一環境から始め、運用負荷と費用を抑える候補とする |
 | Public reverse proxy | Caddy | Planned | HTTPS終端とFrontend / APIの経路振り分けを単純化する |
-| Backend tests | JUnit 5 / Spring Boot Test / Testcontainers PostgreSQL | Existing | 起動health check、初期Migration / 制約、Error ResponseのIntegration Testを実装済み。Repository等のTestは後続Stepで追加する |
+| Backend tests | JUnit 5 / Spring Boot Test / Testcontainers PostgreSQL | Existing | 起動health check、初期Migration / 制約、Error ResponseのIntegration TestとMoney / FXのUnit Testを実装済み。Repository等のTestは後続Stepで追加する |
 | Frontend tests | Vitest / React Testing Library | Planned | UI状態と金額表示などをブラウザー全体のE2Eに依存せず確認する |
 | CI | GitHub Actions | Planned | まず検査とbuildを自動化し、deployは後段にする |
 | Queue / cache / orchestration | Kafka、Redis、Kubernetes等 | Future / MVPでは不採用 | 現在の規模・要件では運用対象を増やす明確な必要がない |
@@ -280,11 +281,14 @@ Net Worth、Market Exposure、Position Value、Unrealized PnLの意味と二重�
 ## 12. 数値・通貨・日時
 
 - Javaの計算・永続化直前の変換では `BigDecimal` を原則使用する。`double` / `float` による価格、数量、PnL、比率の業務計算をしない。文字列または正確なDecimal Provider値から生成する。
+- Backend Domainでは `Money` / `FxRate` にCurrencyCodeを、`Price` に価格対象のassetKeyとQuote Currencyを、`AssetQuantity` にassetKeyを明示する。異なる通貨のMoney同士は加算できない。`NUMERIC(38,18)`、`NUMERIC(38,8)`、`NUMERIC(24,12)`、`NUMERIC(18,8)` はJavaの `BigDecimal` へ対応付け、DB列とAPI境界で個別のscale制約を検証する。
+- `JpyConverter` は換算元からJPYへのFXを受け取り、FX未取得なら値を作らず `Optional.empty()` を返す。取得できない価格・数量・金額もゼロの代替値を作らず、呼出側で不在値として扱う。
+- PerpetualのPrice / Margin / PnLにはそれぞれ `PriceFxRate` / `MarginFxRate` / `PnlFxRate` を使い、同じ型のFX Rateを誤って共用できないようにする。
 - DBでは適切な `NUMERIC(precision, scale)` を使い、精度・scaleはAsset Quantity、USD Price、JPY Value、FX Rateごとにdatabase-design.mdで定義する。浮動小数点型を金額・数量に用いない。
 - 金額だけを持つ値にしない。Asset Quantity、USD Price、JPY Value、FX Rate、Position Value、Unrealized PnL、Net Worth、Market Exposureは意味とCurrencyを追跡する。
 - Portfolio基準通貨はJPY。暗号資産価格、Perpetual Entry / Mark / Liquidation PriceはUSDを許容し、JPYへ集計する場合は明示的なFX Rateと評価時刻を記録する。異なる通貨を無換算で加算しない。
 - Net Worth等の計算ルールはrequirements.mdを正とする。Position Valueと証拠金の重複計上、口座Equityに含まれるUnrealized PnLの再加算を防止する。
-- Roundingは表示時に行い、取得値・内部計算を途中で表示桁へ丸めない。サービスごとの最小単位とUI表示桁はDB/API設計で確定する。
+- Roundingは表示時にだけ `DisplayRounding` で明示したscale / modeを使い、取得値・内部計算を途中で丸めない。サービスごとの最小単位とUI表示桁はDB/API設計で確定する。
 - Activity日時と取得日時はUTCで保存・送受信し、画面表示でローカル日時へ変換する。
 
 ## 13. Error Handling / Logging
