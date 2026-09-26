@@ -33,7 +33,8 @@
 - **Existing:** `frontend/tsconfig.json` は `strict: true`。一方、`frontend/next.config.mjs` の `typescript.ignoreBuildErrors` は `true` で、Frontendのlint・test scriptやGitHub Actions workflowは見当たらない。
 - **Existing:** `backend/` にJava 25 / Spring Boot 4.1.1のMavenプロジェクトがあり、Spring MVC、Jackson 3、JPA、PostgreSQL Driver、Flyway、Security、OAuth2 Client、Validation、Actuator、JUnit、Testcontainersを設定している。`/actuator/health` のHTTP応答、8本のFlyway Migration、主要FK / CHECK制約、Problem DetailsとRequest IDをPostgreSQL Testcontainers付きで検証する。
 - **Existing:** `backend/src/main/java/com/cryptoportfoliohub/domain/money/` に通貨付きMoney / Price / Quantity / FX Value、JPY換算、PerpetualのPosition Value / 線形Unrealized PnL、表示用丸め基盤がある。Javaの計算には `BigDecimal` を使い、金融数値のUnit Testを持つ。
-- **未実装:** BackendのGoogle OAuth設定とアプリケーション認証、業務Entity / Repository、業務API、Provider連携、同期処理、Credential暗号化、デプロイ環境。
+- **Existing:** `backend/src/main/java/com/cryptoportfoliohub/persistence/` に12 Entityと12 Repositoryがある。Hibernate `ddl-auto: validate` でFlyway Schemaとの整合を検証し、所有データQueryにはUser IDを含める。TestcontainersでUser A / Bの分離とConnection論理削除後の履歴参照を検証する。
+- **未実装:** BackendのGoogle OAuth設定とアプリケーション認証、業務API、Provider連携、同期処理、Credential暗号化、デプロイ環境。
 
 この一覧は本リポジトリのファイル・設定に基づく。以下の採用方針は、別途Existingと記載したものを除き、実装済みであることを意味しない。
 
@@ -50,7 +51,7 @@
 | Backend runtime | Java 25 LTS / Spring Boot 4.1.1 | Existing | Backend基盤のMaven設定とアプリ起動クラスを作成済み。業務機能は未実装 |
 | Backend build | Maven Wrapper 3.9.12 | Existing | `backend/mvnw` とWrapper設定でビルドツールを固定する |
 | Backend security | Spring Security / OAuth2 Login | Adopted | Googleログインとサーバー管理の認証セッションを一元化する。依存は導入済みだが、OAuth設定とログイン処理は未実装 |
-| Backend persistence | Spring Data JPA / Hibernate | Adopted | RDBの永続化とドメイン処理を分ける標準的な構成にする。依存は導入済みだが、Entity / Repositoryは未実装 |
+| Backend persistence | Spring Data JPA / Hibernate | Existing | 12 Entity / Repositoryを作成済み。Migration SchemaとHibernate validateをIntegration Testで確認し、所有Resource QueryはUser IDを条件に含める |
 | Backend API | REST / JSON、Jackson 3 | Adopted | Next.jsとの責務境界を明確にし、HTTPで確認・テストしやすくする。Problem Detailsの共通エラー基盤は実装済み。業務Endpointは未実装 |
 | Database | PostgreSQL | Existing | PostgreSQL Driver、Testcontainers、Compose上のPostgreSQLを構成済み。Named Volumeにデータを保持する |
 | Database migration | Flyway | Existing | 8本の初期SQL Migrationを導入済み。起動時に検証・適用し、HibernateはSchema validateのみ行う |
@@ -58,7 +59,7 @@
 | Local runtime | Docker Compose | Existing | Frontend、Backend、PostgreSQLを内部Networkで起動する。Host公開PortはFrontendのみ |
 | First deployment target | AWS Lightsail + Docker Compose | Planned | 個人開発の単一環境から始め、運用負荷と費用を抑える候補とする |
 | Public reverse proxy | Caddy | Planned | HTTPS終端とFrontend / APIの経路振り分けを単純化する |
-| Backend tests | JUnit 5 / Spring Boot Test / Testcontainers PostgreSQL | Existing | 起動health check、初期Migration / 制約、Error ResponseのIntegration TestとMoney / FXのUnit Testを実装済み。Repository等のTestは後続Stepで追加する |
+| Backend tests | JUnit 5 / Spring Boot Test / Testcontainers PostgreSQL | Existing | 起動health check、初期Migration / 制約、Error Response、Entity Schema mapping、User ownershipのIntegration TestとMoney / FXのUnit Testを実装済み |
 | Frontend tests | Vitest / React Testing Library | Planned | UI状態と金額表示などをブラウザー全体のE2Eに依存せず確認する |
 | CI | GitHub Actions | Planned | まず検査とbuildを自動化し、deployは後段にする |
 | Queue / cache / orchestration | Kafka、Redis、Kubernetes等 | Future / MVPでは不採用 | 現在の規模・要件では運用対象を増やす明確な必要がない |
@@ -319,7 +320,7 @@ Net Worth、Market Exposure、Position Value、Unrealized PnLの意味と二重�
 - JUnit 5でDomain / Application Service Unit Testを行う。特にPortfolio集計、Net Worth、Market Exposure、Position Value、Unrealized PnL、通貨換算・丸めを境界値込みで確認する。
 - Provider Adapterは保存fixture / 期待値とローカルMock HTTP Server等を使い、実API・本物Credentialへ依存させない。認証署名やresponse正規化も単体テストする。
 - Controller / Security Testで認証必須、user owner境界、validation、Problem Details応答を検証する。
-- Repository TestはTestcontainersのPostgreSQLで実施し、H2だけでは再現しにくいPostgreSQL固有の型・Constraint・Query挙動を確認する。
+- Repository TestはTestcontainersのPostgreSQLで実施し、H2だけでは再現しにくいPostgreSQL固有の型・Constraint・Query挙動を確認する。現在、全EntityのSchema MappingとUser ID条件付きQueryの所有者分離を検証している。
 - 全機能に重いEnd-to-End環境を要求しない。同期全体やGoogle Providerの実通信をCIから実行しない。
 
 ### Frontend

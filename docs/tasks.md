@@ -287,28 +287,28 @@ PnL FX    → Unrealized PnL
 
 対象:
 
-- [ ] User
-- [ ] Connection
-- [ ] ConnectionCredential
-- [ ] ConnectionSyncState
-- [ ] SyncRun
-- [ ] SyncRunResult
-- [ ] AssetBalance
-- [ ] PerpetualPosition
-- [ ] ProviderAccountState
-- [ ] Activity
-- [ ] ActivityLeg
-- [ ] PortfolioSnapshot
+- [x] User
+- [x] Connection
+- [x] ConnectionCredential
+- [x] ConnectionSyncState
+- [x] SyncRun
+- [x] SyncRunResult
+- [x] AssetBalance
+- [x] PerpetualPosition
+- [x] ProviderAccountState
+- [x] Activity
+- [x] ActivityLeg
+- [x] PortfolioSnapshot
 
 ### 方針
 
-- [ ] Many-to-Oneは原則LAZY
-- [ ] 巨大なObject Graphを作らない
-- [ ] One-to-Manyを常時EAGER取得しない
-- [ ] `CascadeType.ALL` を機械的に使わない
-- [ ] History EntityをConnection操作から誤削除しない
-- [ ] JPA EntityをREST DTOとして直接公開しない
-- [ ] User所有ResourceのRepository QueryはuserIdを条件に含める
+- [x] Many-to-Oneは原則LAZY
+- [x] 巨大なObject Graphを作らない
+- [x] One-to-Manyを常時EAGER取得しない
+- [x] `CascadeType.ALL` を機械的に使わない
+- [x] History EntityをConnection操作から誤削除しない
+- [x] JPA EntityをREST DTOとして直接公開しない
+- [x] User所有ResourceのRepository QueryはuserIdを条件に含める
 
 ### 禁止
 
@@ -322,9 +322,9 @@ findById(id)
 
 ### 完了条件
 
-- [ ] EntityとSchemaが一致する
-- [ ] Repository Testの土台と、User IDを条件にしたRepository Testがある
-- [ ] User ownershipを検索条件に含められる
+- [x] EntityとSchemaが一致する
+- [x] Repository Testの土台と、User IDを条件にしたRepository Testがある
+- [x] User ownershipを検索条件に含められる
 
 ---
 
@@ -1841,8 +1841,8 @@ Database設計レビューは完了している。
 次は以下から開始する。
 
 ```text
-Phase 2
-Step 2-3: JPA Entity / Repository基盤
+Phase 3
+Step 3-1: Google OAuth2 Login
 ```
 
 今回の連続実装では、完了条件を満たしたStepごとにCommitし、次の未完了Stepへ進む。

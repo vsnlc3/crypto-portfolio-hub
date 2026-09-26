@@ -41,6 +41,12 @@ class MoneyDomainTests {
     }
 
     @Test
+    void currencyCodeFitsDatabaseCurrencyColumns() {
+        assertThat(new CurrencyCode("USDC")).isEqualTo(new CurrencyCode("USDC"));
+        assertThatIllegalArgumentException().isThrownBy(() -> new CurrencyCode("TOOLONG99"));
+    }
+
+    @Test
     void retainsDatabaseQuantityScaleAsAnExactBigDecimal() {
         AssetQuantity quantity = AssetQuantity.of("BTC", "0.000000000000000001");
 
