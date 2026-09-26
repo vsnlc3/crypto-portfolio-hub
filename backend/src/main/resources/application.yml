@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: crypto-portfolio-hub
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/crypto_portfolio_hub}
+    username: ${SPRING_DATASOURCE_USERNAME:crypto_portfolio_hub}
+    password: ${SPRING_DATASOURCE_PASSWORD:crypto_portfolio_hub}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
