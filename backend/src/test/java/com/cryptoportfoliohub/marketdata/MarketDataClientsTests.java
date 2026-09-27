@@ -5,6 +5,7 @@ import com.cryptoportfoliohub.error.ProviderException;
 import com.cryptoportfoliohub.marketdata.coingecko.CoinGeckoClient;
 import com.cryptoportfoliohub.marketdata.config.MarketDataProperties;
 import com.cryptoportfoliohub.marketdata.exchangerate.ExchangeRateApiClient;
+import java.math.BigDecimal;
 import java.net.SocketTimeoutException;
 import java.time.Clock;
 import java.time.Instant;
@@ -43,8 +44,8 @@ class MarketDataClientsTests {
                 })
                 .andRespond(withSuccess("""
                         [
-                          {"id":"bitcoin","current_price":64000.123456789,"last_updated":"2026-09-27T11:59:00Z"},
-                          {"id":"ethereum","current_price":2510.75,"last_updated":"2026-09-27T11:58:00Z"}
+                          {"id":"bitcoin","current_price":64000.123456789,"price_change_percentage_24h":1.2345,"last_updated":"2026-09-27T11:59:00Z"},
+                          {"id":"ethereum","current_price":2510.75,"price_change_percentage_24h":null,"last_updated":"2026-09-27T11:58:00Z"}
                         ]
                         """, MediaType.APPLICATION_JSON));
         CoinGeckoClient client = new CoinGeckoClient(builder.build(), properties, CLOCK);
@@ -53,7 +54,9 @@ class MarketDataClientsTests {
 
         assertThat(prices).containsKeys("bitcoin", "ethereum");
         assertThat(prices.get("bitcoin").amount()).isEqualByComparingTo("64000.123456789");
+        assertThat(prices.get("bitcoin").change24hPercentage()).contains(new BigDecimal("1.2345"));
         assertThat(prices.get("bitcoin").evaluatedAt()).isEqualTo(Instant.parse("2026-09-27T11:59:00Z"));
+        assertThat(prices.get("ethereum").change24hPercentage()).isEmpty();
         server.verify();
     }
 

@@ -7,5 +7,6 @@ import java.time.Instant;
 public record CoinGeckoMarketRow(
         String id,
         @JsonProperty("current_price") BigDecimal currentPrice,
+        @JsonProperty("price_change_percentage_24h") BigDecimal priceChangePercentage24h,
         @JsonProperty("last_updated") Instant lastUpdated) {
 }

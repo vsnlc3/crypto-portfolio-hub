@@ -11,6 +11,7 @@ import com.cryptoportfoliohub.marketdata.config.MarketDataProperties;
 import com.cryptoportfoliohub.marketdata.domain.DataFreshness;
 import com.cryptoportfoliohub.marketdata.domain.MarketDataSource;
 import com.cryptoportfoliohub.marketdata.domain.MarketFxQuote;
+import com.cryptoportfoliohub.marketdata.domain.MarketPriceChange;
 import com.cryptoportfoliohub.marketdata.domain.MarketPriceQuote;
 import com.cryptoportfoliohub.marketdata.exchangerate.ExchangeRateApiClient;
 import com.cryptoportfoliohub.marketdata.exchangerate.FxObservation;
@@ -183,12 +184,14 @@ public class MarketDataService {
         Optional<String> coinId = CoinGeckoAssetMapping.coinIdFor(assetKey);
         if (coinId.isEmpty()) {
             return new MarketPriceQuote(
-                    assetKey, Optional.empty(), Optional.empty(), Optional.empty(), DataFreshness.UNAVAILABLE, Optional.empty());
+                    assetKey, Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                    DataFreshness.UNAVAILABLE, Optional.empty());
         }
         Optional<CoinGeckoPriceObservation> observation = Optional.ofNullable(observations.get(coinId.orElseThrow()));
         if (observation.isEmpty()) {
             return new MarketPriceQuote(
                     assetKey,
+                    Optional.empty(),
                     Optional.empty(),
                     Optional.of(MarketDataSource.COINGECKO),
                     Optional.empty(),
@@ -196,14 +199,21 @@ public class MarketDataService {
                     failure);
         }
         CoinGeckoPriceObservation value = observation.orElseThrow();
+        DataFreshness freshness = isStale(value.evaluatedAt(), properties.getPriceFreshness(), now)
+                ? DataFreshness.STALE
+                : DataFreshness.FRESH;
         return new MarketPriceQuote(
                 assetKey,
                 Optional.of(Price.of(assetKey, value.amount().toPlainString(), CurrencyCode.USD)),
+                freshness == DataFreshness.FRESH
+                        ? value.change24hPercentage().map(change -> new MarketPriceChange(
+                                change,
+                                MarketPriceChange.Unit.PERCENTAGE,
+                                MarketPriceChange.ComparisonPeriod.H24))
+                        : Optional.empty(),
                 Optional.of(MarketDataSource.COINGECKO),
                 Optional.of(value.evaluatedAt()),
-                isStale(value.evaluatedAt(), properties.getPriceFreshness(), now)
-                        ? DataFreshness.STALE
-                        : DataFreshness.FRESH,
+                freshness,
                 failure);
     }
 

@@ -745,14 +745,14 @@ Phase 4で取得元・仕様を確認した後、Market Data Providerを実装�
 
 Assetsで表示する銘柄ごとの価格変化はMarket Data Providerのcurrent quote / tickerとして扱う。Portfolio Snapshotから算出しない。
 
-- [ ] 固定比較期間 `24h` のprice changeを取得する
-- [ ] Providerの返すchangeの単位（価格差 / percentage等）を保持する
-- [ ] Comparison periodを `24h` として返す
-- [ ] Market Data Sourceを返す
-- [ ] quoteの `evaluatedAt` を返す
-- [ ] Providerが値を返さない場合は `null / unavailable` とする
-- [ ] 取得不能値を推測値や0にしない
-- [ ] Price History DBやTicker History DBを作らない
+- [x] 固定比較期間 `24h` のprice changeを取得する
+- [x] Providerの返すchangeの単位（価格差 / percentage等）を保持する
+- [x] Comparison periodを `24h` として返す
+- [x] Market Data Sourceを返す
+- [x] quoteの `evaluatedAt` を返す
+- [x] Providerが値を返さない場合は `null / unavailable` とする
+- [x] 取得不能値を推測値や0にしない
+- [x] Price History DBやTicker History DBを作らない
 
 ### Step 6-1 Tests
 
@@ -765,9 +765,9 @@ Assetsで表示する銘柄ごとの価格変化はMarket Data Providerのcurren
 
 ## Step 6-2 Tests
 
-- [ ] 24h quoteのcomparison period / source / evaluatedAt
-- [ ] 24h change unavailable
-- [ ] 24h changeにPortfolio Snapshotを使用していないこと
+- [x] 24h quoteのcomparison period / source / evaluatedAt
+- [x] 24h change unavailable
+- [x] 24h changeにPortfolio Snapshotを使用していないこと
 
 ---
 

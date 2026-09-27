@@ -8,6 +8,7 @@ import com.cryptoportfoliohub.marketdata.coingecko.CoinGeckoPriceObservation;
 import com.cryptoportfoliohub.marketdata.config.MarketDataProperties;
 import com.cryptoportfoliohub.marketdata.domain.DataFreshness;
 import com.cryptoportfoliohub.marketdata.domain.MarketDataSource;
+import com.cryptoportfoliohub.marketdata.domain.MarketPriceChange;
 import com.cryptoportfoliohub.marketdata.exchangerate.ExchangeRateApiClient;
 import com.cryptoportfoliohub.marketdata.exchangerate.FxObservation;
 import java.math.BigDecimal;
@@ -17,6 +18,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,7 +49,8 @@ class MarketDataServiceTests {
     @Test
     void mapsCanonicalAssetsAndSharesOneBatchedPriceFetchAcrossRequests() {
         when(coinGeckoClient.fetchPrices(CoinGeckoAssetMapping.allCoinIds())).thenReturn(Map.of(
-                "bitcoin", new CoinGeckoPriceObservation(new BigDecimal("64250.123456789012345"), START.minusSeconds(60)),
+                "bitcoin", new CoinGeckoPriceObservation(new BigDecimal("64250.123456789012345"),
+                        Optional.of(new BigDecimal("1.4")), START.minusSeconds(60)),
                 "solana", new CoinGeckoPriceObservation(new BigDecimal("151.25"), START.minusSeconds(30))));
 
         var first = marketDataService.currentPrices(List.of("BTC", "SOL"));
@@ -58,6 +61,10 @@ class MarketDataServiceTests {
         assertThat(first.get("BTC").source()).contains(MarketDataSource.COINGECKO);
         assertThat(first.get("BTC").evaluatedAt()).contains(START.minusSeconds(60));
         assertThat(first.get("BTC").freshness()).isEqualTo(DataFreshness.FRESH);
+        assertThat(first.get("BTC").change24h()).contains(new MarketPriceChange(
+                new BigDecimal("1.4"),
+                MarketPriceChange.Unit.PERCENTAGE,
+                MarketPriceChange.ComparisonPeriod.H24));
         assertThat(second.price()).isEqualTo(first.get("BTC").price());
         verify(coinGeckoClient).fetchPrices(List.of("bitcoin", "ethereum", "solana", "ripple", "hyperliquid", "usd-coin"));
     }
@@ -70,6 +77,21 @@ class MarketDataServiceTests {
         assertThat(quote.source()).isEmpty();
         assertThat(quote.freshness()).isEqualTo(DataFreshness.UNAVAILABLE);
         verify(coinGeckoClient, never()).fetchPrices(anyCollection());
+    }
+
+    @Test
+    void keepsCurrentPriceWhen24hChangeIsMissing() {
+        Instant evaluatedAt = START.minusSeconds(20);
+        when(coinGeckoClient.fetchPrices(CoinGeckoAssetMapping.allCoinIds())).thenReturn(Map.of(
+                "bitcoin", new CoinGeckoPriceObservation(BigDecimal.TEN, evaluatedAt)));
+
+        var quote = marketDataService.currentPrice("BTC");
+
+        assertThat(quote.price()).isPresent();
+        assertThat(quote.change24h()).isEmpty();
+        assertThat(quote.source()).contains(MarketDataSource.COINGECKO);
+        assertThat(quote.evaluatedAt()).contains(evaluatedAt);
+        assertThat(quote.freshness()).isEqualTo(DataFreshness.FRESH);
     }
 
     @Test
@@ -97,6 +119,7 @@ class MarketDataServiceTests {
 
         assertThat(staleQuote.price()).isPresent();
         assertThat(staleQuote.freshness()).isEqualTo(DataFreshness.STALE);
+        assertThat(staleQuote.change24h()).isEmpty();
         assertThat(staleQuote.failureCategory()).contains(ProviderErrorCategory.RATE_LIMIT);
     }
 

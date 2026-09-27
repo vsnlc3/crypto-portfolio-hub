@@ -9,6 +9,7 @@ import java.util.Optional;
 public record MarketPriceQuote(
         String assetKey,
         Optional<Price> price,
+        Optional<MarketPriceChange> change24h,
         Optional<MarketDataSource> source,
         Optional<Instant> evaluatedAt,
         DataFreshness freshness,
@@ -17,6 +18,7 @@ public record MarketPriceQuote(
     public MarketPriceQuote {
         Objects.requireNonNull(assetKey, "assetKey must not be null");
         Objects.requireNonNull(price, "price must not be null");
+        Objects.requireNonNull(change24h, "change24h must not be null");
         Objects.requireNonNull(source, "source must not be null");
         Objects.requireNonNull(evaluatedAt, "evaluatedAt must not be null");
         Objects.requireNonNull(freshness, "freshness must not be null");
@@ -29,6 +31,9 @@ public record MarketPriceQuote(
         }
         if (price.isEmpty() && freshness != DataFreshness.UNAVAILABLE) {
             throw new IllegalArgumentException("A missing market price must be unavailable.");
+        }
+        if (change24h.isPresent() && (price.isEmpty() || freshness != DataFreshness.FRESH)) {
+            throw new IllegalArgumentException("A 24h price change requires a fresh current price.");
         }
         price.ifPresent(value -> {
             if (!assetKey.equals(value.assetKey())) {

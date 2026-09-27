@@ -10,6 +10,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
@@ -83,7 +84,10 @@ public class CoinGeckoClient {
             }
             CoinGeckoPriceObservation observation;
             try {
-                observation = new CoinGeckoPriceObservation(row.currentPrice(), row.lastUpdated());
+                observation = new CoinGeckoPriceObservation(
+                        row.currentPrice(),
+                        Optional.ofNullable(row.priceChangePercentage24h()),
+                        row.lastUpdated());
             } catch (IllegalArgumentException exception) {
                 throw new ProviderException(ProviderErrorCategory.INVALID_RESPONSE);
             }

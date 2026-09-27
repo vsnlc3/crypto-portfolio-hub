@@ -65,6 +65,12 @@ Step 4-4では公式仕様およびIDを確認し、実価格値を検証Fixture
 - Provider Key未設定でもBackendは起動できる。CoinGecko Demo keyはHeaderからのみ送信し、ExchangeRate-API keyは要求Pathに含まれるためrequest URIをアプリケーションログ・例外メッセージへ記録しない。
 - 2026-09-28、`.env`から注入したCredentialで`MarketDataLiveSmokeTests`を実行し、CoinGecko DemoのCurrent PriceとExchangeRate-APIのUSD/JPY responseを取得してresponse shapeおよびProvider評価時刻の読み取りを確認した（1 test成功）。値とCredentialはログ・文書へ記録しない。
 
+### Step 6-2 実装状況
+
+- CoinGecko `price_change_percentage_24h`をCurrent Priceと同じresponseから読み取り、percentage unit / `H24` periodとして保持する。Sourceは`COINGECKO`、evaluatedAtは同一rowの`last_updated`とする。
+- 24h changeがNULL / 欠落の場合もCurrent Priceは利用可能なまま、changeだけUnavailableとする。PriceがSTALEの場合もchangeはUnavailableとし、SnapshotやPrice Historyから変化率を推測しない。
+- Fixture Testでquote metadata、NULL change、STALE changeを確認した。Price / Ticker History DBは作成しない。
+
 ## bitbank (Step 4-1)
 
 ### 参照した公式資料
