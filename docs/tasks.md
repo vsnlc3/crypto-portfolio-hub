@@ -7,6 +7,7 @@
 - [requirements.md](./requirements.md)
 - [screen-design.md](./screen-design.md)
 - [development-guidelines.md](./development-guidelines.md)
+- [provider-specifications.md](./provider-specifications.md)
 - [database-design.md](./database-design.md)
 - [api-design.md](./api-design.md) ※ API実装と並行して作成・更新する
 
@@ -435,27 +436,29 @@ Sign in
 
 確認する。
 
-- [ ] Balance API
-- [ ] Activity / Transaction API
-- [ ] Deposit / Withdrawal API
-- [ ] API Key
-- [ ] API Secret
-- [ ] API Key署名方式
-- [ ] 必要なread-only権限
-- [ ] 注文・出金権限が不要であること
-- [ ] 接続確認方法
-- [ ] Account identifierの有無
-- [ ] Connection作成時に必要な入力項目
-- [ ] Balanceのavailable / locked / total semantics
-- [ ] Event ID
-- [ ] Pagination
-- [ ] Rate Limit
-- [ ] 履歴取得可能範囲
-- [ ] BUY / SELL時に取得できる資産情報
-- [ ] Base / Quote Assetの数量
-- [ ] Fee Asset / Fee Quantity
-- [ ] Activity Legsへの変換方法
-- [ ] Event dedup key
+- [x] Balance API
+- [x] Activity / Transaction API
+- [x] Deposit / Withdrawal API
+- [x] API Key
+- [x] API Secret
+- [x] API Key署名方式
+- [x] 必要なread-only権限
+- [x] 注文・出金権限が不要であること
+- [x] 接続確認方法
+- [x] Account identifierの有無
+- [x] Connection作成時に必要な入力項目
+- [x] Balanceのavailable / locked / total semantics
+- [x] Event ID
+- [x] Pagination
+- [x] Rate Limit
+- [x] 履歴取得可能範囲
+- [x] BUY / SELL時に取得できる資産情報
+- [x] Base / Quote Assetの数量
+- [x] Fee Asset / Fee Quantity
+- [x] Activity Legsへの変換方法
+- [x] Event dedup key
+
+Confirmed behavior and unresolved API documentation details are recorded in [provider-specifications.md](./provider-specifications.md). Unresolved pagination boundaries and trade amount interpretation must be validated with fixtures before the bitbank Adapter is implemented.
 
 ---
 

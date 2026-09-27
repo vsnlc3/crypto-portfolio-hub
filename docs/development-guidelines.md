@@ -8,6 +8,7 @@
 
 - [requirements.md](./requirements.md) — MVPの機能要件・用語定義
 - [screen-design.md](./screen-design.md) — 画面と状態の設計
+- [provider-specifications.md](./provider-specifications.md) — 公式Provider仕様の確認結果と未確定事項
 
 ## 1. この文書の目的
 

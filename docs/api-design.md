@@ -66,3 +66,4 @@ Missing or invalid CSRF token returns `403` Problem Details. Authentication erro
 - User-owned endpoints derive the owner from the Backend-authenticated User. They do not trust a client-supplied `userId`.
 - State-changing endpoints require CSRF protection while authentication uses the same-origin Session cookie.
 - Add each subsequent API contract with its implementing vertical slice, including request / response DTO, status, authentication, ownership, pagination, and partial / stale / unavailable semantics where applicable.
+- Confirmed external Provider contracts and remaining source-specification questions are tracked separately in [provider-specifications.md](./provider-specifications.md); they are not Frontend-facing application API contracts.
