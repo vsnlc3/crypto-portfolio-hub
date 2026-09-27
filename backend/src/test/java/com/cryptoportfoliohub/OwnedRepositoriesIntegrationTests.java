@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.context.annotation.Import;
+import org.springframework.transaction.annotation.Transactional;
 import com.cryptoportfoliohub.persistence.entity.ConnectionSyncStateId;
 import com.cryptoportfoliohub.persistence.entity.SyncRunResultId;
 import com.cryptoportfoliohub.persistence.entity.SyncCapability;
@@ -147,6 +148,25 @@ class OwnedRepositoriesIntegrationTests {
         assertThat(syncRunRepository.findByIdAndConnection_User_Id(fixture.syncRunA(), fixture.userA())).isPresent();
     }
 
+    @Test
+    @Transactional
+    void credentialDeletionIsScopedToTheAuthenticatedConnectionOwner() {
+        Fixture fixture = insertFixture();
+
+        assertThat(credentialRepository.deleteAllByConnection_IdAndConnection_User_Id(
+                fixture.connectionA(), fixture.userB())).isZero();
+        assertThat(credentialRepository.findAllByConnection_IdAndConnection_User_IdAndConnection_DeletedAtIsNull(
+                fixture.connectionA(), fixture.userA())).hasSize(1);
+
+        assertThat(credentialRepository.deleteAllByConnection_IdAndConnection_User_Id(
+                fixture.connectionA(), fixture.userA())).isEqualTo(1L);
+
+        assertThat(credentialRepository.findAllByConnection_IdAndConnection_User_IdAndConnection_DeletedAtIsNull(
+                fixture.connectionA(), fixture.userA())).isEmpty();
+        assertThat(credentialRepository.findAllByConnection_IdAndConnection_User_IdAndConnection_DeletedAtIsNull(
+                fixture.connectionB(), fixture.userB())).hasSize(1);
+    }
+
     private Fixture insertFixture() {
         UUID userA = UUID.randomUUID();
         UUID userB = UUID.randomUUID();
@@ -280,7 +300,7 @@ class OwnedRepositoriesIntegrationTests {
                 VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 100, 100, 100, 0, 100, 0, 'COMPLETE')
                 """, snapshotB, userB);
 
-        return new Fixture(userA, userB, connectionA, syncRunA, credentialA, balanceA,
+        return new Fixture(userA, userB, connectionA, connectionB, syncRunA, credentialA, balanceA,
                 positionA, accountStateA, activityA, activityLegA, snapshotA, googleSubjectA);
     }
 
@@ -302,6 +322,7 @@ class OwnedRepositoriesIntegrationTests {
             UUID userA,
             UUID userB,
             UUID connectionA,
+            UUID connectionB,
             UUID syncRunA,
             UUID credentialA,
             UUID balanceA,

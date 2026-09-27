@@ -18,6 +18,10 @@ server:
         same-site: lax
 
 app:
+  security:
+    credential-encryption:
+      key-base64: ${CREDENTIAL_ENCRYPTION_KEY_BASE64:}
+      current-key-version: ${CREDENTIAL_ENCRYPTION_KEY_VERSION:1}
   auth:
     google:
       enabled: ${GOOGLE_OAUTH_ENABLED:false}

@@ -8,6 +8,7 @@ import jakarta.persistence.JoinColumns;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import com.cryptoportfoliohub.connection.credential.EncryptedCredential;
 
 @Entity
 @Table(name = "connection_credentials", uniqueConstraints =
@@ -37,6 +38,17 @@ public class ConnectionCredential extends UpdatedEntity {
     protected ConnectionCredential() {
     }
 
+    public ConnectionCredential(
+            ConnectionEntity connection,
+            String credentialType,
+            EncryptedCredential encryptedCredential) {
+        this.connection = connection;
+        this.credentialType = credentialType;
+        this.ciphertext = encryptedCredential.ciphertext();
+        this.nonce = encryptedCredential.nonce();
+        this.keyVersion = encryptedCredential.keyVersion();
+    }
+
     public ConnectionEntity getConnection() {
         return connection;
     }
@@ -47,5 +59,9 @@ public class ConnectionCredential extends UpdatedEntity {
 
     public int getKeyVersion() {
         return keyVersion;
+    }
+
+    public EncryptedCredential encryptedValue() {
+        return new EncryptedCredential(ciphertext, nonce, keyVersion);
     }
 }

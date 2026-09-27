@@ -592,27 +592,28 @@ MVPで独立したMarket Price History DBは作らない。Provider仕様・Mark
 
 ## Step 5-1: Credential暗号化
 
-- [ ] AES-256-GCM暗号化を実装する
-- [ ] nonceをCredentialごとに生成する
-- [ ] key versionを保存する
-- [ ] Encryption Keyを環境変数等のBackend Secretから取得する
-- [ ] Encryption KeyをDBへ保存しない
-- [ ] Encryption KeyをDocker imageへ埋め込まない
-- [ ] Encryption Key未設定時に平文保存へfallbackしない
-- [ ] CredentialをResponseへ返さない
-- [ ] Credentialをログへ出さない
-- [ ] Credential ciphertextもログへ出さない
-- [ ] Connection削除時にCredentialを即時削除する
+- [x] AES-256-GCM暗号化を実装する
+- [x] nonceをCredentialごとに生成する
+- [x] key versionを保存する
+- [x] Encryption Keyを環境変数等のBackend Secretから取得する
+- [x] `CREDENTIAL_ENCRYPTION_KEY_BASE64`にBase64形式の32-byte AES key、`CREDENTIAL_ENCRYPTION_KEY_VERSION`に正のkey versionを設定する
+- [x] Encryption KeyをDBへ保存しない
+- [x] Encryption KeyをDocker imageへ埋め込まない
+- [x] Encryption Key未設定時に平文保存へfallbackしない
+- [x] CredentialをResponseへ返さない（現StepではCredentialを返すAPIを追加せず、暗号化値もsafe `toString` で秘匿する）
+- [x] Credentialをログへ出さない
+- [x] Credential ciphertextもログへ出さない
+- [x] Connection削除Flow用のCredential即時削除Repository operationを用意する。Connection削除時の呼び出しはStep 5-2で実装する。
 
 ### テスト
 
-- [ ] encrypt → decrypt
-- [ ] 同一値でも異なるnonce
-- [ ] 不正ciphertext
-- [ ] 不正tag
-- [ ] key未設定
-- [ ] key version
-- [ ] Credential削除
+- [x] encrypt → decrypt
+- [x] 同一値でも異なるnonce
+- [x] 不正ciphertext
+- [x] 不正tag
+- [x] key未設定
+- [x] key version
+- [x] Credential削除用のUser-scoped Repository operationを用意し、他UserのCredentialを削除できないことを検証する。Connection削除Flowからの呼び出しはStep 5-2で実装する。
 
 ---
 
