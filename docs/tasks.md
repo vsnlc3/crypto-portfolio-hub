@@ -357,11 +357,11 @@ GET  /oauth2/authorization/google
 GET  /login/oauth2/code/google
 ```
 
-実Googleアカウントでの認証完了確認は、Google OAuth Client ID / Secretの設定とGoogle Cloud Consoleへの公開callback URL登録後に行う。値を用意していない環境ではMock認証テストまでを実施する。
+Google OAuth Client ID / Secretを設定したローカル環境で実Google OAuth E2Eを確認済み。公開環境では利用するHost / Schemeに対応したcallback URL登録が別途必要。Secret値はRepositoryへ保存しない。
 
 ### 完了条件
 
-- [ ] Googleログインできる
+- [x] Googleログインできる
 - [x] ログインUserをBackendで特定できる
 - [x] 未認証状態では保護APIへアクセスできない
 - [x] ClientからUser IDを指定して認証を回避できない
@@ -374,6 +374,7 @@ GET  /login/oauth2/code/google
 - [x] Email変更・重複だけでUser identityが変わらないことを検証する
 - [x] 未認証拒否、Logout後のSession無効化、CSRF保護APIを検証する
 - [x] Client supplied userIdを認可根拠にできないことを検証する
+- [x] 実Google OAuth E2EでLogin → `/api/v1/auth/me` (`200`) → Logout (`204`) → Logout後の `/api/v1/auth/me` (`401`) を確認する
 
 ---
 

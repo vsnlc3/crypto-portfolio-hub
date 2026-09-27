@@ -34,7 +34,7 @@
 - **Existing:** `backend/` にJava 25 / Spring Boot 4.1.1のMavenプロジェクトがあり、Spring MVC、Jackson 3、JPA、PostgreSQL Driver、Flyway、Security、OAuth2 Client、Validation、Actuator、JUnit、Testcontainersを設定している。`/actuator/health` のHTTP応答、8本のFlyway Migration、主要FK / CHECK制約、Problem DetailsとRequest IDをPostgreSQL Testcontainers付きで検証する。
 - **Existing:** `backend/src/main/java/com/cryptoportfoliohub/domain/money/` に通貨付きMoney / Price / Quantity / FX Value、JPY換算、PerpetualのPosition Value / 線形Unrealized PnL、表示用丸め基盤がある。Javaの計算には `BigDecimal` を使い、金融数値のUnit Testを持つ。
 - **Existing:** `backend/src/main/java/com/cryptoportfoliohub/persistence/` に12 Entityと12 Repositoryがある。Hibernate `ddl-auto: validate` でFlyway Schemaとの整合を検証し、所有データQueryにはUser IDを含める。TestcontainersでUser A / Bの分離とConnection論理削除後の履歴参照を検証する。
-- **Existing:** BackendにGoogle OIDC Login、SubjectによるUser作成・再紐付け、Session Cookie、CSRF対応のLogout、認証User確認APIを実装した。Google OAuth Client ID / Secretは未設定であり、実Google認証とGoogle Cloud ConsoleでのRedirect URI登録は未確認。
+- **Existing:** BackendにGoogle OIDC Login、SubjectによるUser作成・再紐付け、Session Cookie、CSRF対応のLogout、認証User確認APIを実装し、`.env`から注入したCredentialでローカル実Google OAuth E2Eを確認した。Secret値はGit管理外である。公開環境のHost / Schemeに対応したRedirect URI登録はDeployment設計時に行う。
 - **未実装:** 業務API、Provider連携、同期処理、Credential暗号化、Frontend認証画面・Route Guard、デプロイ環境。
 
 この一覧は本リポジトリのファイル・設定に基づく。以下の採用方針は、別途Existingと記載したものを除き、実装済みであることを意味しない。
@@ -51,7 +51,7 @@
 | Frontend global client state | Zustand | Future | MVPでは必須でない。画面をまたぐクライアント専用状態が実際に増えた場合のみ採用する |
 | Backend runtime | Java 25 LTS / Spring Boot 4.1.1 | Existing | Backend基盤のMaven設定とアプリ起動クラスを作成済み。業務機能は未実装 |
 | Backend build | Maven Wrapper 3.9.12 | Existing | `backend/mvnw` とWrapper設定でビルドツールを固定する |
-| Backend security | Spring Security / OAuth2 Login | Existing | Google OIDC Login、Backend Session、CSRF保護、Logout、User Subject紐付けを実装済み。実OAuthにはClient ID / SecretとRedirect URI登録が必要 |
+| Backend security | Spring Security / OAuth2 Login | Existing | Google OIDC Login、Backend Session、CSRF保護、Logout、User Subject紐付けを実装し、ローカル実OAuth E2Eを確認済み。公開環境には環境固有のClient設定とRedirect URI登録が必要 |
 | Backend persistence | Spring Data JPA / Hibernate | Existing | 12 Entity / Repositoryを作成済み。Migration SchemaとHibernate validateをIntegration Testで確認し、所有Resource QueryはUser IDを条件に含める |
 | Backend API | REST / JSON、Jackson 3 | Adopted | Next.jsとの責務境界を明確にし、HTTPで確認・テストしやすくする。Problem Detailsの共通エラー基盤は実装済み。業務Endpointは未実装 |
 | Database | PostgreSQL | Existing | PostgreSQL Driver、Testcontainers、Compose上のPostgreSQLを構成済み。Named Volumeにデータを保持する |
