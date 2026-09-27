@@ -101,6 +101,7 @@ Googleアカウントでユーザーを認証し、本人のPortfolio画面へ�
 - **通貨一覧:** 銘柄、数量、価格、評価額、24時間価格変化、保有サービス。
 - **Perpetual positions表:** 銘柄、Long / Short、レバレッジ、Position Value、証拠金、Unrealized PnL、Entry / Mark / Liquidation Price。
 - 最終同期時刻と接続先ごとの状態。
+- CoinGecko Demo attribution `Powered by CoinGecko`を10px以上の読みやすい文字で表示し、CoinGecko API pageへリンクする。
 
 ### 表示するデータ
 
@@ -155,6 +156,7 @@ Googleアカウントでユーザーを認証し、本人のPortfolio画面へ�
 - **Allocationカード:** 銘柄別評価額と現物ポートフォリオ内の構成比。
 - **Holdings by currency一覧:** トークンアイコン、シンボル・名称、保有サービス、合計数量、単価、評価額、24時間変化、構成比。
 - 集計時に対象接続先数または取得状態を表示する。
+- CoinGecko Demo attribution `Powered by CoinGecko`を10px以上の読みやすい文字で表示し、CoinGecko API pageへリンクする。
 
 ### 表示するデータ
 

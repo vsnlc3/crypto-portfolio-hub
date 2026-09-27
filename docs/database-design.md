@@ -1092,6 +1092,12 @@ fx_evaluated_at
 
 FX Rateは換算元通貨1単位あたりのJPYとする。換算元通貨がJPYの場合はRateを `1`、Sourceを `IDENTITY` とし、評価時刻を記録する。価格・FXを取得できない場合はNULLを保持し、0として扱わない。
 
+Spot assetのPriceと24h quoteにはCoinGecko Demo API (`COINGECKO`)、USD/JPYにはExchangeRate-API Free plan (`EXCHANGERATE_API`)を使う。取得時のUSD価格、Provider observation timestamp (`price_evaluated_at`)、USDJPYレート、Rate Providerのlast-update timestamp (`fx_evaluated_at`)を評価対象データに保持する。Hyperliquid Perpetual PositionはHyperliquidが返すMark Price / Unrealized PnLを用い、CoinGecko spot priceへ置換しない。これらはMarket Price / FX履歴テーブルの代替ではなく、各Balance / Position等の評価根拠である。
+
+CoinGecko Demo APIの利用では`Powered by CoinGecko` attributionを表示し、API pageへlinkする。運営者の組織外のユーザーへ提供する前に、Demo planのlicense条件とCoinGecko API Termsに定める利用条件を確認する。
+
+24h price changeはMarket quote由来の独立した表示値であり、Portfolio Snapshotから算出しない。quoteが欠けても現在価格が有効なら価格評価を無効化しない。現在価格・必要なFXが欠ける場合は評価値をNULL / unavailableとし、不完全な値をSnapshotへ保存しない。API障害時に別のProviderへ切り替えず、前回の完全なCurrent Stateがある場合にのみ既存のSTALE方針に従って保持する。
+
 Perpetual Positionでは同じFX情報を用途別に、Price / Position Value、Margin、Unrealized PnLそれぞれの列群へ記録する（§14）。換算元通貨1単位あたりのJPYを保存し、換算不能な場合はNULLとする。
 
 対象:

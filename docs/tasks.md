@@ -549,23 +549,34 @@ Net Worthへ二重計上しないため、Providerの数値定義を公式仕様
 
 以下を決定する。
 
-- [ ] Current Crypto Price取得元
-- [ ] USD / JPY FX取得元
-- [ ] 24h price changeを含むmarket quote / tickerの取得可否・比較期間
-- [ ] 対応Assetとsymbol / asset_keyからMarket Data IDへの対応
-- [ ] Price Currency
-- [ ] Price Source / evaluatedAt
-- [ ] FX Source / evaluatedAt
-- [ ] Price timestamp
-- [ ] FX timestamp
-- [ ] Rate Limit
-- [ ] Failure時の扱い
-- [ ] stale判定に利用する鮮度基準
-- [ ] JPYの場合のidentity conversion
-- [ ] Provider障害時のfallbackを設けるか
-- [ ] 価格変化・FXが取得不能な場合にunavailableとして返せるか
+- [x] Current Crypto Price取得元
+- [x] USD / JPY FX取得元
+- [x] 24h price changeを含むmarket quote / tickerの取得可否・比較期間
+- [x] 対応Assetとsymbol / asset_keyからMarket Data IDへの対応
+- [x] Price Currency
+- [x] Price Source / evaluatedAt
+- [x] FX Source / evaluatedAt
+- [x] Price timestamp
+- [x] FX timestamp
+- [x] Rate Limit
+- [x] Failure時の扱い
+- [x] stale判定に利用する鮮度基準
+- [x] JPYの場合のidentity conversion
+- [x] Provider障害時のfallbackを設けるか
+- [x] 価格変化・FXが取得不能な場合にunavailableとして返せるか
 
 MVPで独立したMarket Price History DBは作らない。Provider仕様・Market Data Providerの公式資料を確認し、取得できる項目・頻度・条件を推測で確定しない。
+
+### 確定結果
+
+- CoinGecko Demo API `/coins/markets`でSpot向けUSD建てcurrent price、24h percent change、`last_updated`を一括取得する。Demo planは公式資料時点で100 calls/min、10,000 calls/month、Data Freshnessは60秒から。Appは1回の複数ID requestを10分TTLの共有Cacheで利用する（31日連続でも約4,464 calls）。Hyperliquid PerpはProviderのMark Price / PnLを使い、Spot価格と混ぜない。
+- USD/JPYはExchangeRate-API Free planのUSD base ratesから取得し、`time_last_update_unix`をFX evaluatedAtとして使う。日次更新、月1,500 requests。Backend SecretのAPI keyを使い、URL / logへ漏らさない。
+- 現行UI Asset ID: BTC=`bitcoin`, ETH=`ethereum`, SOL=`solana`, XRP=`ripple`, HYPE=`hyperliquid`, USDC=`usd-coin`。Provider asset_keyは正規のAsset identityを確認してからmappingし、tickerだけで別Tokenを統合しない。
+- Price Currency=`USD`; Source=`COINGECKO`; FX Source=`EXCHANGERATE_API`; Price timestamp=`last_updated`; FX timestamp=`time_last_update_unix`。JPY identityはRate `1`, Source `IDENTITY`。
+- Application鮮度の初期値はCrypto price 15分、daily FX 72時間。二次Providerへの自動fallbackは行わない。必要な価格・FXを得られないときはNULL / unavailableとし、Portfolio全体が正しく評価できなければSnapshotを作成しない。鮮度上限を超えた前回成功Current Stateを再利用する場合はSTALEとして扱う。
+- Price changeは24h percentage。Unavailable / staleな24h changeは`null`とし、Price評価が有効な場合のNet Worth計算を妨げない。
+- 公式資料を[provider-specifications.md](./provider-specifications.md)へ記録した。実API requestとcredential確認はStep 6-1、Adapter / cache / failure testsもStep 6-1 / 6-2で実施する。
+- CoinGecko Demo planではAttributionが必要なため、Dashboard / Assetsへ`Powered by CoinGecko`表記とAPI pageへのLinkを含める。組織外への提供・公開前にはPlanのlicense条件とTerms上必要なUser Agreement / Privacy Policy / data disclaimerを確認する。Demo planをそのまま商用・公開運用可能と見なさない。
 
 ### Connectionsへ引き継ぐ確定事項
 
@@ -718,6 +729,11 @@ Phase 4で取得元・仕様を確認した後、Market Data Providerを実装�
 - [ ] Provider Errorを分類する
 - [ ] Price / FXの鮮度基準を適用できる
 - [ ] fallbackはPhase 4で採用を決めた場合だけ実装する
+- [ ] CoinGecko Demo key / ExchangeRate-API keyはBackend環境設定から注入し、未設定時はUnavailableとして起動・同期する（実SecretはSource / Image / DB / logへ入れない）
+- [ ] CoinGeckoは複数Coin IDを一括取得し、Market DataをUserごとに重複Fetchせず共有Cacheする
+- [ ] ExchangeRate-API responseの更新時刻に合わせて共有Cacheし、Keyを含むRequest URIをlogへ出さない
+- [ ] CacheしたPrice / FXにはProvider evaluatedAtと鮮度状態を付ける
+- [ ] CoinGecko AttributionをDashboard / Assetsに表示し、API pageへLinkする
 
 ## Step 6-2: 24h Market Quote
 
@@ -1662,6 +1678,7 @@ CIでは実Provider CredentialやGoogle Client Secretを使わない。
 - [ ] Firewall
 - [ ] Google OAuth Production Redirect URL
 - [ ] Production secrets
+- [ ] CoinGecko利用Plan / licenseと、外部ユーザー向けUser Agreement / Privacy Policy / data limitation disclaimerを公開前に確認する
 - [ ] Encryption Key
 - [ ] Named Volume
 - [ ] DB Backup
@@ -1703,6 +1720,7 @@ AWS Secrets ManagerはMVP必須としない。
 - [ ] Current Crypto Price / USD-JPY FX
 - [ ] 24h price changeはMarket Data quote由来
 - [ ] price / FX unavailable・staleを0扱いしない
+- [ ] CoinGecko attributionをDashboard / Assetsへ表示し、外部ユーザー提供前に利用Plan / Termsを確認する
 - [ ] Market Price History DBがない
 
 ## Portfolio

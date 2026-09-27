@@ -4,6 +4,56 @@
 
 本書は公式に公開されたProvider仕様と、その仕様から確定できるAdapter上の制約を記録する。APIドキュメントに明記されない挙動は推測で確定せず、「実装前の確認事項」に残す。Providerの生レスポンス、Credential、個人情報をログへ出さない。
 
+## Market Data (Step 4-4)
+
+### 採用方針
+
+- Spot assetのCrypto priceと24h market quoteにはCoinGecko Demo APIの`GET /coins/markets`を使い、1リクエストにMVPの必要Coin IDをまとめる。要求通貨はUSD、`price_change_percentage=24h`、`precision=full`とする。
+- responseの`current_price`はUSD建て単価、`price_change_percentage_24h`は過去24時間の変化率、`last_updated`はそのMarket dataの時刻として扱う。Provider識別値は`COINGECKO`。Price Currencyは`USD`。
+- CoinGecko Demo API keyはBackend Secret `COINGECKO_DEMO_API_KEY`として注入する。Demo APIの`x-cg-demo-api-key`認証headerを使い、query string、Browser、Frontend bundle、ログには出さない。公式PricingではDemo planは100 calls/min、月10,000 calls、Data Freshnessは60 secondsから。実装ではAssetごとに呼ばず一括取得し、ユーザー共有Cacheを初期10分TTLで使う。連続稼働時でも31日で最大約4,464回に抑え、Retryと手動更新用のQuota余裕を残す。
+- USD/JPYにはExchangeRate-API Free plan `GET /v6/{API_KEY}/latest/USD`を使う。`conversion_rates.JPY`はUSD 1単位あたりのJPY、`time_last_update_unix`はRateのProvider update時刻、`base_code`はUSDであることを確認して使う。Provider識別値は`EXCHANGERATE_API`。
+- FX API keyはBackend Secret `EXCHANGERATE_API_KEY`として注入する。公式資料上Free planは1,500 requests/month、更新は24時間ごと。共有Cacheで更新時刻を見て最大1日1回取得する。KeyがPathに含まれるため、HTTP client / proxy / error logでRequest URIを記録しないか、Key部分を必ずredactする。
+- API keyは開発時も`.env`等のGit管理外設定で注入し、DB / Git / Docker imageへ保存しない。未設定ならMarket data capabilityをUnavailableにし、平文値や固定のDummy価格へfallbackしない。
+
+### Coin ID Mapping
+
+CoinGeckoのSymbolは一意でないためsymbol検索ではなくAPI IDを指定する。現行UIのCanonical Assetに対するIDは以下のとおり。
+
+| Application Asset | CoinGecko ID | Notes |
+| --- | --- | --- |
+| BTC | `bitcoin` | Canonical Bitcoin |
+| ETH | `ethereum` | Canonical Ether |
+| SOL | `solana` | Canonical Solana |
+| XRP | `ripple` | Canonical XRP |
+| HYPE | `hyperliquid` | Hyperliquid native HYPE。`hype-3`の別Tokenと混同しない |
+| USDC | `usd-coin` | Canonical USDC。Network別Mint / Contractを検証し、別の同名・bridged tokenをSymbolだけで同一視しない |
+
+Provider `asset_key`からCanonical AssetへのMappingが不明なAsset、CoinGeckoにないAsset、複数候補が残るAssetは推測せず価格をUnavailableとする。将来Assetを追加する場合はProvider識別子・network・token address等でIdentityを確定してからMarket IDを追加する。
+
+### Timestamp、鮮度、失敗
+
+- `price_evaluated_at`はCoinGecko `last_updated`、`fx_evaluated_at`はExchangeRate-API `time_last_update_unix`に対応する。HTTP取得時刻とProviderデータ時刻は混同しない。取得時刻はObservability / cache control上で別途保持してよい。
+- Application鮮度方針として、暗号資産価格はProvider時刻から15分、日次FXは72時間を超えた値をSTALEとする。これはProviderが保証する更新間隔ではなく、Demo planの更新頻度と共有Cacheを踏まえたUI / Valuation向けのMVP判定値。運用データに応じて設定化する。
+- FX取得元通貨と対象通貨が同一の場合はRate 1、Source `IDENTITY`とする。MVP Portfolio換算ではJPY→JPYをidentityとし、USD→JPYは上記FX Rateを使う。
+- CoinGeckoまたはFX API障害時に第二Providerへ自動fallbackしない。成功済みresponseは共有Cacheとして利用し、Provider observationからの経過時間が鮮度上限を超えたらSTALEとする。必要なPrice / FXがUnavailableまたは鮮度上限を超え、全体のNet Worthを正しく算出できないときはそのデータを0扱いせず、新しいSnapshotを作らない。前回成功済みの全体Current Stateを再利用する場合は既存方針に従いSTALEとして示す。
+- `price_change_percentage_24h`がnull / 欠落 / staleの場合は24h quoteだけをUnavailableにする。現在価格とFXが有効ならPortfolio valuationは継続できる。Comparison periodは`24h`、Quote sourceは`COINGECKO`、quote evaluatedAtはPriceと同じ`last_updated`とする。
+- Hyperliquid Perpetual PositionのPosition Value / Unrealized PnLでは、Hyperliquidから取得した当該PositionのMark Price / Provider PnLを使う。Spot向けCoinGecko価格へ置換・fallbackせず、価格通貨ごとのFX換算だけを適用する。
+- 429、timeout、5xx、認証・quota errorは別Providerへの切替やゼロ値にせず、Market Data capabilityの失敗状態として記録する。Bounded backoffはRate Limit / Retry共通方針に従い、同じ共有Cache keyへの同時Fetchを抑制する。
+- CoinGeckoのDemo planは公式Pricingで「testing and exploration」向けと説明され、Attribution requiredとなっている。Screen Designに従い`Powered by CoinGecko` attributionを読みやすく表示しAPI pageへリンクする。アプリを運営者の組織外のユーザーへ提供する前に、利用プラン・API Terms、User Agreement、Privacy Policy、データの制限事項 / 免責表示を確認し、Demo planが本番提供を許可すると推定しない。
+
+### 参照した公式資料
+
+- [CoinGecko Demo API - Coins List with Market Data](https://docs.coingecko.com/demo/reference/coins-markets)
+- [CoinGecko Errors & Rate Limits](https://docs.coingecko.com/docs/errors-and-rate-limits)
+- [CoinGecko Demo API Authentication](https://docs.coingecko.com/demo/reference/authentication)
+- [CoinGecko API Pricing / Demo Limits and Attribution](https://www.coingecko.com/en/api/pricing)
+- [CoinGecko API Terms of Service](https://www.coingecko.com/en/api_terms)
+- [CoinGecko API IDの説明](https://www.coingecko.com/learn/coingecko-api-troubleshooting-guide-and-solutions)
+- [Bitcoin](https://www.coingecko.com/en/coins/bitcoin), [Ethereum](https://www.coingecko.com/en/coins/ethereum), [Solana](https://www.coingecko.com/en/coins/solana), [XRP](https://www.coingecko.com/en/coins/xrp), [HYPE](https://www.coingecko.com/en/coins/hyperliquid), [USDC](https://www.coingecko.com/en/coins/usd-coin) CoinGecko API ID pages
+- [ExchangeRate-API Free plan](https://www.exchangerate-api.com/), [Free API Request Format](https://www.exchangerate-api.com/docs/standard-requests), [Supported Currency Codes](https://www.exchangerate-api.com/docs/supported-currencies)
+
+実APIへのMarket data requestはcredential注入後のStep 6-1で確認する。Step 4-4では公式仕様およびIDを確認し、実価格値を検証Fixtureへ固定しない。
+
 ## bitbank (Step 4-1)
 
 ### 参照した公式資料

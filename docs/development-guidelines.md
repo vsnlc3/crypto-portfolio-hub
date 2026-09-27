@@ -431,8 +431,8 @@ Google Client Secret、Provider Credential、Encryption KeyをGitHub Actions log
 
 ### まだ未確定の事項
 
-- HyperliquidのAccount Mode検出とMode別Balance / Account Equityの対応付け、Perp FillのActivity表現。
-- USD価格とJPY換算用のProvider、価格・為替の評価時刻および代替手段。
+- Hyperliquid Account Mode / Perp Fill mappingは`provider-specifications.md`と`database-design.md`で確定済み。開発環境のDNS制限でLive Info API responseは未確認のため、Adapter fixture testsをStep 7-6で行う。
+- CoinGecko Demo APIのCredentialとExchangeRate-API Free planのCredentialは、Step 6-1でBackend Secretとして設定する。Market priceは共有Cache TTL 10分 / STALE判定15分、日次FXは72時間をMVP鮮度基準とする。API障害時の第二Provider fallbackは設けず、評価不能値を0にしない。Demo planのAttributionと外部ユーザー提供前のLicense確認を守る。
 - Solanaの初回Activity取得期間、Heliusの実利用Plan / 最新料金・Rate Limitの確認、定期同期間隔。
 - 履歴・価格Snapshotの保持期間。
 - Google OAuthの本番Redirect URL、Domain、Session有効期間、暗号化鍵の本番保管とRotation。
