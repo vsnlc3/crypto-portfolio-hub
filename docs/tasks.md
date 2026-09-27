@@ -719,22 +719,27 @@ Phase 4で取得元・仕様を確認した後、Market Data Providerを実装�
 
 ## Step 6-1: Market Data Provider
 
-- [ ] 公式仕様に基づくCurrent Crypto Price取得
-- [ ] USD / JPY FX取得
-- [ ] `symbol` / `asset_key` とMarket Data IDの対応
-- [ ] Price Currencyを保持する
-- [ ] Price Source / `price_evaluated_at` を追跡する
-- [ ] FX Source / `fx_evaluated_at` を追跡する
-- [ ] JPYのidentity conversionはRate `1` / Source `IDENTITY` とする
-- [ ] Rate Limit / Timeoutを扱う
-- [ ] Provider Errorを分類する
-- [ ] Price / FXの鮮度基準を適用できる
-- [ ] fallbackはPhase 4で採用を決めた場合だけ実装する
-- [ ] CoinGecko Demo key / ExchangeRate-API keyはBackend環境設定から注入し、未設定時はUnavailableとして起動・同期する（実SecretはSource / Image / DB / logへ入れない）
-- [ ] CoinGeckoは複数Coin IDを一括取得し、Market DataをUserごとに重複Fetchせず共有Cacheする
-- [ ] ExchangeRate-API responseの更新時刻に合わせて共有Cacheし、Keyを含むRequest URIをlogへ出さない
-- [ ] CacheしたPrice / FXにはProvider evaluatedAtと鮮度状態を付ける
-- [ ] CoinGecko AttributionをDashboard / Assetsに表示し、API pageへLinkする
+- [x] 公式仕様に基づくCurrent Crypto Price取得
+- [x] USD / JPY FX取得
+- [x] Canonical `asset_key` とMarket Data IDの対応
+- [x] Price Currencyを保持する
+- [x] Price Source / `price_evaluated_at` を追跡する
+- [x] FX Source / `fx_evaluated_at` を追跡する
+- [x] JPYのidentity conversionはRate `1` / Source `IDENTITY` とする
+- [x] Rate Limit / Timeoutを扱う
+- [x] Provider Errorを分類する
+- [x] Price / FXの鮮度基準を適用できる
+- [x] fallbackは実装しない（Phase 4の採用方針どおり）
+- [x] CoinGecko Demo key / ExchangeRate-API keyはBackend環境設定から注入し、未設定時はUnavailableとして起動・同期する（実SecretはSource / Image / DB / logへ入れない）
+- [x] CoinGeckoは複数Coin IDを一括取得し、Market DataをUserごとに重複Fetchせず共有Cacheする
+- [x] ExchangeRate-API responseの更新時刻に合わせて共有Cacheし、Keyを含むRequest URIをlogへ出さない
+- [x] CacheしたPrice / FXにはProvider evaluatedAtと鮮度状態を付ける
+- [x] CoinGecko AttributionをDashboard / Assetsに表示し、API pageへLinkする
+
+### Live Provider Smoke Test
+
+- [ ] `.env`に実キーを設定し、CoinGecko / ExchangeRate-APIへの実requestでresponse shapeと評価時刻を確認する。テストは `-Dmarket-data.live-smoke=true` で明示実行し、キーやrequest URIは表示しない。
+- [x] 実キー未設定時は該当ProviderをUnavailableのままにし、Dummy価格・為替へfallbackしないことを確認する。
 
 ## Step 6-2: 24h Market Quote
 
@@ -749,14 +754,17 @@ Assetsで表示する銘柄ごとの価格変化はMarket Data Providerのcurren
 - [ ] 取得不能値を推測値や0にしない
 - [ ] Price History DBやTicker History DBを作らない
 
-### Tests
+### Step 6-1 Tests
 
-- [ ] Current priceの取得とsymbol / asset_key mapping
-- [ ] Price Currency / Source / evaluatedAtの保持
-- [ ] USD / JPY FXの取得とSource / evaluatedAtの保持
-- [ ] Rate Limit / Timeout / Error分類
-- [ ] price unavailable / FX unavailable
-- [ ] stale price / stale FXの判定
+- [x] Current priceの取得とcanonical `asset_key` / CoinGecko ID mapping
+- [x] Price Currency / Source / evaluatedAtの保持
+- [x] USD / JPY FXの取得とSource / evaluatedAtの保持
+- [x] Rate Limit / Timeout / Error分類
+- [x] price unavailable / FX unavailable
+- [x] stale price / stale FXの判定
+
+## Step 6-2 Tests
+
 - [ ] 24h quoteのcomparison period / source / evaluatedAt
 - [ ] 24h change unavailable
 - [ ] 24h changeにPortfolio Snapshotを使用していないこと

@@ -54,6 +54,17 @@ Provider `asset_key`からCanonical AssetへのMappingが不明なAsset、CoinGe
 
 実APIへのMarket data requestはcredential注入後のStep 6-1で確認する。Step 4-4では公式仕様およびIDを確認し、実価格値を検証Fixtureへ固定しない。
 
+### Step 6-1 実装状況
+
+- 2026-09-28にCoinGecko Demo markets / authentication / error limit資料とExchangeRate-API Standard Request資料を再確認し、下記の実装契約と一致することを確認した。
+- Backendはこの節のCanonical Asset IDだけをCoinGeckoへ一括送信する。未知・曖昧な`asset_key`は価格Unavailableとし、SymbolだけからCoin IDを推測しない。
+- CoinGeckoでは`x-cg-demo-api-key` Header、USD建て`/coins/markets`、`last_updated`を使用する。価格がNULL、評価時刻が不正、またはresponse自体が解釈できない場合はその値を採用せず0にしない。
+- USD / JPYはExchangeRate-APIのUSD base responseから`conversion_rates.JPY`と`time_last_update_unix`を検証する。JPY→JPYはProvider呼び出しなしのRate `1` / `IDENTITY`。
+- PriceはBackend単一Instance内でユーザー間共有する10分のin-memory Cache、Provider評価時刻から15分をfreshness上限として判定する。FXはresponse更新時刻を保持し、Free planの1日更新を前提に最低24時間ごとの同Cache、72時間をfreshness上限とする。各上限は設定値。複数Backend Instance間のCache共有は将来のDeployment設計事項。
+- 429 / timeout等の失敗は分類し、bounded backoffの間は再Fetchしない。前回成功値は評価時刻からSTALE判定し、存在しなければUnavailableとする。別Providerやゼロ値へfallbackしない。
+- Provider Key未設定でもBackendは起動できる。CoinGecko Demo keyはHeaderからのみ送信し、ExchangeRate-API keyは要求Pathに含まれるためrequest URIをアプリケーションログ・例外メッセージへ記録しない。
+- 実API Smoke Testは`MarketDataLiveSmokeTests`で用意したが、`COINGECKO_DEMO_API_KEY`と`EXCHANGERATE_API_KEY`が未設定のため未実行。資格情報設定後に`-Dmarket-data.live-smoke=true`で確認する。
+
 ## bitbank (Step 4-1)
 
 ### 参照した公式資料

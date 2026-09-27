@@ -26,6 +26,15 @@ app:
     google:
       enabled: ${GOOGLE_OAUTH_ENABLED:false}
     frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:3000}
+  market-data:
+    coin-gecko-demo-api-key: ${COINGECKO_DEMO_API_KEY:}
+    exchange-rate-api-key: ${EXCHANGERATE_API_KEY:}
+    connect-timeout: ${MARKET_DATA_CONNECT_TIMEOUT:PT3S}
+    read-timeout: ${MARKET_DATA_READ_TIMEOUT:PT5S}
+    price-cache-ttl: ${MARKET_DATA_PRICE_CACHE_TTL:PT10M}
+    price-freshness: ${MARKET_DATA_PRICE_FRESHNESS:PT15M}
+    fx-freshness: ${MARKET_DATA_FX_FRESHNESS:PT72H}
+    fx-maximum-request-interval: ${MARKET_DATA_FX_REQUEST_INTERVAL:PT24H}
 
 management:
   endpoints:

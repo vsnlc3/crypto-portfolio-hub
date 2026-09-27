@@ -36,7 +36,8 @@
 - **Existing:** `backend/src/main/java/com/cryptoportfoliohub/domain/money/` に通貨付きMoney / Price / Quantity / FX Value、JPY換算、PerpetualのPosition Value / 線形Unrealized PnL、表示用丸め基盤がある。Javaの計算には `BigDecimal` を使い、金融数値のUnit Testを持つ。
 - **Existing:** `backend/src/main/java/com/cryptoportfoliohub/persistence/` に12 Entityと12 Repositoryがある。Hibernate `ddl-auto: validate` でFlyway Schemaとの整合を検証し、所有データQueryにはUser IDを含める。TestcontainersでUser A / Bの分離とConnection論理削除後の履歴参照を検証する。
 - **Existing:** BackendにGoogle OIDC Login、SubjectによるUser作成・再紐付け、Session Cookie、CSRF対応のLogout、認証User確認API、Connection一覧・追加・削除APIを実装し、`.env`から注入したCredentialでローカル実Google OAuth E2Eを確認した。Secret値はGit管理外である。公開環境のHost / Schemeに対応したRedirect URI登録はDeployment設計時に行う。
-- **未実装:** Portfolio業務API、Providerデータ取得・同期、Portfolio評価、デプロイ環境。
+- **Existing:** BackendにCoinGecko DemoのCurrent Price / USDJPY FX Provider Adapter、Canonical Asset ID mapping、共有Cache、鮮度判定、Provider error分類を実装した。両API keyはBackend環境変数で任意注入し、未設定時はUnavailableを返す。実API Smoke Testは未実施。
+- **未実装:** Provider Account / Balance / Position / Activity取得とSync、Portfolio評価、Portfolio業務API、デプロイ環境。Provider API keyを`.env`へ注入する設定は任意である。
 
 この一覧は本リポジトリのファイル・設定に基づく。以下の採用方針は、別途Existingと記載したものを除き、実装済みであることを意味しない。
 
@@ -52,6 +53,7 @@
 | Frontend global client state | Zustand | Future | MVPでは必須でない。画面をまたぐクライアント専用状態が実際に増えた場合のみ採用する |
 | Backend runtime | Java 25 LTS / Spring Boot 4.1.1 | Existing | Backend基盤のMaven設定とアプリ起動クラスを作成済み。業務機能は未実装 |
 | Backend build | Maven Wrapper 3.9.12 | Existing | `backend/mvnw` とWrapper設定でビルドツールを固定する |
+| Market data | CoinGecko Demo + ExchangeRate-API | Existing | Batch price / USDJPY FX、全ユーザー共通のInstance内Cache、Provider timestamp freshness。Key未設定時はUnavailable。実API Smoke TestはKey設定後に実施する |
 | Backend security | Spring Security / OAuth2 Login | Existing | Google OIDC Login、Backend Session、CSRF保護、Logout、User Subject紐付けを実装し、ローカル実OAuth E2Eを確認済み。公開環境には環境固有のClient設定とRedirect URI登録が必要 |
 | Backend persistence | Spring Data JPA / Hibernate | Existing | 12 Entity / Repositoryを作成済み。Migration SchemaとHibernate validateをIntegration Testで確認し、所有Resource QueryはUser IDを条件に含める |
 | Backend API | REST / JSON、Jackson 3 | Adopted | Next.jsとの責務境界を明確にし、HTTPで確認・テストしやすくする。Problem Detailsの共通エラー基盤は実装済み。業務Endpointは未実装 |

@@ -6,6 +6,7 @@ import { AllocationCard } from "@/components/dashboard/allocation-card"
 import { CurrencyList } from "@/components/dashboard/currency-list"
 import { PositionsTable } from "@/components/dashboard/positions-table"
 import { Button } from "@/components/ui/button"
+import { CoinGeckoAttribution } from "@/components/coingecko-attribution"
 import { RefreshCw } from "lucide-react"
 
 export default function DashboardPage() {
@@ -46,6 +47,10 @@ export default function DashboardPage() {
 
       <div className="mt-4">
         <PositionsTable />
+      </div>
+
+      <div className="mt-6 flex justify-end">
+        <CoinGeckoAttribution />
       </div>
     </div>
   )

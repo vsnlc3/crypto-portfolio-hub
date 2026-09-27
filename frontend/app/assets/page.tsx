@@ -2,6 +2,7 @@ import { PageHeader } from "@/components/page-header"
 import { CurrencyList } from "@/components/dashboard/currency-list"
 import { AllocationCard } from "@/components/dashboard/allocation-card"
 import { Card } from "@/components/ui/card"
+import { CoinGeckoAttribution } from "@/components/coingecko-attribution"
 import {
   fmtUsd,
   netWorth,
@@ -49,6 +50,10 @@ export default function AssetsPage() {
         <div className="lg:col-span-7">
           <CurrencyList />
         </div>
+      </div>
+
+      <div className="mt-6 flex justify-end">
+        <CoinGeckoAttribution />
       </div>
     </div>
   )
