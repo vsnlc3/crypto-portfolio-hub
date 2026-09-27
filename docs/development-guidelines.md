@@ -34,7 +34,8 @@
 - **Existing:** `backend/` にJava 25 / Spring Boot 4.1.1のMavenプロジェクトがあり、Spring MVC、Jackson 3、JPA、PostgreSQL Driver、Flyway、Security、OAuth2 Client、Validation、Actuator、JUnit、Testcontainersを設定している。`/actuator/health` のHTTP応答、8本のFlyway Migration、主要FK / CHECK制約、Problem DetailsとRequest IDをPostgreSQL Testcontainers付きで検証する。
 - **Existing:** `backend/src/main/java/com/cryptoportfoliohub/domain/money/` に通貨付きMoney / Price / Quantity / FX Value、JPY換算、PerpetualのPosition Value / 線形Unrealized PnL、表示用丸め基盤がある。Javaの計算には `BigDecimal` を使い、金融数値のUnit Testを持つ。
 - **Existing:** `backend/src/main/java/com/cryptoportfoliohub/persistence/` に12 Entityと12 Repositoryがある。Hibernate `ddl-auto: validate` でFlyway Schemaとの整合を検証し、所有データQueryにはUser IDを含める。TestcontainersでUser A / Bの分離とConnection論理削除後の履歴参照を検証する。
-- **未実装:** BackendのGoogle OAuth設定とアプリケーション認証、業務API、Provider連携、同期処理、Credential暗号化、デプロイ環境。
+- **Existing:** BackendにGoogle OIDC Login、SubjectによるUser作成・再紐付け、Session Cookie、CSRF対応のLogout、認証User確認APIを実装した。Google OAuth Client ID / Secretは未設定であり、実Google認証とGoogle Cloud ConsoleでのRedirect URI登録は未確認。
+- **未実装:** 業務API、Provider連携、同期処理、Credential暗号化、Frontend認証画面・Route Guard、デプロイ環境。
 
 この一覧は本リポジトリのファイル・設定に基づく。以下の採用方針は、別途Existingと記載したものを除き、実装済みであることを意味しない。
 
@@ -50,7 +51,7 @@
 | Frontend global client state | Zustand | Future | MVPでは必須でない。画面をまたぐクライアント専用状態が実際に増えた場合のみ採用する |
 | Backend runtime | Java 25 LTS / Spring Boot 4.1.1 | Existing | Backend基盤のMaven設定とアプリ起動クラスを作成済み。業務機能は未実装 |
 | Backend build | Maven Wrapper 3.9.12 | Existing | `backend/mvnw` とWrapper設定でビルドツールを固定する |
-| Backend security | Spring Security / OAuth2 Login | Adopted | Googleログインとサーバー管理の認証セッションを一元化する。依存は導入済みだが、OAuth設定とログイン処理は未実装 |
+| Backend security | Spring Security / OAuth2 Login | Existing | Google OIDC Login、Backend Session、CSRF保護、Logout、User Subject紐付けを実装済み。実OAuthにはClient ID / SecretとRedirect URI登録が必要 |
 | Backend persistence | Spring Data JPA / Hibernate | Existing | 12 Entity / Repositoryを作成済み。Migration SchemaとHibernate validateをIntegration Testで確認し、所有Resource QueryはUser IDを条件に含める |
 | Backend API | REST / JSON、Jackson 3 | Adopted | Next.jsとの責務境界を明確にし、HTTPで確認・テストしやすくする。Problem Detailsの共通エラー基盤は実装済み。業務Endpointは未実装 |
 | Database | PostgreSQL | Existing | PostgreSQL Driver、Testcontainers、Compose上のPostgreSQLを構成済み。Named Volumeにデータを保持する |
@@ -112,6 +113,9 @@
 - ログイン後のアプリ認証はBackend管理のServer-side HTTP SessionとSession Cookieを使用する。FrontendへGoogle Access Token、ID Token、Client Secretを保存・公開しない。
 - Cookieは `HttpOnly`、本番では `Secure`、`SameSite=Lax`、適切な有効期間・Pathを設定する。ログアウトでサーバーSessionを破棄し、ログイン成功時はSessionを更新する。
 - Connectionsの登録・削除、同期要求など状態を変更するAPIにはCSRF対策を適用する。CORSを広く許可してCookieを跨いで送る設計にしない。
+- OAuth Loginは `GOOGLE_OAUTH_ENABLED=true` で有効にし、`SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_ID` と `SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_SECRET` をBackend環境へ注入する。Composeでは `.env` から受け渡すが、実値をGit・イメージへ含めない。Google Cloud Consoleには公開する同一Originの `/login/oauth2/code/google` callback URLを登録する。実際のHost / SchemeはFrontend proxyまたはCaddy経由でBackendへ正しく伝える。
+- Session Cookieは `application.yml` で `HttpOnly` / `SameSite=Lax` を設定する。本番HTTPS環境では `SESSION_COOKIE_SECURE=true` を設定する。開発用 `.env.example` の値はOAuth無効・Secureなしで、実OAuthを有効化するには利用者のGoogle OAuth設定が必要。
+- CSRF tokenは `GET /api/v1/auth/csrf` で取得し、変更系Requestの `X-CSRF-TOKEN` headerへ設定する。Session Cookieと異なりCSRF tokenはFrontendがRequest headerへ渡すため、API Responseに含める。
 
 Spring SecurityのOAuth2 LoginはGoogle等のOIDC Providerによるログインに対応し、Authorization Code Grantを使用する。本プロジェクトでは、この認証フローとBackend Sessionを一体で管理する。[Spring Security OAuth2 Login](https://docs.spring.io/spring-security/reference/servlet/oauth2/login/) を実装時の参照資料とする。
 
@@ -126,7 +130,8 @@ Spring SecurityのOAuth2 LoginはGoogle等のOIDC Providerによるログイン�
 ### 5.3 ユーザー境界
 
 - Googleの安定したProvider subjectを内部Userへ紐付ける。Emailだけをユーザーの永続識別子にしない。
-- API利用者の内部User IDはSpring Securityの認証Principal / Sessionから取得する。Requestの `userId` を認可判断の根拠にしない。
+- 現在の認証PrincipalはOIDC `sub` として扱い、Backendはそれを `users.google_subject` で内部Userへ解決する。`GET /api/v1/auth/me` のResponseには内部User IDと表示情報だけを含め、Google `sub` やTokenを返さない。
+- API利用者の内部User IDはBackend Sessionに保持したSpring Security principalのGoogle `sub` を内部Userへ解決して取得する。Requestの `userId` を認可判断の根拠にしない。
 - Controller、Application Service、Repositoryの各境界でUser所有権を保つ。Connection ID等の推測可能なIDを指定されても、他ユーザーのレコードを返さない。
 - Portfolio、Connections、Credential、Balance、Position、Activity、評価・同期履歴をユーザー単位で分離する。DB設計では外部キー、Unique制約、User IDを含む検索条件を検討する。
 

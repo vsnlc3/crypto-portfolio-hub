@@ -332,46 +332,48 @@ findById(id)
 
 ## Step 3-1: Google OAuth2 Login
 
-- [ ] Spring Security OAuth2 Loginを設定する
-- [ ] Google OIDC `sub` を取得する
-- [ ] 初回ログイン時にUserを作成する
-- [ ] 再ログイン時に既存Userへ紐付ける
-- [ ] EmailではなくGoogle SubjectをIdentityの基準にする
-- [ ] Backend Sessionを利用する
-- [ ] HttpOnly Cookieを使用する
-- [ ] ProductionでSecure Cookieを使用できる構成にする
-- [ ] SameSite方針を設定する
-- [ ] Logoutを実装する
-- [ ] CSRF対策を有効にする
+- [x] Spring Security OAuth2 Loginを設定する
+- [x] Google OIDC `sub` を取得する
+- [x] 初回ログイン時にUserを作成する
+- [x] 再ログイン時に既存Userへ紐付ける
+- [x] EmailではなくGoogle SubjectをIdentityの基準にする
+- [x] Backend Sessionを利用する
+- [x] HttpOnly Cookieを使用する
+- [x] ProductionでSecure Cookieを使用できる構成にする
+- [x] SameSite方針を設定する
+- [x] Logoutを実装する
+- [x] CSRF対策を有効にする
 
 ### API
 
-このStepで必要なAPIを設計し、`api-design.md` を新規作成または更新する。
-
-候補:
+以下のAPIとBrowser向けOAuth routeを実装し、`api-design.md` に契約を記録する。
 
 ```text
+GET  /api/v1/auth/csrf
 GET  /api/v1/auth/me
 POST /api/v1/auth/logout
+
+GET  /oauth2/authorization/google
+GET  /login/oauth2/code/google
 ```
 
-Endpoint名は実装時に既存RoutingとUIを確認して確定する。
+実Googleアカウントでの認証完了確認は、Google OAuth Client ID / Secretの設定とGoogle Cloud Consoleへの公開callback URL登録後に行う。値を用意していない環境ではMock認証テストまでを実施する。
 
 ### 完了条件
 
 - [ ] Googleログインできる
-- [ ] ログインUserをBackendで特定できる
-- [ ] 未認証状態では保護APIへアクセスできない
-- [ ] ClientからUser IDを指定して認証を回避できない
-- [ ] Logout後に保護APIへアクセスできない
+- [x] ログインUserをBackendで特定できる
+- [x] 未認証状態では保護APIへアクセスできない
+- [x] ClientからUser IDを指定して認証を回避できない
+- [x] Logout後に保護APIへアクセスできない
 
 ### テスト
 
-- [ ] OAuth成功・失敗をMockで検証する
-- [ ] Google `sub` から同一Userへ紐付くことを検証する
-- [ ] Email変更・重複だけでUser identityが変わらないことを検証する
-- [ ] 未認証拒否、Logout後のSession無効化、CSRF保護APIを検証する
-- [ ] Client supplied userIdを認可根拠にできないことを検証する
+- [x] OAuth成功・失敗をMockで検証する
+- [x] Google `sub` から同一Userへ紐付くことを検証する
+- [x] Email変更・重複だけでUser identityが変わらないことを検証する
+- [x] 未認証拒否、Logout後のSession無効化、CSRF保護APIを検証する
+- [x] Client supplied userIdを認可根拠にできないことを検証する
 
 ---
 

@@ -55,4 +55,11 @@ public class User extends UpdatedEntity {
     public Instant getLastLoginAt() {
         return lastLoginAt;
     }
+
+    public void recordGoogleLogin(String email, String displayName, String avatarUrl, Instant loggedInAt) {
+        this.email = email;
+        this.displayName = displayName;
+        this.avatarUrl = avatarUrl;
+        this.lastLoginAt = loggedInAt;
+    }
 }

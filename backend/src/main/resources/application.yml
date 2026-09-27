@@ -9,6 +9,18 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: validate
+server:
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        secure: ${SESSION_COOKIE_SECURE:false}
+        same-site: lax
+
+app:
+  auth:
+    google:
+      enabled: ${GOOGLE_OAUTH_ENABLED:false}
 
 management:
   endpoints:
