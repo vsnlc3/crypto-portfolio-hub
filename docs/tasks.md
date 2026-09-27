@@ -738,7 +738,7 @@ Phase 4で取得元・仕様を確認した後、Market Data Providerを実装�
 
 ### Live Provider Smoke Test
 
-- [ ] `.env`に実キーを設定し、CoinGecko / ExchangeRate-APIへの実requestでresponse shapeと評価時刻を確認する。テストは `-Dmarket-data.live-smoke=true` で明示実行し、キーやrequest URIは表示しない。
+- [x] `.env`に設定した実キーでCoinGecko / ExchangeRate-APIへの実requestを行い、response shapeと評価時刻を確認した。`-Dmarket-data.live-smoke=true`で明示実行し、キーやrequest URIは表示しない。
 - [x] 実キー未設定時は該当ProviderをUnavailableのままにし、Dummy価格・為替へfallbackしないことを確認する。
 
 ## Step 6-2: 24h Market Quote

@@ -52,7 +52,7 @@ Provider `asset_key`からCanonical AssetへのMappingが不明なAsset、CoinGe
 - [Bitcoin](https://www.coingecko.com/en/coins/bitcoin), [Ethereum](https://www.coingecko.com/en/coins/ethereum), [Solana](https://www.coingecko.com/en/coins/solana), [XRP](https://www.coingecko.com/en/coins/xrp), [HYPE](https://www.coingecko.com/en/coins/hyperliquid), [USDC](https://www.coingecko.com/en/coins/usd-coin) CoinGecko API ID pages
 - [ExchangeRate-API Free plan](https://www.exchangerate-api.com/), [Free API Request Format](https://www.exchangerate-api.com/docs/standard-requests), [Supported Currency Codes](https://www.exchangerate-api.com/docs/supported-currencies)
 
-実APIへのMarket data requestはcredential注入後のStep 6-1で確認する。Step 4-4では公式仕様およびIDを確認し、実価格値を検証Fixtureへ固定しない。
+Step 4-4では公式仕様およびIDを確認し、実価格値を検証Fixtureへ固定しない。Step 6-1ではCredential注入後に両Providerへの実requestを確認した。
 
 ### Step 6-1 実装状況
 
@@ -63,7 +63,7 @@ Provider `asset_key`からCanonical AssetへのMappingが不明なAsset、CoinGe
 - PriceはBackend単一Instance内でユーザー間共有する10分のin-memory Cache、Provider評価時刻から15分をfreshness上限として判定する。FXはresponse更新時刻を保持し、Free planの1日更新を前提に最低24時間ごとの同Cache、72時間をfreshness上限とする。各上限は設定値。複数Backend Instance間のCache共有は将来のDeployment設計事項。
 - 429 / timeout等の失敗は分類し、bounded backoffの間は再Fetchしない。前回成功値は評価時刻からSTALE判定し、存在しなければUnavailableとする。別Providerやゼロ値へfallbackしない。
 - Provider Key未設定でもBackendは起動できる。CoinGecko Demo keyはHeaderからのみ送信し、ExchangeRate-API keyは要求Pathに含まれるためrequest URIをアプリケーションログ・例外メッセージへ記録しない。
-- 実API Smoke Testは`MarketDataLiveSmokeTests`で用意したが、`COINGECKO_DEMO_API_KEY`と`EXCHANGERATE_API_KEY`が未設定のため未実行。資格情報設定後に`-Dmarket-data.live-smoke=true`で確認する。
+- 2026-09-28、`.env`から注入したCredentialで`MarketDataLiveSmokeTests`を実行し、CoinGecko DemoのCurrent PriceとExchangeRate-APIのUSD/JPY responseを取得してresponse shapeおよびProvider評価時刻の読み取りを確認した（1 test成功）。値とCredentialはログ・文書へ記録しない。
 
 ## bitbank (Step 4-1)
 
