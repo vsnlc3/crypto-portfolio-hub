@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import { Activity, LayoutDashboard, Plug, RefreshCw, Search, Wallet } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import type { AuthenticatedUser } from "@/lib/auth-api"
 
 const nav = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -13,7 +14,15 @@ const nav = [
   { href: "/connections", label: "Connections", icon: Plug },
 ]
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+type AppShellProps = {
+  children: React.ReactNode
+  user: AuthenticatedUser
+  onLogout: () => void
+  isLoggingOut: boolean
+  logoutError: boolean
+}
+
+export function AppShell({ children, user, onLogout, isLoggingOut, logoutError }: AppShellProps) {
   const pathname = usePathname()
 
   return (
@@ -61,7 +70,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <p className="text-xs font-medium text-sidebar-foreground">3 sources live</p>
           </div>
           <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-            Read-only demo. Google sign-in coming soon.
+            Your read-only portfolio view.
           </p>
         </div>
       </aside>
@@ -104,17 +113,33 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <RefreshCw className="size-3.5" />
               <span className="hidden sm:inline">Sync</span>
             </Button>
-            <div className="flex items-center gap-2 rounded-full border border-border bg-card py-1 pl-1 pr-3">
-              <div className="flex size-7 items-center justify-center rounded-full bg-accent text-xs font-semibold">
-                KT
+            <div className="flex min-w-0 items-center gap-2 rounded-full border border-border bg-card py-1 pl-1 pr-3">
+              <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-semibold" aria-hidden="true">
+                {getInitials(user.displayName || user.email)}
               </div>
-              <span className="hidden text-sm sm:inline">Kenta</span>
+              <span className="hidden max-w-40 truncate text-sm sm:inline" title={user.displayName || user.email}>
+                {user.displayName || user.email}
+              </span>
             </div>
+            <Button variant="outline" size="sm" onClick={onLogout} disabled={isLoggingOut}>
+              {isLoggingOut ? "Signing out…" : "Sign out"}
+            </Button>
           </div>
         </header>
+
+        {logoutError && (
+          <p role="alert" className="border-b border-destructive/20 bg-destructive/5 px-5 py-2 text-right text-xs text-destructive md:px-8">
+            Sign out failed. Please try again.
+          </p>
+        )}
 
         <main className="flex-1 px-5 py-6 md:px-8 md:py-8">{children}</main>
       </div>
     </div>
   )
+}
+
+function getInitials(value: string) {
+  const parts = value.trim().split(/[\s@._-]+/).filter(Boolean)
+  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "U"
 }

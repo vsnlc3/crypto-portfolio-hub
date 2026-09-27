@@ -22,7 +22,8 @@ public class SecurityConfiguration {
             ProblemAuthenticationEntryPoint authenticationEntryPoint,
             ProblemAccessDeniedHandler accessDeniedHandler,
             GoogleOidcUserService googleOidcUserService,
-            @Value("${app.auth.google.enabled:false}") boolean googleLoginEnabled) throws Exception {
+            @Value("${app.auth.google.enabled:false}") boolean googleLoginEnabled,
+            @Value("${app.auth.frontend-base-url:http://localhost:3000}") String frontendBaseUrl) throws Exception {
         http
                 .csrf(Customizer.withDefaults())
                 .authorizeHttpRequests(authorize -> authorize
@@ -41,8 +42,9 @@ public class SecurityConfiguration {
         if (googleLoginEnabled) {
             http.oauth2Login(oauth2 -> oauth2
                     .userInfoEndpoint(userInfo -> userInfo.oidcUserService(googleOidcUserService))
+                    .defaultSuccessUrl(frontendBaseUrl, true)
                     .failureHandler(new SimpleUrlAuthenticationFailureHandler(
-                            "/signin?error=AUTHENTICATION_FAILED")));
+                            frontendBaseUrl + "/signin?error=AUTHENTICATION_FAILED")));
         }
 
         return http.build();

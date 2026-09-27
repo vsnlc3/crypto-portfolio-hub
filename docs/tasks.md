@@ -380,19 +380,22 @@ Google OAuth Client ID / Secretを設定したローカル環境で実Google OAu
 
 ## Step 3-2: Frontend Sign in
 
-- [ ] Sign in画面を実装する
-- [ ] Googleログインへの導線を追加する
-- [ ] 未認証時のRoute Guardを追加する
-- [ ] 固定プロフィール表示をGoogleログインUserへ置き換える
-- [ ] Logoutを接続する
-- [ ] 認証Loadingを表示する
-- [ ] 認証Errorを表示する
-- [ ] Vitest / React Testing LibraryのFrontend Test基盤を用意する
+- [x] Sign in画面を実装する
+- [x] Googleログインへの導線を追加する
+- [x] 未認証時のRoute Guardを追加する
+- [x] 固定プロフィール表示をGoogleログインUserへ置き換える
+- [x] Logoutを接続する
+- [x] 認証Loadingを表示する
+- [x] 認証Errorを表示する
+- [x] Vitest / React Testing LibraryのFrontend Test基盤を用意する
 
 ### テスト
 
-- [ ] Route Guardが未認証時にSign inへ遷移する
-- [ ] 認証中 / 認証Error / Logout後の画面状態を検証する
+- [x] Route Guardが未認証時にSign inへ遷移する
+- [x] 認証中 / 認証Error / Logout中・失敗・成功後の画面状態を検証する
+- [x] 実ブラウザーでSign in → Google Login → Dashboard → Logout → Sign inを確認する
+
+実Google OAuthのブラウザー確認は外部Smoke Testとして扱い、通常の実装・回帰テストの完了条件にはしない。
 
 ### 完了条件
 
@@ -1457,7 +1460,7 @@ Validation Error
 
 ## Step 14-1: TypeScript
 
-- [ ] `typescript.ignoreBuildErrors` を解除する
+- [x] `typescript.ignoreBuildErrors` を解除する
 - [ ] typecheck scriptを追加する
 - [ ] Production buildが型エラーなしで成功する
 - [ ] API Response DTOの型をFrontendで定義する

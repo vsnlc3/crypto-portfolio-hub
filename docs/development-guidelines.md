@@ -27,15 +27,15 @@
 ### 1.2 リポジトリで確認した現在地
 
 - **Existing:** `frontend/` にNext.js、React、TypeScript、Tailwind CSS、shadcn/uiを使ったDashboard、Assets、Activity、Connections画面がある。
-- **Existing:** `frontend/lib/mock-data.ts` の静的モックを画面で参照している。API接続、永続化、Google認証、Sign in画面はない。
-- **Existing:** ルートのDocker ComposeでFrontend、Backend、PostgreSQLを同一Networkへ接続する。Hostへ公開するのはFrontendの3000番Portのみで、PostgreSQLはNamed Volumeへ保存する。`frontend/Dockerfile` はNode.js 22とpnpmを使う開発起動設定、`backend/Dockerfile` はMaven buildとJava 25 runtimeのmulti-stage buildである。
+- **Existing:** Portfolio画面は `frontend/lib/mock-data.ts` の静的モックを参照する。Google Sign in画面、Frontend route guard、Session user表示、CSRF付きLogoutは実装済み。Portfolio API接続と永続化は未実装。
+- **Existing:** ルートのDocker ComposeでFrontend、Backend、PostgreSQLを同一Networkへ接続する。Frontendは3000番、ローカルOAuth callback用にBackendは8080番をHostへ公開し、PostgreSQLは公開せずNamed Volumeへ保存する。ProductionではBackendを直接公開せずreverse proxy経由にする。`frontend/Dockerfile` はNode.js 22とpnpmを使う開発起動設定、`backend/Dockerfile` はMaven buildとJava 25 runtimeのmulti-stage buildである。
 - **Existing:** `frontend/package.json` は `pnpm@12.3.4` を指定し、lockfileもpnpm 12.3.4である。
-- **Existing:** `frontend/tsconfig.json` は `strict: true`。一方、`frontend/next.config.mjs` の `typescript.ignoreBuildErrors` は `true` で、Frontendのlint・test scriptやGitHub Actions workflowは見当たらない。
+- **Existing:** `frontend/tsconfig.json` は `strict: true` で、Next.js build時のTypeScriptエラーを隠さない。Vitest / React Testing Library、`test`、`typecheck` scriptを追加済み。Frontend lint scriptとGitHub Actions workflowはまだない。
 - **Existing:** `backend/` にJava 25 / Spring Boot 4.1.1のMavenプロジェクトがあり、Spring MVC、Jackson 3、JPA、PostgreSQL Driver、Flyway、Security、OAuth2 Client、Validation、Actuator、JUnit、Testcontainersを設定している。`/actuator/health` のHTTP応答、8本のFlyway Migration、主要FK / CHECK制約、Problem DetailsとRequest IDをPostgreSQL Testcontainers付きで検証する。
 - **Existing:** `backend/src/main/java/com/cryptoportfoliohub/domain/money/` に通貨付きMoney / Price / Quantity / FX Value、JPY換算、PerpetualのPosition Value / 線形Unrealized PnL、表示用丸め基盤がある。Javaの計算には `BigDecimal` を使い、金融数値のUnit Testを持つ。
 - **Existing:** `backend/src/main/java/com/cryptoportfoliohub/persistence/` に12 Entityと12 Repositoryがある。Hibernate `ddl-auto: validate` でFlyway Schemaとの整合を検証し、所有データQueryにはUser IDを含める。TestcontainersでUser A / Bの分離とConnection論理削除後の履歴参照を検証する。
 - **Existing:** BackendにGoogle OIDC Login、SubjectによるUser作成・再紐付け、Session Cookie、CSRF対応のLogout、認証User確認APIを実装し、`.env`から注入したCredentialでローカル実Google OAuth E2Eを確認した。Secret値はGit管理外である。公開環境のHost / Schemeに対応したRedirect URI登録はDeployment設計時に行う。
-- **未実装:** 業務API、Provider連携、同期処理、Credential暗号化、Frontend認証画面・Route Guard、デプロイ環境。
+- **未実装:** 業務API、Provider連携、同期処理、Credential暗号化、デプロイ環境。
 
 この一覧は本リポジトリのファイル・設定に基づく。以下の採用方針は、別途Existingと記載したものを除き、実装済みであることを意味しない。
 
@@ -46,7 +46,7 @@
 | Frontend | Next.js 16.3.3 / React 19 / TypeScript 5.7.3 | Existing | 現在のUIと設定を継続して活用する |
 | Frontend styling | Tailwind CSS 4 / shadcn/uiの既存コンポーネント | Existing | v0生成UIのデザインと部品を活かし、全面書き換えを避ける |
 | Frontend package manager | pnpm 12.3.4、lockfile固定 | Existing | `package.json` と `pnpm-lock.yaml` でバージョンが一致している |
-| Frontend server state | TanStack Query | Adopted | APIデータのcache、再取得、同期中・失敗状態をまとめて扱う |
+| Frontend server state | TanStack Query | Existing | 認証Userのcacheと状態管理に利用開始。Portfolio APIでもcache、再取得、同期中・失敗状態を扱う |
 | Frontend forms | React Hook Form + Zod | Adopted | 接続追加等の入力を整理し、クライアント側の入力補助を行う。サーバー検証の代わりにはしない |
 | Frontend global client state | Zustand | Future | MVPでは必須でない。画面をまたぐクライアント専用状態が実際に増えた場合のみ採用する |
 | Backend runtime | Java 25 LTS / Spring Boot 4.1.1 | Existing | Backend基盤のMaven設定とアプリ起動クラスを作成済み。業務機能は未実装 |
@@ -57,7 +57,7 @@
 | Database | PostgreSQL | Existing | PostgreSQL Driver、Testcontainers、Compose上のPostgreSQLを構成済み。Named Volumeにデータを保持する |
 | Database migration | Flyway | Existing | 8本の初期SQL Migrationを導入済み。起動時に検証・適用し、HibernateはSchema validateのみ行う |
 | External integrations | Provider / Adapter | Adopted | bitbank、Solana、Hyperliquid固有形式をアプリの共通モデルから隔離する |
-| Local runtime | Docker Compose | Existing | Frontend、Backend、PostgreSQLを内部Networkで起動する。Host公開PortはFrontendのみ |
+| Local runtime | Docker Compose | Existing | Frontend、Backend、PostgreSQLを内部Networkで起動する。Frontendは3000番、ローカルOAuth callback用Backendは8080番をHostへ公開し、PostgreSQLは内部のみ |
 | First deployment target | AWS Lightsail + Docker Compose | Planned | 個人開発の単一環境から始め、運用負荷と費用を抑える候補とする |
 | Public reverse proxy | Caddy | Planned | HTTPS終端とFrontend / APIの経路振り分けを単純化する |
 | Backend tests | JUnit 5 / Spring Boot Test / Testcontainers PostgreSQL | Existing | 起動health check、初期Migration / 制約、Error Response、Entity Schema mapping、User ownershipのIntegration TestとMoney / FXのUnit Testを実装済み |
@@ -74,7 +74,7 @@
 - `frontend/app/` と `frontend/components/` の画面構成・部品を土台として、API連携と状態表示を段階的に加える。UIをゼロから作り直さない。
 - Dashboard、Assets、Activity、Connectionsの表示データを静的モックからAPI由来へ置き換える。requirementsとscreen-designで定義したJPY集計、Google認証、ユーザー分離、Loading / Empty / Errorを優先する。
 - `frontend/lib/mock-data.ts` は本番データの取得元にしない。モックを残す場合は開発・テスト専用のfixtureとして扱う。
-- TypeScriptのstrict設定を維持する。型エラーを隠す `typescript.ignoreBuildErrors` はBackend連携を進める段階で解除し、buildを品質ゲートとして使う。
+- TypeScriptのstrict設定を維持する。`typescript.ignoreBuildErrors` は解除済みとし、buildと `typecheck` を品質ゲートとして使う。
 - pnpmバージョンとlockfileを一致させ、CIとDockerでも `pnpm install --frozen-lockfile` を使う。
 
 ### 3.2 Server StateとClient State
@@ -94,7 +94,8 @@
 ### 3.4 Runtime設定
 
 - ブラウザーへ公開してよい設定だけを `NEXT_PUBLIC_` 変数にする。Backend URL、API Key、OAuth Client Secret、Credential暗号化鍵などの秘密値にこの接頭辞を付けない。
-- FrontendからBackendへは同一Originの `/api/*` 経由でアクセスする構成を目標とする。ローカル開発ではNext.jsのproxy/rewriteを使い、本番ではreverse proxyが同じパスをBackendへ転送する。
+- FrontendからBackendへは同一Originの `/api/*` 経由でアクセスする。ローカル開発ではNext.js rewriteが `BACKEND_INTERNAL_URL` へ転送し、本番ではreverse proxyが同じパスをBackendへ転送する。
+- OAuth LoginはFrontendの `/auth/google` routeからBackend Authorization URLへTop-level browser redirectする。Backendは認証成功・失敗後に `FRONTEND_BASE_URL` へ戻す。ローカルComposeではGoogle callback用にBackendの8080番を公開し、Productionではpublic同一Originのreverse proxyだけを公開する。
 - 検索欄や全体Syncなど現状プレースホルダーのUIは、仕様・API・結果表示が定まるまでは業務操作として扱わない。
 
 ## 4. Backend方針
@@ -113,7 +114,7 @@
 - ログイン後のアプリ認証はBackend管理のServer-side HTTP SessionとSession Cookieを使用する。FrontendへGoogle Access Token、ID Token、Client Secretを保存・公開しない。
 - Cookieは `HttpOnly`、本番では `Secure`、`SameSite=Lax`、適切な有効期間・Pathを設定する。ログアウトでサーバーSessionを破棄し、ログイン成功時はSessionを更新する。
 - Connectionsの登録・削除、同期要求など状態を変更するAPIにはCSRF対策を適用する。CORSを広く許可してCookieを跨いで送る設計にしない。
-- OAuth Loginは `GOOGLE_OAUTH_ENABLED=true` で有効にし、`SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_ID` と `SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_SECRET` をBackend環境へ注入する。Composeでは `.env` から受け渡すが、実値をGit・イメージへ含めない。Google Cloud Consoleには公開する同一Originの `/login/oauth2/code/google` callback URLを登録する。実際のHost / SchemeはFrontend proxyまたはCaddy経由でBackendへ正しく伝える。
+- OAuth Loginは `GOOGLE_OAUTH_ENABLED=true` で有効にし、`SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_ID` と `SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_SECRET` をBackend環境へ注入する。Composeでは `.env` から受け渡すが、実値をGit・イメージへ含めない。Google Cloud Consoleには対象環境の `/login/oauth2/code/google` callback URLを登録する。ローカルComposeでは `http://localhost:8080/login/oauth2/code/google`、Productionでは公開する同一OriginのURLを使う。
 - Session Cookieは `application.yml` で `HttpOnly` / `SameSite=Lax` を設定する。本番HTTPS環境では `SESSION_COOKIE_SECURE=true` を設定する。開発用 `.env.example` の値はOAuth無効・Secureなしで、実OAuthを有効化するには利用者のGoogle OAuth設定が必要。
 - CSRF tokenは `GET /api/v1/auth/csrf` で取得し、変更系Requestの `X-CSRF-TOKEN` headerへ設定する。Session Cookieと異なりCSRF tokenはFrontendがRequest headerへ渡すため、API Responseに含める。
 
@@ -123,7 +124,7 @@ Spring SecurityのOAuth2 LoginはGoogle等のOIDC Providerによるログイン�
 
 - 公開アクセスは同一Originとし、`/api/*`、`/oauth2/*`、OAuth callbackなどBackend管理の経路はreverse proxyからBackendへ送る。画面本体はNext.jsへ送る。
 - OAuth redirectはBackendが処理し、認証完了後に同一ホストのFrontendへ戻す。ブラウザーはHttpOnly Session Cookieを自動送信する。
-- 開発時もFrontendの同一Origin proxy/rewriteでBackendへ転送する。ブラウザーからCompose内の `backend` hostnameやDBへ直接接続しない。
+- 開発時もFrontendの同一Origin proxy/rewriteでAPIをBackendへ転送する。ブラウザーからCompose内の `backend` hostnameやDBへ直接接続しない。ローカルOAuth browser redirectとcallbackだけは `localhost:8080` を使う。
 - Frontendのルートガードは画面遷移のための補助とする。APIの認証・認可は必ずBackendで検証し、cookieの存在や画面側判定をアクセス制御の代わりにしない。
 - 初期はBackend単一インスタンスのSessionを使う。再起動で再ログインになる可能性を許容し、複数インスタンスが必要になった時点でPostgreSQLを使ったSpring Session JDBC等を検討する。Redisは前提にしない。
 
@@ -318,7 +319,7 @@ Net Worth、Market Exposure、Position Value、Unrealized PnLの意味と二重�
 
 ## 14. Testing
 
-現在、Frontendにtest scriptはない。Backendには起動・Migration・Error HandlingのIntegration Testがあり、機能追加に合わせて以下のTestを加える。
+FrontendにはVitest / React Testing Libraryによるtest scriptがある。Backendには起動・Migration・Error HandlingのIntegration Testがあり、機能追加に合わせて以下のTestを加える。
 
 ### Backend
 
@@ -332,11 +333,11 @@ Net Worth、Market Exposure、Position Value、Unrealized PnLの意味と二重�
 
 - VitestとReact Testing Libraryで金額の表示、Loading / Empty / Error、主要なComponent、フォームValidationをテストする。
 - APIはmockし、テストごとにユーザーや接続データを明示する。実外部APIや実ログイン情報を使わない。
-- 認証導入後、Googleログインを含む実ブラウザーE2Eが必要な場合は専用のテスト環境を別途判断する。MVP初期から広範なE2E suiteを必須にしない。
+- 実Google OAuthのブラウザー確認はCredentialをGitやCIへ保存せず、外部Smoke Testとして必要に応じて実施する。通常の実装・回帰テスト・CIをブロックする条件にしない。MVP初期から広範な自動ブラウザーE2E suiteを必須にしない。
 
 ### 品質ゲート
 
-- CIではFrontend lint / typecheck / test / production buildを実行する。現在lint・test scriptがないため、Frontend API接続を始める前に必要なscriptを整える。
+- CIではFrontend lint / typecheck / test / production buildを実行する。typecheckとtest scriptは追加済みで、lint scriptとCI workflowは後続Stepで整える。
 - Backendではformat / compile / unit test / integration testを段階的に加える。
 - Test用CredentialやOAuth Client SecretをCIへ登録しない。外部APIテストfixtureは公開可能な匿名データのみを使う。
 

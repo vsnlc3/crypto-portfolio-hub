@@ -10,9 +10,13 @@ The Backend uses Spring Security Google OpenID Connect Login and a server-side H
 
 OAuth login is enabled only when the Backend is configured with `GOOGLE_OAUTH_ENABLED=true` and Google client credentials. The Frontend starts a browser redirect to the OAuth authorization endpoint; it must not call that endpoint using `fetch`.
 
+The Frontend `GET /auth/google` route redirects the browser to the configured `GOOGLE_OAUTH_AUTHORIZATION_URL`. The Backend OAuth success and failure handlers return to `FRONTEND_BASE_URL` (`http://localhost:3000` in local Compose by default); failure uses `/signin?error=AUTHENTICATION_FAILED`. The local Google callback remains `http://localhost:8080/login/oauth2/code/google`, and Compose publishes Backend port 8080 for that browser callback. Production uses its public Frontend URL and matching provider callback registration.
+
+Frontend API requests use same-origin `/api/*` paths. Next.js rewrites them to `BACKEND_INTERNAL_URL` (`http://backend:8080` in Compose), preserving the browser Session request. The browser does not call a Compose hostname or use cross-origin CORS for API requests.
+
 ### `GET /oauth2/authorization/google`
 
-Starts Google's Authorization Code flow and redirects the browser to Google. This is a Spring Security browser route, not a JSON API. The callback is `/login/oauth2/code/google`. The callback creates or refreshes the internal User by Google `sub`, then establishes the Backend Session. Login failures redirect to `/signin?error=AUTHENTICATION_FAILED` without exposing provider details.
+Starts Google's Authorization Code flow and redirects the browser to Google. This is a Spring Security browser route, not a JSON API. The callback is `/login/oauth2/code/google`. The callback creates or refreshes the internal User by Google `sub`, then establishes the Backend Session and redirects to `FRONTEND_BASE_URL`. Login failures redirect to the Frontend `/signin?error=AUTHENTICATION_FAILED` without exposing provider details.
 
 OAuth is disabled by default, so local and test application startup does not require real Google credentials. Enabling it without both client values fails application startup rather than falling back to an unauthenticated mode.
 

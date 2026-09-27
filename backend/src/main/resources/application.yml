@@ -21,6 +21,7 @@ app:
   auth:
     google:
       enabled: ${GOOGLE_OAUTH_ENABLED:false}
+    frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:3000}
 
 management:
   endpoints:
