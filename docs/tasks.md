@@ -680,36 +680,36 @@ Request / Response DTOはPhase 4で確認したProvider別の入力項目と既�
 
 既存Connections UIを実データへ接続する。
 
-- [ ] TanStack Query導入
-- [ ] Connection一覧
-- [ ] Loading
-- [ ] Empty
-- [ ] Error
-- [ ] Add Source
-- [ ] Delete / Disconnect
-- [ ] マスク済みIdentifier
-- [ ] Connection Status
-- [ ] Capabilities
-- [ ] last attempt / last successful sync
-- [ ] Toast
-- [ ] React Hook Form
-- [ ] Zod
+- [x] TanStack Query導入
+- [x] Connection一覧
+- [x] Loading
+- [x] Empty
+- [x] Error
+- [x] Add Source
+- [x] Delete / Disconnect
+- [x] マスク済みIdentifier
+- [x] Connection Status
+- [x] Capabilities
+- [x] last attempt / last successful sync
+- [x] Toast
+- [x] React Hook Form
+- [x] Zod
 
 ### 完了条件
 
-- [ ] Provider仕様で確定したbitbank / Solana Wallet Address / HyperliquidのFormからConnectionを追加できる
-- [ ] Connectionを一覧表示できる
-- [ ] Connectionを削除できる
-- [ ] 他UserのConnectionが表示されない
-- [ ] 入力validationとAPI validationの結果を表示する
-- [ ] Credentialが画面/API Response/ログへ露出しないことをテストする
+- [x] Provider仕様で確定したbitbank / Solana Wallet Address / HyperliquidのFormからConnectionを追加できる
+- [x] Connectionを一覧表示できる
+- [x] Connectionを削除できる
+- [x] 他UserのConnectionが表示されない
+- [x] 入力validationとAPI validationの結果を表示する
+- [x] Credentialが画面/API Response/ログへ露出しないことをテストする
 
 このPhaseではJPY評価額を表示しない。Portfolio計算完了後にConnections画面へ追加する。手動Sync操作もProvider Sync API完成後のDashboard Phaseで統合する。
 
 ### Frontend Test
 
-- [ ] Provider別Form、validation、Loading / Empty / Errorを検証する
-- [ ] Connection追加・削除後の一覧更新を検証する
+- [x] Provider別Form、validation、Loading / Empty / Errorを検証する
+- [x] Connection追加・削除後の一覧更新を検証する
 
 ---
 

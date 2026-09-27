@@ -259,6 +259,7 @@ Googleアカウントでユーザーを認証し、本人のPortfolio画面へ�
 
 - ログイン中のユーザーが所有する接続だけを表示する。
 - サービス種別・UI表示名、アカウント識別子のマスク表示、接続状態、対応機能、JPY評価額、最終同期時刻。
+- Connection作成直後の`CONNECTED`は設定登録済みを示す。Provider APIの接続検証と同期成否はSync実装後に反映する。
 - Solana接続の内部対象はWalletアプリではなくSolana Wallet Addressとする。接続バッジやラベルはPhantomと表示してよい。
 - bitbank等の秘密情報やAPIキーそのものは表示しない。
 
@@ -283,10 +284,11 @@ Googleアカウントでユーザーを認証し、本人のPortfolio画面へ�
 
 ### 現行UIとの差分
 
-- **要修正:** Solana接続の内部識別子が現在 `phantom` というWalletアプリ依存のサービスIDになっている。内部設計ではSolana Wallet Addressを接続対象として扱い、UI上の表示名としてPhantomを使う。
-- **要修正:** Add sourceとSyncは現状クリック処理のないプレースホルダー。ユーザー単位で保存された接続に対する実際の追加・読み取り同期操作にする。
-- **要修正:** 追跡額は現在USD表示。JPY基準へ変更する。
-- **要修正:** 画面下部は「Read-only demo」「Google sign-in ... coming soon」と表示する。MVPでは認証済みユーザーの接続管理画面として表示し、固定デモ文言を外す。
+- Solana ConnectionはBackendへ`SOLANA`として保存し、Wallet Addressをマスク表示する。表示用バッジはPhantom。
+- Add source、一覧、DisconnectはBackend APIへ接続済み。bitbank Credentialは画面上で再表示せず、Backend APIの応答にも含めない。
+- **後続Stepで対応:** 手動SyncはProvider Sync APIがまだないためConnections画面から依頼できない。Provider Sync実装後に接続単位で追加する。
+- Portfolio valuation前の追跡額は`— / Not valued yet`として表示し、JPY値を0やUSDとして偽装しない。JPY評価実装後にConnectionsへ反映する。
+- 固定の「Read-only demo」「Google sign-in coming soon」文言は削除済み。
 
 ## 8. 現行UIとの差分のまとめ
 
@@ -296,8 +298,8 @@ Googleアカウントでユーザーを認証し、本人のPortfolio画面へ�
 | --- | --- | --- |
 | 認証・ユーザー表示 | Sign inなし、固定プロフィール | Googleログインを必須にし、本人のデータだけを表示する。 |
 | 通貨 | 金額・評価額の大半がUSD | 集計値はJPY。価格として自然な単価・Perpetual建値はUSD表示可。 |
-| データ取得 | `mock-data.ts` の静的データ | ユーザー単位の実データを取得し、未取得とゼロを区別する。 |
+| データ取得 | Dashboard / Assets / Activityは `mock-data.ts` の静的データ。ConnectionsはBackend API接続済み。 | 各画面をユーザー単位の実データへ順次移行し、未取得とゼロを区別する。 |
 | 同期 | 時刻表示・ボタンが固定または未接続 | 接続先別の状態、最終同期時刻、部分失敗、再試行を扱う。 |
 | 履歴チャート | 期間ボタンがデータを切り替えない | 選択期間の履歴を表示し、データがない場合を明示する。 |
-| Solana接続 | `phantom` を内部サービスIDとして扱う | 内部対象はSolana Wallet Address。UIラベルはPhantom可。 |
+| Solana接続 | ConnectionsのProviderは `SOLANA`、表示バッジはPhantom。旧Mock画面にはサービスID `phantom` が残る。 | 内部対象はSolana Wallet Address。UIラベルはPhantom可。 |
 | 状態表示 | データ取得中・空・エラーの状態がない | 各画面のLoading / Empty / Errorを本書に沿って実装する。 |

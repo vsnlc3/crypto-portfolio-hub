@@ -62,13 +62,7 @@ export function AppShell({ children, user, onLogout, isLoggingOut, logoutError }
         </nav>
 
         <div className="rounded-xl border border-border bg-card/60 p-3">
-          <div className="flex items-center gap-2">
-            <span className="relative flex size-2">
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-60" />
-              <span className="relative inline-flex size-2 rounded-full bg-primary" />
-            </span>
-            <p className="text-xs font-medium text-sidebar-foreground">3 sources live</p>
-          </div>
+          <p className="text-xs font-medium text-sidebar-foreground">Read-only sources</p>
           <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
             Your read-only portfolio view.
           </p>

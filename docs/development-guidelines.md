@@ -28,15 +28,15 @@
 ### 1.2 リポジトリで確認した現在地
 
 - **Existing:** `frontend/` にNext.js、React、TypeScript、Tailwind CSS、shadcn/uiを使ったDashboard、Assets、Activity、Connections画面がある。
-- **Existing:** Portfolio画面は `frontend/lib/mock-data.ts` の静的モックを参照する。Google Sign in画面、Frontend route guard、Session user表示、CSRF付きLogoutは実装済み。Portfolio API接続と永続化は未実装。
+- **Existing:** Dashboard / Assets / Activity画面は `frontend/lib/mock-data.ts` の静的モックを参照する。ConnectionsはBackend APIへ接続済み。Google Sign in画面、Frontend route guard、Session user表示、CSRF付きLogoutも実装済み。Portfolio API接続と永続化は未実装。
 - **Existing:** ルートのDocker ComposeでFrontend、Backend、PostgreSQLを同一Networkへ接続する。Frontendは3000番、ローカルOAuth callback用にBackendは8080番をHostへ公開し、PostgreSQLは公開せずNamed Volumeへ保存する。ProductionではBackendを直接公開せずreverse proxy経由にする。`frontend/Dockerfile` はNode.js 22とpnpmを使う開発起動設定、`backend/Dockerfile` はMaven buildとJava 25 runtimeのmulti-stage buildである。
 - **Existing:** `frontend/package.json` は `pnpm@12.3.4` を指定し、lockfileもpnpm 12.3.4である。
-- **Existing:** `frontend/tsconfig.json` は `strict: true` で、Next.js build時のTypeScriptエラーを隠さない。Vitest / React Testing Library、`test`、`typecheck` scriptを追加済み。Frontend lint scriptとGitHub Actions workflowはまだない。
+- **Existing:** `frontend/tsconfig.json` は `strict: true` で、Next.js build時のTypeScriptエラーを隠さない。Vitest / React Testing Library、`test`、`typecheck` scriptを追加済み。ConnectionsでTanStack Query、React Hook Form、Zodを使い、Provider別Form、Loading / Empty / Error、追加・削除をテストする。Frontend lint scriptとGitHub Actions workflowはまだない。
 - **Existing:** `backend/` にJava 25 / Spring Boot 4.1.1のMavenプロジェクトがあり、Spring MVC、Jackson 3、JPA、PostgreSQL Driver、Flyway、Security、OAuth2 Client、Validation、Actuator、JUnit、Testcontainersを設定している。`/actuator/health` のHTTP応答、8本のFlyway Migration、主要FK / CHECK制約、Problem DetailsとRequest IDをPostgreSQL Testcontainers付きで検証する。
 - **Existing:** `backend/src/main/java/com/cryptoportfoliohub/domain/money/` に通貨付きMoney / Price / Quantity / FX Value、JPY換算、PerpetualのPosition Value / 線形Unrealized PnL、表示用丸め基盤がある。Javaの計算には `BigDecimal` を使い、金融数値のUnit Testを持つ。
 - **Existing:** `backend/src/main/java/com/cryptoportfoliohub/persistence/` に12 Entityと12 Repositoryがある。Hibernate `ddl-auto: validate` でFlyway Schemaとの整合を検証し、所有データQueryにはUser IDを含める。TestcontainersでUser A / Bの分離とConnection論理削除後の履歴参照を検証する。
-- **Existing:** BackendにGoogle OIDC Login、SubjectによるUser作成・再紐付け、Session Cookie、CSRF対応のLogout、認証User確認APIを実装し、`.env`から注入したCredentialでローカル実Google OAuth E2Eを確認した。Secret値はGit管理外である。公開環境のHost / Schemeに対応したRedirect URI登録はDeployment設計時に行う。
-- **未実装:** 業務API、Provider連携、同期処理、Credential暗号化、デプロイ環境。
+- **Existing:** BackendにGoogle OIDC Login、SubjectによるUser作成・再紐付け、Session Cookie、CSRF対応のLogout、認証User確認API、Connection一覧・追加・削除APIを実装し、`.env`から注入したCredentialでローカル実Google OAuth E2Eを確認した。Secret値はGit管理外である。公開環境のHost / Schemeに対応したRedirect URI登録はDeployment設計時に行う。
+- **未実装:** Portfolio業務API、Providerデータ取得・同期、Portfolio評価、デプロイ環境。
 
 この一覧は本リポジトリのファイル・設定に基づく。以下の採用方針は、別途Existingと記載したものを除き、実装済みであることを意味しない。
 
@@ -48,7 +48,7 @@
 | Frontend styling | Tailwind CSS 4 / shadcn/uiの既存コンポーネント | Existing | v0生成UIのデザインと部品を活かし、全面書き換えを避ける |
 | Frontend package manager | pnpm 12.3.4、lockfile固定 | Existing | `package.json` と `pnpm-lock.yaml` でバージョンが一致している |
 | Frontend server state | TanStack Query | Existing | 認証Userのcacheと状態管理に利用開始。Portfolio APIでもcache、再取得、同期中・失敗状態を扱う |
-| Frontend forms | React Hook Form + Zod | Adopted | 接続追加等の入力を整理し、クライアント側の入力補助を行う。サーバー検証の代わりにはしない |
+| Frontend forms | React Hook Form + Zod | Existing | ConnectionsのProvider別Formに導入済み。クライアント側の入力補助として使い、サーバー検証の代わりにはしない |
 | Frontend global client state | Zustand | Future | MVPでは必須でない。画面をまたぐクライアント専用状態が実際に増えた場合のみ採用する |
 | Backend runtime | Java 25 LTS / Spring Boot 4.1.1 | Existing | Backend基盤のMaven設定とアプリ起動クラスを作成済み。業務機能は未実装 |
 | Backend build | Maven Wrapper 3.9.12 | Existing | `backend/mvnw` とWrapper設定でビルドツールを固定する |
