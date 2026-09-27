@@ -23,6 +23,9 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import com.cryptoportfoliohub.connection.api.ConnectionAlreadyExistsException;
+import com.cryptoportfoliohub.connection.api.ConnectionRequestValidationException;
+import com.cryptoportfoliohub.connection.credential.CredentialEncryptionException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -58,6 +61,33 @@ public class ApiExceptionHandler {
                                                        HttpServletRequest request) {
         return response(HttpStatus.NOT_FOUND, problemResponseFactory.create(
                 HttpStatus.NOT_FOUND, ProblemCodes.RESOURCE_NOT_FOUND, exception.getMessage(), request));
+    }
+
+    @ExceptionHandler(ConnectionRequestValidationException.class)
+    ResponseEntity<Map<String, Object>> handleConnectionValidation(
+            ConnectionRequestValidationException exception, HttpServletRequest request) {
+        Map<String, Object> problem = problemResponseFactory.create(
+                HttpStatus.BAD_REQUEST, ProblemCodes.VALIDATION_ERROR,
+                "One or more request fields are invalid.", request);
+        ArrayList<Map<String, String>> errors = new ArrayList<>();
+        exception.getErrors().forEach((field, message) -> errors.add(Map.of("field", field, "message", message)));
+        problem.put("errors", errors);
+        return response(HttpStatus.BAD_REQUEST, problem);
+    }
+
+    @ExceptionHandler(ConnectionAlreadyExistsException.class)
+    ResponseEntity<Map<String, Object>> handleConnectionAlreadyExists(
+            ConnectionAlreadyExistsException exception, HttpServletRequest request) {
+        return response(HttpStatus.CONFLICT, problemResponseFactory.create(
+                HttpStatus.CONFLICT, ProblemCodes.CONNECTION_ALREADY_EXISTS, exception.getMessage(), request));
+    }
+
+    @ExceptionHandler(CredentialEncryptionException.class)
+    ResponseEntity<Map<String, Object>> handleCredentialEncryption(
+            CredentialEncryptionException exception, HttpServletRequest request) {
+        return response(HttpStatus.SERVICE_UNAVAILABLE, problemResponseFactory.create(
+                HttpStatus.SERVICE_UNAVAILABLE, ProblemCodes.CREDENTIAL_ENCRYPTION_UNAVAILABLE,
+                "Credential encryption is not available.", request));
     }
 
     @ExceptionHandler(AuthenticationException.class)

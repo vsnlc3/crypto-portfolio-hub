@@ -57,6 +57,7 @@ public class ConnectionEntity extends UpdatedEntity {
             String externalAccountRef,
             ConnectionStatus status) {
         this.user = user;
+        this.userId = user.getId();
         this.provider = provider;
         this.displayName = displayName;
         this.externalAccountRef = externalAccountRef;
@@ -85,6 +86,14 @@ public class ConnectionEntity extends UpdatedEntity {
 
     public ConnectionStatus getStatus() {
         return status;
+    }
+
+    public Instant getLastAttemptAt() {
+        return lastAttemptAt;
+    }
+
+    public Instant getLastSuccessAt() {
+        return lastSuccessAt;
     }
 
     public Instant getDeletedAt() {

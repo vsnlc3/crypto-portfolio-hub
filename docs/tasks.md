@@ -621,21 +621,21 @@ MVPで独立したMarket Price History DBは作らない。Provider仕様・Mark
 
 Phase 4で確認したProvider仕様に基づき、Provider別Create Request、validation、Connection一覧・削除を実装する。
 
-- [ ] Connection一覧
-- [ ] Connection追加
-- [ ] Connection削除
-- [ ] ProviderごとのCreate Request / Response DTO
-- [ ] Providerごとのvalidation
-- [ ] User ownership
-- [ ] display name
-- [ ] masked identifier
-- [ ] ProviderごとのCapabilities
-- [ ] Connection status
-- [ ] last attempt / last success
-- [ ] 論理削除
-- [ ] Current State削除方針をDB設計どおり実装する
-- [ ] CredentialはConnection削除時に即時削除する
-- [ ] Historyは保持し、削除済ConnectionをActive一覧に返さない
+- [x] Connection一覧
+- [x] Connection追加
+- [x] Connection削除
+- [x] ProviderごとのCreate Request / Response DTO
+- [x] Providerごとのvalidation
+- [x] User ownership
+- [x] display name
+- [x] masked identifier（bitbankはProvider仕様上Account IDが得られないためNULLとし、Credentialを識別子として使わない）
+- [x] ProviderごとのCapabilities
+- [x] Connection status（作成直後の`CONNECTED`は接続設定の登録状態を表し、Provider APIの検証はSync時に行う）
+- [x] last attempt / last success
+- [x] 論理削除
+- [x] Current State削除方針をDB設計どおり実装する（Balance / Position / Account State / Sync State）
+- [x] CredentialはConnection削除時に即時削除する
+- [x] Historyは保持し、削除済ConnectionをActive一覧に返さない
 
 ### User ownership
 
@@ -667,12 +667,12 @@ Request / Response DTOはPhase 4で確認したProvider別の入力項目と既�
 
 ### Backend Test / ownership
 
-- [ ] Provider別Create Requestのvalidationを検証する
-- [ ] Repository / ControllerでUser AがUser BのConnectionを取得・変更・削除できないことを検証する
-- [ ] Client supplied userIdで所有権を変更できないことを検証する
-- [ ] 論理削除後のConnectionがActive一覧に含まれないことを検証する
-- [ ] User AがUser BのCredentialを取得できず、Connection操作からBのCredentialへアクセスできないことを検証する
-- [ ] Connection削除時にCredential / Current Stateを削除し、Activity / Sync Historyを保持することを検証する
+- [x] Provider別Create Requestのvalidationを検証する
+- [x] Repository / ControllerでUser AがUser BのConnectionを取得・変更・削除できないことを検証する
+- [x] Client supplied userIdで所有権を変更できないことを検証する
+- [x] 論理削除後のConnectionがActive一覧に含まれないことを検証する
+- [x] User AがUser BのCredentialを取得できず、Connection操作からBのCredentialへアクセスできないことを検証する
+- [x] Connection削除時にCredential / Current Stateを削除し、Activity / Sync Historyを保持することを検証する
 
 ---
 

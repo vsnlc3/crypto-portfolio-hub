@@ -277,6 +277,8 @@ Userが登録した外部サービス接続を表す。
 | `created_at` | timestamptz | NO | |
 | `updated_at` | timestamptz | NO | |
 
+`CONNECTED`は接続設定が登録済みであることを表す。Provider APIのCredentialやデータ取得可否は同期時に確認し、失敗は同期結果とConnection statusへ反映する。同期前の`last_attempt_at` / `last_success_at`はNULLのままとする。
+
 ## Constraints
 
 ```text
@@ -340,6 +342,7 @@ WHERE deleted_at IS NULL
 ```
 
 bitbankなどIdentifierを持たないConnectionはApplication Service側で重複登録ルールを管理する。
+bitbankはAPI Key / Secretを識別子に使えないため、MVPではUserごとにActive Connectionを1件までとし、論理削除後は新しいConnectionとして再登録できる。
 
 ---
 
@@ -1254,6 +1257,9 @@ Current Position
 → 物理削除
 
 Provider Account State
+→ 物理削除
+
+Connection Sync State
 → 物理削除
 
 Activity

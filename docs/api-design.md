@@ -2,7 +2,7 @@
 
 Status: Vertical-slice contract; update this document alongside each API implementation.
 
-This document records APIs implemented so far. It does not predefine future Connection or Portfolio endpoints. JSON responses use camelCase. Errors use the common RFC 9457 Problem Details response with the application's stable `code` and `requestId` fields.
+This document records APIs implemented so far and evolves alongside each vertical slice. JSON responses use camelCase. Errors use the common RFC 9457 Problem Details response with the application's stable `code` and `requestId` fields.
 
 ## Authentication
 
@@ -53,6 +53,64 @@ Response `200`:
 `avatarUrl` and `displayName` may be `null`. Google `sub`, tokens, and Connection / Portfolio data are not included.
 
 Unauthenticated response: `401` Problem Details with `code: AUTHENTICATION_REQUIRED`.
+
+## Connections
+
+All Connection endpoints require an authenticated Google Session. `POST` and `DELETE` require the Session's CSRF token. The owner is resolved from the authenticated OIDC `sub`; a client-supplied `userId` is ignored and never determines ownership.
+
+### `GET /api/v1/connections`
+
+Returns the authenticated user's active Connections ordered by creation time, newest first. Soft-deleted Connections are excluded. Each item contains:
+
+```json
+{
+  "id": "<connection-uuid>",
+  "provider": "SOLANA",
+  "displayName": "Phantom",
+  "maskedIdentifier": "11111…1111",
+  "status": "CONNECTED",
+  "capabilities": ["BALANCE", "ACTIVITY"]
+}
+```
+
+`maskedIdentifier` is omitted when the Provider exposes no safe account identifier. In particular, bitbank API Key / Secret are credentials, not account identifiers, and are never masked or returned. `lastAttemptAt` / `lastSuccessAt` are omitted until synchronization runs. This slice does not yet return tracked JPY value.
+
+Capabilities are `BALANCE` and `ACTIVITY` for bitbank and Solana; Hyperliquid adds `POSITION` and `ACCOUNT`.
+
+### `POST /api/v1/connections`
+
+Creates an active Connection and returns `201 Created` with the same safe response shape as the list item. `displayName` is optional (maximum 100 characters); defaults are `bitbank`, `Phantom`, and `Hyperliquid`.
+
+Provider-specific JSON fields:
+
+| `provider` | Required fields | Stored account reference |
+| --- | --- | --- |
+| `BITBANK` | `apiKey`, `apiSecret` | None. Credentials are independently encrypted with AES-256-GCM and never returned. |
+| `SOLANA` | `walletAddress` | Valid Base58 encoding of a 32-byte Solana Address. No Wallet secret or signature is requested. |
+| `HYPERLIQUID` | `accountAddress` | `0x` followed by 40 hexadecimal characters; stored lowercase. No Private Key or Agent Secret is requested. |
+
+Example:
+
+```json
+{
+  "provider": "BITBANK",
+  "displayName": "My bitbank",
+  "apiKey": "<read-only-api-key>",
+  "apiSecret": "<api-secret>"
+}
+```
+
+The create endpoint performs local validation and persistence only; it does not call a Provider API. `CONNECTED` means the source configuration has been registered. Provider authentication / data availability is checked during later sync, which can update the status. If the credential encryption key is missing or invalid, bitbank creation fails closed with `503 CREDENTIAL_ENCRYPTION_UNAVAILABLE`; no plaintext value is stored.
+
+At most one active bitbank Connection is allowed per User because the Provider does not expose a verified account identifier in the confirmed private API. Active Solana and Hyperliquid duplicates are rejected by `(user, provider, account address)`; a deleted Connection may be added again as a new Connection.
+
+Invalid fields return `400 VALIDATION_ERROR` with safe field names only. An active duplicate returns `409 CONNECTION_ALREADY_EXISTS`. The API never includes rejected field values in the error response.
+
+### `DELETE /api/v1/connections/{connectionId}`
+
+Soft-deletes only a Connection owned by the authenticated User and returns `204 No Content`. An unknown, deleted, or other user's Connection returns `404 RESOURCE_NOT_FOUND`.
+
+Within the same transaction, it removes that Connection's encrypted Credentials, Current Balances, Current Positions, Provider Account States, and Connection Sync States. The Connection is retained with `status: DISCONNECTED` and `deletedAt`. Activity (including Legs and detail rows) and Sync Run history (including results) remain available to their owner; User-level Portfolio Snapshots are unchanged. Repeating the delete returns `404`.
 
 ### `POST /api/v1/auth/logout`
 
