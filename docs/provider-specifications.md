@@ -138,3 +138,80 @@ Deposit historyはdestination tag、memo、bank accountを返さない。Withdra
 - Helius Parserが認識しないProgram、Token-2022 extension、複合Transactionの分類・Legの境界をfixtureで検証する。未解析のイベントをSWAPや送金として推測分類しない。
 - Helius Parsed Events料金の公式表示が複数ページで不一致のため、Step 7実装で実APIキーを使う前に最新Plan / credits / rate limitを再確認する。外部Keyが未設定でもMock / fixtureによるAdapter実装・テストを先に進める。
 - Token Metadata URIの安全な取得・更新頻度、未知Mintの価格Provider mappingはこの仕様確認の範囲外とし、MetadataをPortfolio valuationの必須条件にしない。
+
+## Hyperliquid (Step 4-3, 調査中)
+
+### 参照した公式資料
+
+- [Hyperliquid Info Endpoint](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint)
+- [Spot Info Endpoints](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint/spot)
+- [Perpetuals Info Endpoints](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint/perpetuals)
+- [Account abstraction modes](https://hyperliquid.gitbook.io/hyperliquid-docs/trading/account-abstraction-modes)
+- [Contract specifications](https://hyperliquid.gitbook.io/hyperliquid-docs/trading/contract-specifications)
+- [Margining](https://hyperliquid.gitbook.io/hyperliquid-docs/trading/margining)
+- [Funding](https://hyperliquid.gitbook.io/hyperliquid-docs/trading/funding)
+- [Robust price indices](https://hyperliquid.gitbook.io/hyperliquid-docs/trading/robust-price-indices)
+- [Portfolio graphs](https://hyperliquid.gitbook.io/hyperliquid-docs/trading/portfolio-graphs)
+- [Rate limits and user limits](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/rate-limits-and-user-limits)
+- [WebSocket response types](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/websocket/subscriptions) — `tid` uniqueness note
+
+### ConnectionとRead API
+
+- Hyperliquid Mainnet Read APIは`POST https://api.hyperliquid.xyz/info`の公開JSON API。確認したbalance、position、history endpointsはConnectionごとのAPI KeyやSecretを要求せず、入力は実際のAccount Address。
+- Addressは`0x`付き42文字のhexadecimal address。Master AccountまたはSub-accountを接続する場合は、照会したいAccountそのもののAddressを指定する。Agent Wallet Addressでは空結果となり得る。Private Key / Agent Secretは要求・保存しない。
+- Endpointの`user` Address形式だけでは、入力がアプリ上でユーザー本人のAccountだと証明されない。読み取り専用接続ではSecretによる署名challengeを追加しない。
+
+### Spot BalanceとAsset識別
+
+- `spotClearinghouseState`は`balances[]`として`coin`、`token`、`hold`、`total`、`entryNtl`を返す。`spotMeta`の`tokens[]`にある`index` / `tokenId` / `name`を参照し、`token` indexとAsset identityを解決する。Spot pairの`@{index}`はSpot MarketのUniverse indexであり、Token IDとして使わない。
+- Asset identityは表示用`coin`文字列単独ではなく、Hyperliquid networkとSpot Tokenの`tokenId`を基本にする。Symbol remappingや同名tokenがあっても別Tokenを誤結合しない。
+- 公式Response schemaは`hold`と`total`をともに返すが、その説明では包含関係を明記していない。値を両方加算して残高を作らず、Responseをそれぞれ保持する。保有額としてどの値を採るか、holdがtotalの内数かは取得fixtureで確認する。
+- 通貨ごとの数量は文字列Decimalとして扱う。`spotMetaAndAssetCtxs`等の価格データやMarket Data IDとの対応はStep 4-4で決める。
+
+### Perpetual Position、Price、Margin、PnL
+
+- `clearinghouseState(user, dex)`は`assetPositions`と`marginSummary` / `crossMarginSummary`を返す。Position fieldには`coin`、signed `szi`、`entryPx`、`leverage.type/value`、`liquidationPx`、`marginUsed`、`positionValue`、`unrealizedPnl`がある。`metaAndAssetCtxs(dex)`は各Perp Marketの`markPx`等を返すため、正しいDEXとMarket metadataで結合する。欠損`liquidationPx`やmark priceを0で補わない。
+- Stable Position Keyは少なくとも`connection_id + perp_dex + coin`とする。HIP-3のMarket名は`dex:coin`となり得るため、`coin`だけで異なるDEXのPositionをまとめない。`szi`符号は方向、絶対値は数量として扱う。Position ValueはRequirementsどおり`abs(szi × Mark Price)`をPrice Currencyで計算し、JPY換算した値もNet Worthには加えない。
+- Hyperliquidの最初のPerp DEXのContract Specificationsでは、Perpetualは主にUSDC-margined、USDT建てのlinear contractsであり、USDC/USDTの換算はPnLへ適用されない。Price単位とCollateral / PnL単位は同じと仮定しない。現在記載される例外のPURR-USD / HYPE-USDは価格をUSDC建てとする。HIP-3はDEXごとのCollateral token / contract仕様を見て単位を解決し、symbol名だけから推定しない。
+- Contract Specificationsから推定される最初のPerp DEXのEntry / Mark / Liquidation PriceはContractのQuote Currency（主にUSDT、記載例外はUSDC）、`marginUsed`とPerpetual account values、`unrealizedPnl`はUSDC建てである。ただしInfo Response field自体にはCurrency fieldがないため、この対応はContract仕様に基づく推定としてMarketごとに照合する。JPY換算では対応するCurrencyごとのFXを記録する。契約単位を確定できないHIP-3 PositionはJPY評価をunavailableとする。
+- APIの`unrealizedPnl`をPositionごとに取得できる。HyperliquidのPortfolio graph仕様ではAccount ValueがCross / Isolated PositionのUnrealized PnLを含むと説明される。`marginUsed`はPositionに割り当てられたMarginであり、Account EquityまたはSpot Balanceに加算する別の資産として扱わない。Position ValueもNet Worthへ加算しない。
+
+### Account Modeに関する未解決点（Net Worth計算のBlocker）
+
+Hyperliquid公式資料はSpot BalanceとPerp Equityの関係をAccount abstraction mode別に定義している。
+
+| Account Mode | 公式説明 | 取得上の影響 |
+| --- | --- | --- |
+| Standard / Manual | SpotとPerp Balance、各DEXのBalanceが分離する | Spot残高と各DEX Perp Account Equityを別々に数える必要がある |
+| Unified Account | 各Asset BalanceをSpotとPerp collateralで共有する | `spotClearinghouseState`が全Balance / Holdのsource of truth。Per-DEX `clearinghouseState`を別資産残高として足せない |
+| Portfolio Margin | 対象Assetを含む一つのPortfolioにSpotとPerpsを統合する | `spotClearinghouseState`が全Balance / Holdのsource of truth。Per-DEX account valueの単純加算はできない |
+
+- API docsは`marginSummary.accountValue`とPosition PnLを返し、Portfolio graph docsはAccount ValueにUnrealized PnLが含まれるとする。一方、Unified / Portfolio Marginでは`spotClearinghouseState`をBalanceのsource of truthとし、個々のPerp DEX user stateはmeaningfulでないと明記する。
+- 調査したRead Info Requestのdocumented fieldsには、Standard / Unified / Portfolio Marginを識別する確定したmode fieldが見当たらない。`userDexAbstraction`はHIP-3 DEX abstraction関連の別設定（Account Abstraction docs上はdiscontinued）であり、Account Mode検出値として代用しない。
+- そのため、全modeを同じ`spot balance + marginSummary.accountValue`式で集計するとUnified / Portfolio Marginで残高を二重計上し得る。反対にspot balancesだけを足すとStandardのPerp collateralを落とし得る。Requirements §4.3のNet Worth定義を満たすmode別のSource of Truthと、modeをRead-onlyで確実に判定する方法が決まるまでNet Worth / SnapshotへHyperliquid値を入れない。
+- 調査時点で確認できた候補は、(a) StandardではSpot Balanceと各DEXのAccount Value（既にPnL込み）を使う、(b) Unified / Portfolio MarginではSpot Clearinghouseの全Balanceを使い、各PerpのPnLを一度だけ加える、である。ただし、現行RESTでmode検出可能かを確認できていないため、これは採用済み計算定義ではない。
+
+### Activity、Event ID、取得範囲
+
+| Activity | API / Fields | 取得上の扱い |
+| --- | --- | --- |
+| Spot / Perp Fill | `userFills`, `userFillsByTime`; `coin`, `side`, `px`, `sz`, `time`, `hash`, `oid`, `tid`, `fee`, `feeToken`, `builderFee`, `closedPnl` | Spot Marketは`@index`を`spotMeta`へ解決。Perp MarketはDEX / coinを保持。`builderFee`は`fee`へ含まれるとAPI資料にあるため二重計上しない |
+| Funding | `userFunding`; `delta.coin`, `usdc`, `szi`, `fundingRate`, `hash`, `time` | `usdc`をProvider原額として保持。符号から`IN` / `OUT`を作る最終規則はProvider fixtureで照合する |
+| Other Ledger Update | `userNonFundingLedgerUpdates`; `delta`, `hash`, `time` | 公式資料はDeposit、Transfer、Withdrawal等を含むと説明。delta typeとasset / amountを確認してからLeg化し、未対応typeは推測変換しない |
+
+- Fillの`tid`は単独で全時点・全coinに一意とは限らず、公式WebSocket docsはglobally uniqueなtrade idに`(block_time, coin, tid)`を使うよう説明する。Header dedup key候補はConnectionと`time + coin + tid`を含める。集約Fillでは個々のTrade IDとの対応を壊さないようfixture検証する。
+- `userFunding` / Ledger Updateは`hash` / `time`とdeltaを返す。複数Market・複数deltaのCollisionを避けるため、event typeとcoin/delta identityもdedup keyへ含め、API再取得fixtureで一意性を検証する。
+- Perp FillはContract Exposureの変化であり、Spot TokenのWallet移動ではない。既存`activity_legs.direction = IN / OUT / FEE`は資産移動方向を意味するため、Perp FillをSpot AssetのIN / OUT Legに変換しない。ActivityでFillのcoin / size / sideを表示する保存方法は未決定で、Adapter実装前にActivityモデルとのmappingを確定する。
+- `userFills`は最大2,000件、`userFillsByTime`は1 Response最大2,000件かつ直近10,000 fillsのみと明記される。したがってSpot/Perp Fillの古い履歴が常に取得できるとは約束しない。
+- `userFunding` / `userNonFundingLedgerUpdates`はinclusiveな`startTime` / `endTime`で取得し、公式Info docsの時刻範囲Paginationは最大500要素またはdistinct blocksとして次の`startTime`を使う。全履歴の最古時刻は資料に明記されていない。同一時刻の境界は重複dedupと欠落検証をfixtureで行う。
+
+### Rate Limit
+
+- Hyperliquid REST APIはIP単位で合計1,200 weight / minute。`clearinghouseState`と`spotClearinghouseState`は2 weight、その他多くのInfo queryは20 weight。`userFills`、`userFillsByTime`、`userFunding`等はResponse 20 itemsごとに追加weightがある。
+- Weight上限内であっても履歴APIの個別件数上限・直近10,000 fills保持範囲を超えて完全性を約束しない。Rate limit応答・timeout時はbounded backoff後に失敗/partialとし、前回Current State / Activityをstale保持する。
+
+### Step 4-3を完了できない理由
+
+- Current Account abstraction modesはSpot / Perp Balanceの包含関係を変えるが、今回確認したRead Info API資料にmodeを識別する方法がない。requirements.mdはAccount Mode別のNet Worth計算を定義していない。
+- Perp FillはPosition変化で、現在のActivity Legは保有Assetの移動を表す。Perp Fillのcoin / size / directionを保存・表示するData Mappingも決まっていない。
+- どちらも推測するとNet Worth二重計上、Perp collateral欠落、Activity Legの誤表示につながるため、Step 4-3と後続Hyperliquid Adapter実装を保留する。対応するTask itemを未完了のままにする。

@@ -430,7 +430,7 @@ Google Client Secret、Provider Credential、Encryption KeyをGitHub Actions log
 
 ### まだ未確定の事項
 
-- HyperliquidのMVPでの具体的API、権限、API制限、履歴取得範囲、更新頻度。
+- HyperliquidのAccount Mode検出とMode別Balance / Account Equityの対応付け、Perp FillのActivity表現。
 - USD価格とJPY換算用のProvider、価格・為替の評価時刻および代替手段。
 - Solanaの初回Activity取得期間、Heliusの実利用Plan / 最新料金・Rate Limitの確認、定期同期間隔。
 - 履歴・価格Snapshotの保持期間。

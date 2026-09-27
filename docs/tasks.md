@@ -497,27 +497,33 @@ Confirmed behavior and unresolved API documentation details are recorded in [pro
 
 確認する。
 
-- [ ] Account Address
-- [ ] Address validation
-- [ ] Connection作成時に必要な入力項目
-- [ ] Spot Balance
-- [ ] Perpetual Position
-- [ ] Entry Price
-- [ ] Mark Price
-- [ ] Liquidation Price
-- [ ] Position Quantity
-- [ ] Leverage
-- [ ] Margin
+- [x] Account Address
+- [x] Address validation
+- [x] Connection作成時に必要な入力項目
+- [x] Spot Balance
+- [x] Perpetual Position
+- [x] Entry Price
+- [x] Mark Price
+- [x] Liquidation Price
+- [x] Position Quantity
+- [x] Leverage
+- [x] Margin
 - [ ] Collateral
 - [ ] Account Equity
-- [ ] Unrealized PnL
+- [x] Unrealized PnL
 - [ ] Funding
-- [ ] Activity
-- [ ] Stable Position Key
-- [ ] Event ID
-- [ ] Historical Data取得範囲
-- [ ] Pagination
-- [ ] Rate Limit
+- [x] Activity
+- [x] Stable Position Key
+- [x] Event ID
+- [x] Historical Data取得範囲
+- [x] Pagination
+- [x] Rate Limit
+- [ ] Account abstraction mode detectionとMode別Net Worth source mapping
+- [ ] Spot `total` / `hold`の包含関係
+- [ ] Funding signed amountからIN / OUTへの変換規則
+- [ ] Perp FillのActivity Header / Legs mapping
+
+確認済みProvider API仕様と未確定点は[provider-specifications.md](./provider-specifications.md)に記録した。Step 4-3は未完了。Account abstraction modeによってSpot / Perp balanceの包含関係が異なり、Net Worthに使うMode判定方法が公式Read API資料から確認できない。`total` / `hold`とFundingの符号もActivity valuation前に確認が必要。Perp Fillはasset movementではないため、現行Activity Legへの保存方法が未確定。mode別Net Worth Source of TruthとPerp FillのActivity表現が決まるまで、後続のHyperliquid Adapter実装へ進まない。
 
 特に以下を確認する。
 
