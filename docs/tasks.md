@@ -466,28 +466,30 @@ Confirmed behavior and unresolved API documentation details are recorded in [pro
 
 確認する。
 
-- [ ] Wallet Address形式
-- [ ] Address validation
-- [ ] Connection作成時に必要な入力項目
-- [ ] Native SOL Balance
-- [ ] SPL Token Balance
-- [ ] Token Mintによる識別
-- [ ] Token metadata取得範囲
-- [ ] Transaction履歴
-- [ ] Transfer分類
-- [ ] Swap分類
-- [ ] SwapのOUT asset
-- [ ] SwapのIN asset
-- [ ] Fee asset / quantity
-- [ ] Transaction Signature
-- [ ] Activity Event ID / dedup key
-- [ ] RPC / API Provider
-- [ ] Historical Data取得範囲
-- [ ] Pagination
-- [ ] Rate Limit
-- [ ] RPC費用
+- [x] Wallet Address形式
+- [x] Address validation
+- [x] Connection作成時に必要な入力項目
+- [x] Native SOL Balance
+- [x] SPL Token Balance
+- [x] Token Mintによる識別
+- [x] Token metadata取得範囲
+- [x] Transaction履歴
+- [x] Transfer分類
+- [x] Swap分類
+- [x] SwapのOUT asset
+- [x] SwapのIN asset
+- [x] Fee asset / quantity
+- [x] Transaction Signature
+- [x] Activity Event ID / dedup key
+- [x] RPC / API Provider
+- [x] Historical Data取得範囲
+- [x] Pagination
+- [x] Rate Limit
+- [x] RPC費用
 
 秘密鍵・Seed Phraseは要求しない。
+
+確認結果と公式資料は[provider-specifications.md](./provider-specifications.md)に記録した。HeliusをSolana履歴Providerとして採用し、Wallet配下Token Accountの履歴を含めてcursor取得する。MVPの初回Backfill期間は設計資料に指定がないため、Sync実装Stepまでに決める。Helius Parsed EventsはOpen Betaで公式料金記載に不一致があるため、実API接続前に料金・Plan・Rate Limitを再確認する。未対応ProgramやParser失敗を推測分類せず、FixtureでTransfer / Swap / failed Transactionと数量精度を検証する。
 
 ---
 

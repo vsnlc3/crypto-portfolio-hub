@@ -430,10 +430,10 @@ Google Client Secret、Provider Credential、Encryption KeyをGitHub Actions log
 
 ### まだ未確定の事項
 
-- bitbank、Solana、HyperliquidのMVPでの具体的API、権限、API制限、履歴取得範囲、更新頻度。
+- HyperliquidのMVPでの具体的API、権限、API制限、履歴取得範囲、更新頻度。
 - USD価格とJPY換算用のProvider、価格・為替の評価時刻および代替手段。
-- Solana TokenとActivityの取得元・対象範囲、および費用・rate limit。
-- 初回Activityの取得期間、履歴・価格Snapshotの保持期間、定期同期間隔。
+- Solanaの初回Activity取得期間、Heliusの実利用Plan / 最新料金・Rate Limitの確認、定期同期間隔。
+- 履歴・価格Snapshotの保持期間。
 - Google OAuthの本番Redirect URL、Domain、Session有効期間、暗号化鍵の本番保管とRotation。
 - AWS LightsailのRegion / instance size / backup方式、独自Domain、DNS、Caddy公開設定、月額上限。
 - Provider固有のCredential暗号化・更新手順と、ユーザーがConnectionを削除した場合のデータ保持期間。
