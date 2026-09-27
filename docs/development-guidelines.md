@@ -222,6 +222,7 @@ MarketDataProvider  # USD価格・JPY FX等。資産サービスの接続Provide
 - bitbank Adapterは要件で扱う現物残高、評価に必要な値、取得可能なActivityを共通モデルへ変換する。
 - Solana Adapterは特定WalletアプリではなくSolana Wallet Addressを対象とする。秘密鍵やSeed Phraseを要求しない。UI上の表示名はPhantomとしてよい。
 - Hyperliquid Adapterは現物残高、Perpetual Position、Funding等を読み取れる範囲で共通モデルへ変換する。
+- HyperliquidのAccount ModeはRead-only `userAbstraction`で判定する。`disabled`はStandard相当、`unifiedAccount` / `portfolioMargin`は各々のModeへ対応させる。`default`、旧`dexAbstraction`、欠落・未知値・取得失敗はUnsupported / Unknownとして推測集計しない。Unified / Portfolio MarginはSpot Clearinghouse Balanceを基準にし、Perp account equityを重ねない。Perp FillはActivity Headerと1:1のPerpetual Fill Detailに保存し、現物IN / OUT Legへ変換しない。実際のFeeのみFee資産Legにする。詳細は[provider-specifications.md](./provider-specifications.md)と[database-design.md](./database-design.md)を参照する。
 - あるサービスでPositionやActivityの取得ができない場合、未対応・未取得を明示する。推測値やゼロで埋めない。
 - 外部APIの生Response、認証方式、Pagination形式をFrontendやPortfolio Domainへ漏らさない。共通モデルへの変換はAdapter内で行う。
 - 価格・為替を取得するProviderも交換可能な境界に置き、金額にCurrency、取得元、評価時刻を持たせる。

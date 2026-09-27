@@ -186,7 +186,7 @@ UNIQUE (id, user_id)
 MVPでは以下を自動削除しない。
 
 ```text
-Activity / Activity Legs
+Activity / Activity Legs / Perpetual Fill Details
 Sync Run / Sync Run Results
 Portfolio Snapshot
 ```
@@ -508,22 +508,22 @@ Confirmed behavior and unresolved API documentation details are recorded in [pro
 - [x] Position Quantity
 - [x] Leverage
 - [x] Margin
-- [ ] Collateral
-- [ ] Account Equity
+- [x] Collateral
+- [x] Account Equity
 - [x] Unrealized PnL
-- [ ] Funding
+- [x] Funding
 - [x] Activity
 - [x] Stable Position Key
 - [x] Event ID
 - [x] Historical Data取得範囲
 - [x] Pagination
 - [x] Rate Limit
-- [ ] Account abstraction mode detectionとMode別Net Worth source mapping
-- [ ] Spot `total` / `hold`の包含関係
-- [ ] Funding signed amountからIN / OUTへの変換規則
-- [ ] Perp FillのActivity Header / Legs mapping
+- [x] `userAbstraction` によるAccount abstraction mode detectionとMode別Net Worth source mapping
+- [x] Spot `total` / `hold`を別属性として保持し、`total`のみを残高評価に使う規則
+- [x] Funding signed amountからIN / OUTへの変換規則
+- [x] Perp Fill DetailとActivity Header / asset Legsのmapping
 
-確認済みProvider API仕様と未確定点は[provider-specifications.md](./provider-specifications.md)に記録した。Step 4-3は未完了。Account abstraction modeによってSpot / Perp balanceの包含関係が異なり、Net Worthに使うMode判定方法が公式Read API資料から確認できない。`total` / `hold`とFundingの符号もActivity valuation前に確認が必要。Perp Fillはasset movementではないため、現行Activity Legへの保存方法が未確定。mode別Net Worth Source of TruthとPerp FillのActivity表現が決まるまで、後続のHyperliquid Adapter実装へ進まない。
+確認結果と公式資料は[provider-specifications.md](./provider-specifications.md)と[database-design.md](./database-design.md)へ反映した。`userAbstraction`の公式Response値をModeへMappingし、`default` / legacy `dexAbstraction` / 未知値はUNSUPPORTED / UNKNOWNとして推測集計しない。Unified Account / Portfolio MarginはSpot Clearinghouse Balanceを基準とし、Perp account balance/equityを重ねない。StandardはSpotとPerp DEXごとのAccount Equityを分ける。Perp Fillは1:1 `activity_perpetual_fill_details`へ保存し、`activity_legs`には現物のIN / OUTを作らない。実APIの直接照会は開発環境のDNS制限で未実施だが、公式Schema確認とfail-closed mappingでStep 4-3を完了とする。Adapter Fixture TestはStep 7-6で行う。
 
 特に以下を確認する。
 
@@ -538,7 +538,7 @@ Price Currency
 Margin Currency
 PnL Currency
 
-FundingのAsset / Amount / Direction
+FundingのAsset / Amount / Direction（signed `usdc`を正数IN / 負数OUTとする）
 ```
 
 Net Worthへ二重計上しないため、Providerの数値定義を公式仕様で確認する。
@@ -896,13 +896,23 @@ POST /api/v1/connections/{connectionId}/sync
 
 ## Step 7-6: Hyperliquid Adapter
 
+- [ ] `V9__support_hyperliquid_account_modes_and_perp_fills.sql` MigrationとJPA / Repositoryを追加する
+- [ ] `provider_account_states.account_scope`でPerp DEXごとのAccount Stateを保持する
+- [ ] Account Stateへ正規化ModeとProvider `userAbstraction`値を保存する
 - [ ] Provider DTO
+- [ ] `userAbstraction`を取得し、既知値をModeへ厳密にMappingする
+- [ ] `default` / `dexAbstraction` / 欠落 / 未知値 / API失敗をUNKNOWN / UNSUPPORTEDとし、誤集計しない
 - [ ] Spot Balance取得・正規化
+- [ ] `total`をBalanceとして評価し、`hold`を加算しない
 - [ ] Account State取得・正規化
 - [ ] Position取得・正規化
-- [ ] Funding / Activity取得
-- [ ] Activity Header / Legs
+- [ ] Funding signed amountをIN / OUTへ正規化
+- [ ] Spot Fill Activity Header / Legs
+- [ ] Perp Fill Activity Header / Perpetual Fill Detail
+- [ ] Perp Fill quantityを資産IN / OUT legsにしない
+- [ ] Perp FeeをFEE Leg、Fee rebateをIN Legへ変換する
 - [ ] Event ID / Position stable key mapping
+- [ ] Standard / Unified / Portfolio MarginのNet Worth mappingとEquity / PnL二重計上防止
 - [ ] Account Equityの意味を反映
 - [ ] Collateralの意味を反映
 - [ ] Unrealized PnLの意味を反映
@@ -913,6 +923,20 @@ POST /api/v1/connections/{connectionId}/sync
 - [ ] Timeout / Rate Limit
 - [ ] fixture / Adapter Test
 
+### Hyperliquid Mapping Tests
+
+- [ ] `disabled` → Standard; `unifiedAccount` → Unified; `portfolioMargin` → Portfolio Margin
+- [ ] `default` / `dexAbstraction` / unknown / missing modeでNet Worth valuation unavailable
+- [ ] StandardでSpot totalと各Perp DEX accountValueを一度ずつ利用し、accountValue内のPnLを重ねない
+- [ ] Unified / Portfolio MarginでSpot totalを利用し、Perp accountValueを加算しない
+- [ ] Per-Position Unrealized PnLは意味・Currencyを確認できる場合のみ一度加算
+- [ ] Position margin / Position ValueをNet Worthへ加算しない
+- [ ] Spot holdをtotalへ追加しない
+- [ ] Fundingの正数・負数・ゼロをIN / OUT / no legへ対応
+- [ ] Perp Fill Detailのside / direction / quantity / price / startPosition / closedPnl mapping
+- [ ] Perp Fill quantityはIN / OUT legsにならず、Feeのみ資産legになる
+- [ ] DetailのUser ownershipは親Activityから継承され、cross-user参照を拒否する
+
 ---
 
 ## Step 7-7: Hyperliquid Sync
@@ -920,6 +944,8 @@ POST /api/v1/connections/{connectionId}/sync
 - [ ] Sync Run / Result / Capability State
 - [ ] Balance / Account State / Position Current State更新
 - [ ] Activity Header / Legsを同一Transactionで保存
+- [ ] Perp Fill Activity Header / Detailを同一Transactionで冪等保存
+- [ ] Perp Fee / Funding / Spot Fill LegsとPerp Fill Detailを混同しない
 - [ ] originalAmount / originalCurrencyと取得済みvaluation metadataを保持
 - [ ] 取得できない値を推測せず、NULL / unavailableにする
 - [ ] 重複排除・再実行時の冪等性
