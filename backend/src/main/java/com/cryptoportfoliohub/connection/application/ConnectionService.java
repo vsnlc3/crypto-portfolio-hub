@@ -3,9 +3,12 @@ package com.cryptoportfoliohub.connection.application;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -13,8 +16,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.cryptoportfoliohub.connection.api.ConnectionAlreadyExistsException;
 import com.cryptoportfoliohub.connection.api.ConnectionCreateRequest;
+import com.cryptoportfoliohub.connection.api.ConnectionPortfolioValueResponse;
 import com.cryptoportfoliohub.connection.api.ConnectionRequestValidationException;
 import com.cryptoportfoliohub.connection.api.ConnectionResponse;
+import com.cryptoportfoliohub.connection.api.CapabilitySyncResponse;
 import com.cryptoportfoliohub.connection.credential.CredentialEncryptionService;
 import com.cryptoportfoliohub.connection.credential.EncryptedCredential;
 import com.cryptoportfoliohub.error.ResourceNotFoundException;
@@ -24,6 +29,7 @@ import com.cryptoportfoliohub.persistence.entity.ConnectionEntity;
 import com.cryptoportfoliohub.persistence.entity.ConnectionProvider;
 import com.cryptoportfoliohub.persistence.entity.ConnectionStatus;
 import com.cryptoportfoliohub.persistence.entity.ConnectionSyncStatus;
+import com.cryptoportfoliohub.persistence.entity.ConnectionSyncState;
 import com.cryptoportfoliohub.persistence.entity.SyncCapability;
 import com.cryptoportfoliohub.persistence.entity.User;
 import com.cryptoportfoliohub.persistence.repository.AssetBalanceRepository;
@@ -32,6 +38,9 @@ import com.cryptoportfoliohub.persistence.repository.ConnectionRepository;
 import com.cryptoportfoliohub.persistence.repository.ConnectionSyncStateRepository;
 import com.cryptoportfoliohub.persistence.repository.PerpetualPositionRepository;
 import com.cryptoportfoliohub.persistence.repository.ProviderAccountStateRepository;
+import com.cryptoportfoliohub.portfolio.application.PortfolioValuationService;
+import com.cryptoportfoliohub.portfolio.domain.ConnectionPortfolioValuation;
+import com.cryptoportfoliohub.portfolio.domain.ConnectionPortfolioStatus;
 import com.cryptoportfoliohub.domain.solana.SolanaAddress;
 
 @Service
@@ -46,6 +55,7 @@ public class ConnectionService {
     private final PerpetualPositionRepository positionRepository;
     private final ProviderAccountStateRepository accountStateRepository;
     private final CredentialEncryptionService credentialEncryptionService;
+    private final PortfolioValuationService portfolioValuationService;
 
     public ConnectionService(
             ConnectionRepository connectionRepository,
@@ -54,7 +64,8 @@ public class ConnectionService {
             AssetBalanceRepository assetBalanceRepository,
             PerpetualPositionRepository positionRepository,
             ProviderAccountStateRepository accountStateRepository,
-            CredentialEncryptionService credentialEncryptionService) {
+            CredentialEncryptionService credentialEncryptionService,
+            PortfolioValuationService portfolioValuationService) {
         this.connectionRepository = connectionRepository;
         this.credentialRepository = credentialRepository;
         this.syncStateRepository = syncStateRepository;
@@ -62,12 +73,26 @@ public class ConnectionService {
         this.positionRepository = positionRepository;
         this.accountStateRepository = accountStateRepository;
         this.credentialEncryptionService = credentialEncryptionService;
+        this.portfolioValuationService = portfolioValuationService;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<ConnectionResponse> list(User authenticatedUser) {
-        return connectionRepository.findAllByUser_IdAndDeletedAtIsNullOrderByCreatedAtDesc(authenticatedUser.getId())
-                .stream().map(this::toResponse).toList();
+        UUID authenticatedUserId = authenticatedUser.getId();
+        var valuation = portfolioValuationService.valueUserWithConnections(authenticatedUserId);
+        Map<UUID, EnumMap<SyncCapability, ConnectionSyncState>> syncByConnection = new HashMap<>();
+        syncStateRepository.findAllByConnection_User_IdAndConnection_DeletedAtIsNull(authenticatedUserId)
+                .forEach(state -> syncByConnection
+                        .computeIfAbsent(state.getId().getConnectionId(), ignored -> new EnumMap<>(SyncCapability.class))
+                        .put(state.getId().getCapability(), state));
+        return connectionRepository.findAllByUser_IdAndDeletedAtIsNullOrderByCreatedAtDesc(authenticatedUserId)
+                .stream()
+                .map(connection -> toResponse(connection,
+                        syncByConnection.getOrDefault(connection.getId(), new EnumMap<>(SyncCapability.class)),
+                        valuation.connections().getOrDefault(connection.getId(),
+                                new ConnectionPortfolioValuation(
+                                        Optional.empty(), ConnectionPortfolioStatus.UNAVAILABLE))))
+                .toList();
     }
 
     @Transactional
@@ -97,7 +122,9 @@ public class ConnectionService {
             saveCredential(connection, "API_SECRET", request.apiSecret().trim());
         }
 
-        return toResponse(connection);
+        return toResponse(connection, new EnumMap<>(SyncCapability.class),
+                new ConnectionPortfolioValuation(
+                        Optional.empty(), ConnectionPortfolioStatus.UNAVAILABLE));
     }
 
     @Transactional
@@ -199,14 +226,29 @@ public class ConnectionService {
         };
     }
 
-    private ConnectionResponse toResponse(ConnectionEntity connection) {
+    private ConnectionResponse toResponse(
+            ConnectionEntity connection,
+            EnumMap<SyncCapability, ConnectionSyncState> syncStates,
+            ConnectionPortfolioValuation portfolioValue) {
+        List<SyncCapability> capabilities = capabilities(connection.getProvider());
         return new ConnectionResponse(
                 connection.getId(),
                 connection.getProvider(),
                 connection.getDisplayName(),
                 mask(connection.getProvider(), connection.getExternalAccountRef()),
                 connection.getStatus(),
-                capabilities(connection.getProvider()),
+                capabilities,
+                capabilities.stream().map(capability -> {
+                    ConnectionSyncState state = syncStates.get(capability);
+                    return state == null
+                            ? new CapabilitySyncResponse(capability, ConnectionSyncStatus.NOT_SYNCED,
+                                    null, null, null)
+                            : new CapabilitySyncResponse(capability, state.getStatus(),
+                                    state.getLastAttemptAt(), state.getLastSuccessAt(),
+                                    state.getLastErrorCategory());
+                }).toList(),
+                new ConnectionPortfolioValueResponse(
+                        portfolioValue.amountJpy().orElse(null), portfolioValue.status()),
                 connection.getLastAttemptAt(),
                 connection.getLastSuccessAt());
     }

@@ -69,11 +69,33 @@ Returns the authenticated user's active Connections ordered by creation time, ne
   "displayName": "Phantom",
   "maskedIdentifier": "11111…1111",
   "status": "CONNECTED",
-  "capabilities": ["BALANCE", "ACTIVITY"]
+  "capabilities": ["BALANCE", "ACTIVITY"],
+  "capabilitySync": [
+    {
+      "capability": "BALANCE",
+      "status": "READY",
+      "lastAttemptAt": "2026-09-28T12:00:00Z",
+      "lastSuccessAt": "2026-09-28T12:00:01Z",
+      "lastErrorCategory": null
+    },
+    {
+      "capability": "ACTIVITY",
+      "status": "NOT_SYNCED",
+      "lastAttemptAt": null,
+      "lastSuccessAt": null,
+      "lastErrorCategory": null
+    }
+  ],
+  "portfolioValue": {
+    "amountJpy": 125000,
+    "status": "COMPLETE"
+  }
 }
 ```
 
-`maskedIdentifier` is omitted when the Provider exposes no safe account identifier. In particular, bitbank API Key / Secret are credentials, not account identifiers, and are never masked or returned. `lastAttemptAt` / `lastSuccessAt` are omitted until synchronization runs. This slice does not yet return tracked JPY value.
+`maskedIdentifier` is omitted when the Provider exposes no safe account identifier. In particular, bitbank API Key / Secret are credentials, not account identifiers, and are never masked or returned. `capabilities` preserves the supported capability names; `capabilitySync` has one owner-scoped status entry for each supported capability, defaulting to `NOT_SYNCED` until a Sync State exists. It includes only safe error categories and the last attempt / success timestamps.
+
+`portfolioValue.amountJpy` is the Connection's complete contribution to Net Worth; it is `null` when any required component is unavailable. `status` is `COMPLETE`, `STALE`, `PARTIAL`, or `UNAVAILABLE`. Partial component sums are not returned as a total. A successful empty Balance can produce a real zero amount. Hyperliquid Position Value and Margin are not added; Standard mode contributes Perp DEX Account Equity, while Unified Account / Portfolio Margin contributes the Spot balances and applicable Unrealized PnL according to the Portfolio calculation rules.
 
 Capabilities are `BALANCE` and `ACTIVITY` for bitbank and Solana; Hyperliquid adds `POSITION` and `ACCOUNT`.
 

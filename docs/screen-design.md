@@ -287,7 +287,7 @@ Googleアカウントでユーザーを認証し、本人のPortfolio画面へ�
 - Solana ConnectionはBackendへ`SOLANA`として保存し、Wallet Addressをマスク表示する。表示用バッジはPhantom。
 - Add source、一覧、DisconnectはBackend APIへ接続済み。bitbank Credentialは画面上で再表示せず、Backend APIの応答にも含めない。
 - **後続Stepで対応:** BackendのConnection単位Manual Sync APIはStep 7-3で実装済み。現在のConnections UIではSync操作をまだAPIへ接続していないため、Step 12-4で接続する。Sync中は対象Connectionだけをdisableし、Partial Failure時は成功Capabilityのデータを表示しつつ失敗状態と前回成功時刻を示す。
-- Portfolio valuation前の追跡額は`— / Not valued yet`として表示し、JPY値を0やUSDとして偽装しない。JPY評価実装後にConnectionsへ反映する。
+- BackendのConnections応答は`portfolioValue`とCapabilityごとの同期状態を返す。Frontendは後続Stepでこれを表示するまで評価額を未取得として扱い、0やUSDとして偽装しない。
 - 固定の「Read-only demo」「Google sign-in coming soon」文言は削除済み。
 
 ## 8. 現行UIとの差分のまとめ

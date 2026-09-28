@@ -14,10 +14,13 @@ public record ConnectionResponse(
         String maskedIdentifier,
         ConnectionStatus status,
         List<SyncCapability> capabilities,
+        List<CapabilitySyncResponse> capabilitySync,
+        ConnectionPortfolioValueResponse portfolioValue,
         Instant lastAttemptAt,
         Instant lastSuccessAt) {
 
     public ConnectionResponse {
         capabilities = List.copyOf(capabilities);
+        capabilitySync = List.copyOf(capabilitySync);
     }
 }

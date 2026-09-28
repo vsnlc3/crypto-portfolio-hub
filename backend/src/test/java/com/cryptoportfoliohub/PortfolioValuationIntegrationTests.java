@@ -27,6 +27,7 @@ import com.cryptoportfoliohub.marketdata.domain.MarketPriceChange;
 import com.cryptoportfoliohub.persistence.entity.ConnectionProvider;
 import com.cryptoportfoliohub.portfolio.application.PortfolioValuationService;
 import com.cryptoportfoliohub.portfolio.application.PortfolioSnapshotService;
+import com.cryptoportfoliohub.portfolio.domain.ConnectionPortfolioStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.eq;
@@ -147,6 +148,61 @@ class PortfolioValuationIntegrationTests {
         var result = valuationService.valueUser(user);
 
         assertThat(result.netWorthJpy()).contains(new BigDecimal("16650.00000000"));
+    }
+
+    @Test
+    void connectionContributionsSumToNetWorthWithoutAddingPositionValueOrMargin() {
+        UUID user = createUser("connection-portfolio-total");
+        Fixture bitbank = createBitbankFixture(user, new BigDecimal("2"));
+        Fixture hyperliquid = createHyperliquidFixture(user, true);
+
+        var result = valuationService.valueUserWithConnections(user);
+
+        assertThat(result.portfolio().netWorthJpy()).contains(new BigDecimal("46800.00000000"));
+        assertThat(result.connections()).hasSize(2);
+        assertThat(result.connections().get(bitbank.connectionId()).amountJpy())
+                .contains(new BigDecimal("30000.00000000"));
+        assertThat(result.connections().get(hyperliquid.connectionId()).amountJpy())
+                .contains(new BigDecimal("16800.00000000"));
+        assertThat(result.connections().values())
+                .allSatisfy(value -> assertThat(value.status()).isEqualTo(ConnectionPortfolioStatus.COMPLETE));
+    }
+
+    @Test
+    void connectionValueIsUnavailableAsPartialInsteadOfReturningAUsablePartialSum() {
+        UUID user = createUser("connection-portfolio-partial");
+        Fixture fixture = createBitbankFixture(user, new BigDecimal("2"));
+        jdbcTemplate.update("""
+                INSERT INTO asset_balances (
+                    id, connection_id, user_id, asset_key, symbol, asset_category, network,
+                    total_quantity, valuation_status, fetched_at, last_success_sync_run_id
+                ) VALUES (?, ?, ?, 'CUSTOM:UNKNOWN', 'UNKNOWN', 'CRYPTO', 'UNSUPPORTED', 1,
+                    'UNAVAILABLE', ?, ?)
+                """, UUID.randomUUID(), fixture.connectionId(), user, timestamp(), fixture.syncRunId());
+
+        var result = valuationService.valueUserWithConnections(user);
+        var connectionValue = result.connections().get(fixture.connectionId());
+
+        assertThat(result.portfolio().netWorthJpy()).isEmpty();
+        assertThat(connectionValue.amountJpy()).isEmpty();
+        assertThat(connectionValue.status()).isEqualTo(ConnectionPortfolioStatus.PARTIAL);
+    }
+
+    @Test
+    void connectionValueRetainsAStaleAmountFromTheLastSuccessfulCurrentState() {
+        UUID user = createUser("connection-portfolio-stale");
+        Fixture fixture = createBitbankFixture(user, new BigDecimal("2"));
+        jdbcTemplate.update("""
+                UPDATE connection_sync_states
+                SET status = 'ERROR', last_error_category = 'UNAVAILABLE'
+                WHERE connection_id = ? AND user_id = ? AND capability = 'BALANCE'
+                """, fixture.connectionId(), user);
+
+        var connectionValue = valuationService.valueUserWithConnections(user)
+                .connections().get(fixture.connectionId());
+
+        assertThat(connectionValue.amountJpy()).contains(new BigDecimal("30000.00000000"));
+        assertThat(connectionValue.status()).isEqualTo(ConnectionPortfolioStatus.STALE);
     }
 
     @Test

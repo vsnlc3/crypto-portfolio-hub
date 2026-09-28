@@ -1,6 +1,7 @@
 package com.cryptoportfoliohub;
 
 import java.nio.charset.StandardCharsets;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -82,6 +83,9 @@ class ConnectionApiIntegrationTests {
                 .andExpect(jsonPath("$.maskedIdentifier").doesNotExist())
                 .andExpect(jsonPath("$.status").value("CONNECTED"))
                 .andExpect(jsonPath("$.capabilities").isArray())
+                .andExpect(jsonPath("$.portfolioValue.amountJpy").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.portfolioValue.status").value("UNAVAILABLE"))
+                .andExpect(jsonPath("$.capabilitySync[0].status").value("NOT_SYNCED"))
                 .andReturn().getResponse().getContentAsString();
 
         assertThat(response).doesNotContain(apiKey, apiSecret, "ciphertext", "API_SECRET");
@@ -199,6 +203,58 @@ class ConnectionApiIntegrationTests {
                                 {"provider":"HYPERLIQUID","accountAddress":"%s"}
                                 """.formatted(address.toLowerCase())))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void connectionListReturnsOwnerScopedJpyValueAndCapabilitySyncMetadata() throws Exception {
+        User owner = createUser("connection-value-owner");
+        User other = createUser("connection-value-other");
+        String body = mockMvc.perform(post("/api/v1/connections")
+                        .with(login(owner)).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"provider":"BITBANK","apiKey":"value-key","apiSecret":"value-secret"}
+                                """))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        UUID connectionId = UUID.fromString(com.jayway.jsonpath.JsonPath.read(body, "$.id"));
+        UUID syncRunId = UUID.randomUUID();
+        Instant syncedAt = Instant.parse("2026-09-28T01:00:00Z");
+        jdbcTemplate.update("""
+                INSERT INTO sync_runs (id, connection_id, user_id, trigger_type, status, started_at, finished_at)
+                VALUES (?, ?, ?, 'INITIAL', 'SUCCESS', ?, ?)
+                """, syncRunId, connectionId, owner.getId(),
+                Timestamp.from(syncedAt), Timestamp.from(syncedAt));
+        jdbcTemplate.update("""
+                INSERT INTO connection_sync_states (
+                    connection_id, user_id, capability, status, last_attempt_at,
+                    last_success_at, last_success_sync_run_id
+                ) VALUES (?, ?, 'BALANCE', 'READY', ?, ?, ?)
+                """, connectionId, owner.getId(),
+                Timestamp.from(syncedAt), Timestamp.from(syncedAt), syncRunId);
+        jdbcTemplate.update("""
+                INSERT INTO asset_balances (
+                    id, connection_id, user_id, asset_key, symbol, asset_category, network,
+                    total_quantity, valuation_status, fetched_at, last_success_sync_run_id
+                ) VALUES (?, ?, ?, 'JPY', 'JPY', 'FIAT', 'BITBANK', 1234.5,
+                    'UNAVAILABLE', ?, ?)
+                """, UUID.randomUUID(), connectionId, owner.getId(),
+                Timestamp.from(syncedAt), syncRunId);
+
+        mockMvc.perform(get("/api/v1/connections").with(login(owner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].portfolioValue.amountJpy").value(1234.5))
+                .andExpect(jsonPath("$[0].portfolioValue.status").value("COMPLETE"))
+                .andExpect(jsonPath("$[0].capabilitySync[0].capability").value("BALANCE"))
+                .andExpect(jsonPath("$[0].capabilitySync[0].status").value("READY"))
+                .andExpect(jsonPath("$[0].capabilitySync[0].lastSuccessAt")
+                        .value("2026-09-28T01:00:00Z"))
+                .andExpect(jsonPath("$[0].capabilitySync[1].capability").value("ACTIVITY"))
+                .andExpect(jsonPath("$[0].capabilitySync[1].status").value("NOT_SYNCED"));
+
+        mockMvc.perform(get("/api/v1/connections").with(login(other)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(0)));
     }
 
     @Test

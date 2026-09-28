@@ -83,6 +83,10 @@ public class ConnectionSyncState {
         return lastSuccessAt;
     }
 
+    public String getLastErrorCategory() {
+        return lastErrorCategory;
+    }
+
     public UUID getLastSuccessSyncRunId() {
         return lastSuccessSyncRunId;
     }

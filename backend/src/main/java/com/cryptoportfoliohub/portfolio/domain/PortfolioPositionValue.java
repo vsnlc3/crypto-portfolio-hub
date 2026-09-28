@@ -9,14 +9,24 @@ public record PortfolioPositionValue(
         Optional<BigDecimal> marginJpy,
         Optional<BigDecimal> unrealizedPnlJpy,
         boolean stale,
-        boolean snapshotStale) {
+        boolean snapshotStale,
+        boolean pnlStale) {
 
     public PortfolioPositionValue(
             Optional<BigDecimal> positionValueJpy,
             Optional<BigDecimal> marginJpy,
             Optional<BigDecimal> unrealizedPnlJpy,
             boolean stale) {
-        this(positionValueJpy, marginJpy, unrealizedPnlJpy, stale, stale);
+        this(positionValueJpy, marginJpy, unrealizedPnlJpy, stale, stale, stale);
+    }
+
+    public PortfolioPositionValue(
+            Optional<BigDecimal> positionValueJpy,
+            Optional<BigDecimal> marginJpy,
+            Optional<BigDecimal> unrealizedPnlJpy,
+            boolean stale,
+            boolean snapshotStale) {
+        this(positionValueJpy, marginJpy, unrealizedPnlJpy, stale, snapshotStale, snapshotStale);
     }
 
     public PortfolioPositionValue {

@@ -1166,18 +1166,25 @@ Snapshot生成頻度・最小間隔はProvider制限・運用方針を確認し�
 
 Portfolio計算後に、Connections画面用のConnection別JPY評価額と状態を集計する。
 
-- [ ] ConnectionごとにNet Worthへ反映される保有資産額を集計する
-- [ ] Position ValueやMarginを保有資産として二重計上しない
-- [ ] Connection内の必要な評価値が不足する場合は0にせずunavailable / partial statusを返す
-- [ ] Capabilitiesとlast successful sync metadataを返す
-- [ ] authenticated user idでConnectionとCurrent Stateを必ず絞る
-- [ ] API変更を `api-design.md` に反映する
+- [x] ConnectionごとにNet Worthへ反映される保有資産額を集計する
+- [x] Position ValueやMarginを保有資産として二重計上しない
+- [x] Connection内の必要な評価値が不足する場合は0にせずunavailable / partial statusを返す
+- [x] Capabilitiesとlast successful sync metadataを返す
+- [x] authenticated user idでConnectionとCurrent Stateを必ず絞る
+- [x] API変更を `api-design.md` に反映する
 
 ### Test / ownership
 
-- [ ] 複数Connectionの合計がPortfolio定義と一致する
-- [ ] unavailable / staleを0として扱わない
-- [ ] User AがUser BのConnection別評価額を取得できない
+- [x] 複数Connectionの合計がPortfolio定義と一致する
+- [x] unavailable / staleを0として扱わない
+- [x] User AがUser BのConnection別評価額を取得できない
+
+### 実装結果
+
+- 既存の `GET /api/v1/connections` と作成応答へ `portfolioValue` とCapabilityごとの `capabilitySync` を追加した。既存のCapability名配列とConnection単位の同期時刻は維持する。
+- Connection評価額は、現物BalanceとNet Worthへ実際に反映されるHyperliquid Account Equity / Unrealized PnLから計算する。Perpetual Position ValueとMarginは加えない。
+- 評価額は完全に計算できる場合のみ返し、既知の入力が一部でも未評価なら `amountJpy: null` / `PARTIAL` とする。最後の成功状態を再利用する場合は金額を保ち `STALE` とする。
+- API応答、複数Connectionの合計、Hyperliquid Equity、部分未評価、STALE、Capability時刻、User所有範囲をPostgreSQL Testcontainersで検証した。
 
 ---
 

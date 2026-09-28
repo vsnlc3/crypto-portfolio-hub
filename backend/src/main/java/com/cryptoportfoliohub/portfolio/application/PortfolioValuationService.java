@@ -44,6 +44,9 @@ import com.cryptoportfoliohub.portfolio.domain.PortfolioBalanceValue;
 import com.cryptoportfoliohub.portfolio.domain.PortfolioCalculator;
 import com.cryptoportfoliohub.portfolio.domain.PortfolioPositionValue;
 import com.cryptoportfoliohub.portfolio.domain.PortfolioValuation;
+import com.cryptoportfoliohub.portfolio.domain.ConnectionPortfolioStatus;
+import com.cryptoportfoliohub.portfolio.domain.ConnectionPortfolioValuation;
+import com.cryptoportfoliohub.portfolio.domain.UserPortfolioValuation;
 
 @Service
 public class PortfolioValuationService {
@@ -77,11 +80,23 @@ public class PortfolioValuationService {
 
     @Transactional
     public PortfolioValuation valueUser(UUID authenticatedUserId) {
+        return valueUserInternal(authenticatedUserId, false).portfolio();
+    }
+
+    @Transactional
+    public UserPortfolioValuation valueUserWithConnections(UUID authenticatedUserId) {
+        return valueUserInternal(authenticatedUserId, true);
+    }
+
+    private UserPortfolioValuation valueUserInternal(
+            UUID authenticatedUserId, boolean includeConnectionValuations) {
         Objects.requireNonNull(authenticatedUserId, "authenticatedUserId must not be null");
         List<ConnectionEntity> connections = connectionRepository
                 .findAllByUser_IdAndDeletedAtIsNullOrderByCreatedAtDesc(authenticatedUserId);
         if (connections.isEmpty()) {
-            return calculator.calculate(List.of(), List.of(), Optional.empty(), false, false, false);
+            return new UserPortfolioValuation(
+                    calculator.calculate(List.of(), List.of(), Optional.empty(), false, false, false),
+                    Map.of());
         }
 
         List<AssetBalance> balances = balanceRepository
@@ -101,10 +116,13 @@ public class PortfolioValuationService {
         accountStates.forEach(state -> valueAccountState(state, fxQuotes));
 
         List<PortfolioBalanceValue> balanceValues = new ArrayList<>();
+        List<ComputedBalance> computedBalances = new ArrayList<>();
         for (AssetBalance balance : balances) {
             AssetEvaluation evaluation = valueBalance(balance, priceQuotes, fxQuotes);
-            balanceValues.add(new PortfolioBalanceValue(
-                    evaluation.category(), evaluation.valueJpy(), evaluation.stale()));
+            PortfolioBalanceValue value = new PortfolioBalanceValue(
+                    evaluation.category(), evaluation.valueJpy(), evaluation.stale());
+            balanceValues.add(value);
+            computedBalances.add(new ComputedBalance(balance, value));
         }
 
         List<ComputedPosition> computedPositions = new ArrayList<>();
@@ -145,7 +163,7 @@ public class PortfolioValuationService {
 
         Optional<Instant> dataAsOfAt = dataAsOfAt(
                 connections, syncByConnection, balances, positions, accountStates);
-        return calculator.calculate(
+        PortfolioValuation userValuation = calculator.calculate(
                 balanceValues,
                 positionValues,
                 netWorthAdjustmentKnown ? Optional.of(roundJpy(netWorthAdjustment)) : Optional.empty(),
@@ -154,6 +172,16 @@ public class PortfolioValuationService {
                 syncAssessment.stale() || netWorthAdjustmentStale,
                 dataAsOfAt,
                 syncAssessment.stale() || netWorthSnapshotAdjustmentStale);
+        Map<UUID, ConnectionPortfolioValuation> connectionValuations = includeConnectionValuations
+                ? connectionValuations(
+                        connections,
+                        syncByConnection,
+                        computedBalances,
+                        statesByConnection,
+                        positionsByConnection,
+                        fxQuotes)
+                : Map.of();
+        return new UserPortfolioValuation(userValuation, connectionValuations);
     }
 
     private Map<String, MarketPriceQuote> resolvePrices(List<AssetBalance> balances) {
@@ -265,7 +293,8 @@ public class PortfolioValuationService {
         boolean snapshotStale = isStale(priceFx) || isStale(pnlFx);
         boolean stale = snapshotStale || isStale(marginFx);
         return new ComputedPosition(position,
-                new PortfolioPositionValue(positionJpy, marginJpy, pnlJpy, stale, snapshotStale),
+                new PortfolioPositionValue(positionJpy, marginJpy, pnlJpy, stale, snapshotStale,
+                        isStale(pnlFx)),
                 pnlJpy,
                 positionScope(position));
     }
@@ -328,6 +357,7 @@ public class PortfolioValuationService {
                             return Optional.empty();
                         }
                         total = total.add(position.unrealizedPnlJpy().orElseThrow());
+                        stale |= position.portfolioValue().pnlStale();
                     }
                 }
             }
@@ -341,8 +371,60 @@ public class PortfolioValuationService {
             totalPnl = totalPnl.add(position.unrealizedPnlJpy().orElseThrow());
         }
         return Optional.of(new NetWorthAdjustment(roundJpy(totalPnl),
-                positions.stream().anyMatch(position -> position.portfolioValue().stale()),
+                positions.stream().anyMatch(position -> position.portfolioValue().pnlStale()),
                 positions.stream().anyMatch(position -> position.portfolioValue().snapshotStale())));
+    }
+
+    private Map<UUID, ConnectionPortfolioValuation> connectionValuations(
+            List<ConnectionEntity> connections,
+            Map<UUID, EnumMap<SyncCapability, ConnectionSyncState>> syncByConnection,
+            List<ComputedBalance> balances,
+            Map<UUID, List<ProviderAccountState>> statesByConnection,
+            Map<UUID, List<ComputedPosition>> positionsByConnection,
+            Map<String, MarketFxQuote> fxQuotes) {
+        Map<UUID, ConnectionPortfolioValuation> result = new HashMap<>();
+        for (ConnectionEntity connection : connections) {
+            List<ComputedBalance> scopedBalances = balances.stream()
+                    .filter(value -> connection.getId().equals(value.entity().getConnection().getId()))
+                    .toList();
+            List<ProviderAccountState> scopedStates = statesByConnection.getOrDefault(
+                    connection.getId(), List.of());
+            List<ComputedPosition> scopedPositions = positionsByConnection.getOrDefault(
+                    connection.getId(), List.of());
+            SyncAssessment sync = assessRequiredSync(List.of(connection), syncByConnection);
+
+            boolean balancesComplete = scopedBalances.stream()
+                    .allMatch(value -> value.value().valueJpy().isPresent());
+            Optional<BigDecimal> holdings = balancesComplete
+                    ? Optional.of(scopedBalances.stream()
+                            .map(value -> value.value().valueJpy().orElseThrow())
+                            .reduce(BigDecimal.ZERO, BigDecimal::add))
+                    : Optional.empty();
+            Optional<NetWorthAdjustment> adjustment = connection.getProvider() == ConnectionProvider.HYPERLIQUID
+                    ? hyperliquidAdjustment(connection.getId(), scopedStates, scopedPositions, fxQuotes)
+                    : Optional.of(new NetWorthAdjustment(BigDecimal.ZERO, false, false));
+
+            if (sync.available() && holdings.isPresent() && adjustment.isPresent()) {
+                boolean stale = sync.stale()
+                        || scopedBalances.stream().anyMatch(value -> value.value().stale())
+                        || adjustment.orElseThrow().stale();
+                result.put(connection.getId(), new ConnectionPortfolioValuation(
+                        Optional.of(roundJpy(holdings.orElseThrow()
+                                .add(adjustment.orElseThrow().amountJpy()))),
+                        stale ? ConnectionPortfolioStatus.STALE : ConnectionPortfolioStatus.COMPLETE));
+                continue;
+            }
+
+            boolean hasCurrentState = !scopedBalances.isEmpty()
+                    || !scopedPositions.isEmpty()
+                    || !scopedStates.isEmpty();
+            result.put(connection.getId(), new ConnectionPortfolioValuation(
+                    Optional.empty(),
+                    hasCurrentState || sync.available()
+                            ? ConnectionPortfolioStatus.PARTIAL
+                            : ConnectionPortfolioStatus.UNAVAILABLE));
+        }
+        return Map.copyOf(result);
     }
 
     private Optional<Instant> dataAsOfAt(
@@ -594,6 +676,9 @@ public class PortfolioValuationService {
             PortfolioPositionValue portfolioValue,
             Optional<BigDecimal> unrealizedPnlJpy,
             String scope) {
+    }
+
+    private record ComputedBalance(AssetBalance entity, PortfolioBalanceValue value) {
     }
 
     private record NetWorthAdjustment(BigDecimal amountJpy, boolean stale, boolean snapshotStale) {
