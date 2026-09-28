@@ -1648,53 +1648,55 @@ Vitest / React Testing Libraryの基盤はPhase 3で導入し、各画面・操�
 
 User A / User Bを作成し、以下すべてのResourceについてUser AがUser BのResourceを取得・変更・削除・同期できないことを再確認する。
 
-- [ ] Connection
-- [ ] Credential
-- [ ] Balance
-- [ ] Position
-- [ ] Provider Account State
-- [ ] Activity
-- [ ] Activity Legs
-- [ ] Sync Run / Sync Result / Sync State
-- [ ] Portfolio Snapshot
-- [ ] Connection別評価額
+- [x] Connection
+- [x] Credential
+- [x] Balance
+- [x] Position
+- [x] Provider Account State
+- [x] Activity
+- [x] Activity Legs
+- [x] Sync Run / Sync Result / Sync State
+- [x] Portfolio Snapshot
+- [x] Connection別評価額
 
 Repository / Application / Controllerの各境界を確認する。DBのComposite Foreign Keyについても、Connection Userと子Entity Userが食い違う行を保存できないことを再確認する。
 
 ## Provider / Sync integration regression
 
-- [ ] 各Provider fixture / Mock APIとの正規化・Error mapping
-- [ ] Success / Failure / Partial Failure
-- [ ] 前回成功Current State保持
-- [ ] lastAttemptAt / lastSuccessAt / Capability状態
-- [ ] 同一Connection重複Sync防止と状態解放
-- [ ] Activity Header / Legsの同一Transaction保存
-- [ ] 再同期時のdedup
-- [ ] 論理削除ConnectionのActivity / Sync History保持・User本人への提供
+- [x] 各Provider fixture / Mock APIとの正規化・Error mapping
+- [x] Success / Failure / Partial Failure
+- [x] 前回成功Current State保持
+- [x] lastAttemptAt / lastSuccessAt / Capability状態
+- [x] 同一Connection重複Sync防止と状態解放
+- [x] Activity Header / Legsの同一Transaction保存
+- [x] 再同期時のdedup
+- [x] 論理削除ConnectionのActivity / Sync History保持・User本人への提供
 
 ## Portfolio / Snapshot regression
 
-- [ ] Net Worth / Market Exposure / Position Value / Margin / Unrealized PnL
-- [ ] Price / Margin / PnL FX分離と二重計上防止
-- [ ] price / FX unavailable、stale、取得済み0の区別
-- [ ] COMPLETE / STALE Snapshot
-- [ ] 必須Current State / Price / FX不足時にSnapshotを作らない
-- [ ] Activity失敗だけではSnapshot作成を妨げない
-- [ ] 欠損履歴点を0補間しない
+- [x] Net Worth / Market Exposure / Position Value / Margin / Unrealized PnL
+- [x] Price / Margin / PnL FX分離と二重計上防止
+- [x] price / FX unavailable、stale、取得済み0の区別
+- [x] COMPLETE / STALE Snapshot
+- [x] 必須Current State / Price / FX不足時にSnapshotを作らない
+- [x] Activity失敗だけではSnapshot作成を妨げない
+- [x] 欠損履歴点を0補間しない
 
 ## Credential / Retention regression
 
-- [ ] encryption / decryption / random nonce / key version
-- [ ] invalid ciphertext / plaintext fallbackなし / Credential非公開・非記録
-- [ ] Connection削除時CredentialとCurrent Stateを削除
-- [ ] Activity / Sync Run / Portfolio Snapshotを削除しない
-- [ ] TTL JobやRetention目的Partitionが追加されていない
+- [x] encryption / decryption / random nonce / key version
+- [x] invalid ciphertext / plaintext fallbackなし / Credential非公開・非記録
+- [x] Connection削除時CredentialとCurrent Stateを削除
+- [x] Activity / Sync Run / Portfolio Snapshotを削除しない
+- [x] TTL JobやRetention目的Partitionが追加されていない
 
 ## Integration実行条件
 
-- [ ] Testcontainers PostgreSQLで空Schemaから全Flyway Migrationを適用する
-- [ ] API認証 / User ownership / DB制約を組み合わせたController Integration Testを実行する
-- [ ] 対象テストがすべて成功する
+- [x] Testcontainers PostgreSQLで空Schemaから全Flyway Migrationを適用する
+- [x] API認証 / User ownership / DB制約を組み合わせたController Integration Testを実行する
+- [x] 対象テストがすべて成功する
+
+**実装結果:** 既存のRepository / Controller / Provider / Sync / Valuation / Snapshot Integration TestをTestcontainers PostgreSQLと全Flyway Migration上で横断実行した。User A/BのConnection、Credential、Current State、Activity Header / Legs / Perpetual Fill、Sync Run / Result / State、Snapshotの境界とDB制約、Connection削除時のCredential / Current State削除と履歴保持、各Providerの再同期・部分失敗・重複防止、Portfolio計算・FX分離・Snapshot条件を確認した。TTL Job / Retention Partitionは存在しない。Java 25 `./mvnw -q clean verify` は179 tests、failures 0 / errors 0 / skipped 1（Live Smoke Testはsystem property未指定）で成功した。
 
 ---
 
