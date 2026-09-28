@@ -1196,20 +1196,20 @@ Portfolio計算後に、Connections画面用のConnection別JPY評価額と状�
 
 最低限:
 
-- [ ] 銘柄別合計数量
-- [ ] JPY評価額
-- [ ] Spot Holdings
-- [ ] Directional Assets
-- [ ] Stablecoins
-- [ ] 保有Connection内訳
-- [ ] Current Price
-- [ ] Price Currency
-- [ ] Price Source / evaluatedAt
-- [ ] 24h Price Change
-- [ ] Comparison period (`24h`)
-- [ ] Market Data Source / evaluatedAt
-- [ ] 24h change unavailableを `null / unavailable` で返す
-- [ ] Fresh / stale / unavailable情報
+- [x] 銘柄別合計数量
+- [x] JPY評価額
+- [x] Spot Holdings
+- [x] Directional Assets
+- [x] Stablecoins
+- [x] 保有Connection内訳
+- [x] Current Price
+- [x] Price Currency
+- [x] Price Source / evaluatedAt
+- [x] 24h Price Change
+- [x] Comparison period (`24h`)
+- [x] Market Data Source / evaluatedAt
+- [x] 24h change unavailableを `null / unavailable` で返す
+- [x] Fresh / stale / unavailable情報
 
 24h Price ChangeはPhase 6のMarket Data quote / ticker由来とし、Portfolio Snapshotから算出しない。
 
@@ -1219,10 +1219,17 @@ API仕様を `api-design.md` に反映する。
 
 ### API Test / ownership
 
-- [ ] 銘柄の数量 / JPY評価額 / quote項目を検証する
-- [ ] 24h changeの比較期間・単位・source・evaluatedAtを検証する
-- [ ] 24h change unavailableはnull/statusで表現し0にしない
-- [ ] User AがUser BのBalance / Asset summaryを取得できない
+- [x] 銘柄の数量 / JPY評価額 / quote項目を検証する
+- [x] 24h changeの比較期間・単位・source・evaluatedAtを検証する
+- [x] 24h change unavailableはnull/statusで表現し0にしない
+- [x] User AがUser BのBalance / Asset summaryを取得できない
+
+### 実装結果
+
+- Authenticated User所有のBalanceをApplication Query Serviceで銘柄集約し、Spot Holdings / Directional / Stablecoins、JPY評価、Connection内訳を返す `GET /api/v1/assets` を追加した。
+- Supported assetだけcanonical keyで統合し、未対応assetはnetworkとasset reference（referenceなしではasset key）で識別する。同じsymbolだけの銘柄統合は行わない。
+- CoinGeckoのcurrent priceとH24 price changeにsource / evaluatedAt / freshnessを含める。未取得の24h changeやFXを0にしない。Balance未同期Connectionを含むcross-Connection aggregateは不完全として数量・金額をnullにする。
+- API契約を `docs/api-design.md` に追加した。Testcontainersで複数Connection集約、Quote項目、H24 unavailable、stale quote、FX unavailable、未同期、未知token identity、User ownership、未認証を検証した（8 tests）。
 
 ---
 

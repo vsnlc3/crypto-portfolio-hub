@@ -165,6 +165,85 @@ Requires an authenticated Session and a valid CSRF header. Invalidates the serve
 
 Missing or invalid CSRF token returns `403` Problem Details. Authentication errors use the common Problem Details contract.
 
+## Assets
+
+### `GET /api/v1/assets`
+
+Requires an authenticated Google Session. The User is resolved from the Session; the API accepts no owner selector. It returns the user's spot balances aggregated across active Connections, along with supported market quotes and the Connection contributions. Perpetual positions are not included in Assets.
+
+Response `200`:
+
+```json
+{
+  "summary": {
+    "spotHoldingsValueJpy": 30000,
+    "directionalAssetsValueJpy": 30000,
+    "stablecoinsValueJpy": 0,
+    "status": "COMPLETE",
+    "connectionCount": 2,
+    "syncedConnectionCount": 2,
+    "dataAsOfAt": "2026-09-28T02:00:00Z"
+  },
+  "assets": [
+    {
+      "assetId": "MARKET:SOL",
+      "assetKey": "SOL",
+      "symbol": "SOL",
+      "name": "Solana",
+      "category": "CRYPTO",
+      "network": "SOLANA",
+      "totalQuantity": 2,
+      "valueJpy": 30000,
+      "status": "COMPLETE",
+      "price": {
+        "amount": 100,
+        "currency": "USD",
+        "source": "COINGECKO",
+        "evaluatedAt": "2026-09-28T02:00:00Z",
+        "status": "COMPLETE",
+        "failureCategory": null
+      },
+      "change24h": {
+        "value": 2.75,
+        "unit": "PERCENTAGE",
+        "comparisonPeriod": "H24",
+        "source": "COINGECKO",
+        "evaluatedAt": "2026-09-28T02:00:00Z",
+        "status": "COMPLETE",
+        "failureCategory": null
+      },
+      "valuation": {
+        "currency": "JPY",
+        "fxSource": "EXCHANGERATE_API",
+        "fxEvaluatedAt": "2026-09-28T02:00:00Z"
+      },
+      "connections": [
+        {
+          "connectionId": "<connection-uuid>",
+          "provider": "SOLANA",
+          "displayName": "Wallet A",
+          "quantity": 1,
+          "valueJpy": 15000,
+          "status": "COMPLETE",
+          "balanceFetchedAt": "2026-09-28T02:00:00Z",
+          "lastSuccessAt": "2026-09-28T02:00:00Z"
+        }
+      ]
+    }
+  ]
+}
+```
+
+`summary` reports JPY Spot Holdings (including fiat balances), CRYPTO-only Directional Assets, and STABLECOIN value. Each amount is `null` when its category cannot be fully evaluated. A successful empty Balance sync is known zero; no active Connections returns `UNAVAILABLE` with null amounts. If any active Connection has never completed BALANCE sync, cross-Connection quantities and JPY values are null because the aggregate could be incomplete; the response still includes known per-Connection contributions and marks affected rows `PARTIAL`.
+
+`status` is `COMPLETE`, `STALE`, `PARTIAL`, or `UNAVAILABLE`. `STALE` means a prior successful state remains usable but a current sync or valuation input is stale. `PARTIAL` means some Balance or valuation input is missing; partial totals are not presented as complete amounts. `UNAVAILABLE` means no usable Balance / valuation is known. Per-asset and per-Connection values are null if any contributing Balance cannot be valued. No unknown amount is converted to zero.
+
+Supported assets aggregate by the exact canonical identity in the market mapping. Unknown assets remain separate by network and provider asset reference (or asset key if there is no reference); matching symbols alone never merge assets. `assetId` is a stable identity for list rendering, not a Connection identifier. `network` is null when an aggregate spans multiple networks.
+
+`price` gives the current market quote. `change24h.value` is the Provider quote's percentage change for `H24`, with the quote's source and evaluation time. If a current quote is available but it has no 24h change, the change is `null` with status `UNAVAILABLE` (or `STALE` when the quote itself is stale); it is never inferred from Portfolio Snapshots or replaced with zero. Price and change status values are `COMPLETE`, `STALE`, or `UNAVAILABLE`.
+
+The endpoint revalues owner-scoped current Balances before creating the DTO. It returns no JPA Entity and never reads another User's Balances or Connections.
+
 ## Error and ownership conventions
 
 - API responses do not expose JPA entities, OAuth tokens, credentials, or provider error bodies.
