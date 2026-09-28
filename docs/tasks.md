@@ -1416,28 +1416,35 @@ API仕様を `api-design.md` に記録する。取得済みの元情報・評価
 
 ## Step 11-2: Activity Frontend
 
-- [ ] mock-data依存を削除
-- [ ] API取得
-- [ ] Activity Header表示
-- [ ] Activity Legs表示
-- [ ] Swap IN / OUT表示
-- [ ] Fee表示
-- [ ] 日付Grouping
-- [ ] Infinite Queryまたは追加読込
-- [ ] Loading
-- [ ] Empty
-- [ ] Error
-- [ ] Partial Error
-- [ ] stale表示
-- [ ] unavailable valuation表示
-- [ ] 元通貨とquantity / originalAmountの単位を区別する
+- [x] mock-data依存を削除
+- [x] API取得
+- [x] Activity Header表示
+- [x] Activity Legs表示
+- [x] Swap IN / OUT表示
+- [x] Fee表示
+- [x] 日付Grouping
+- [x] Infinite Queryまたは追加読込
+- [x] Loading
+- [x] Empty
+- [x] Error
+- [x] Partial Error
+- [x] stale表示
+- [x] unavailable valuation表示
+- [x] 元通貨とquantity / originalAmountの単位を区別する
 
 ### Frontend Test
 
-- [ ] Swap IN / OUT / FEEの表示
-- [ ] 元通貨 / JPY valuation表示
-- [ ] unavailable valuationを0表示しない
-- [ ] 日付Grouping / pagination追加読込
+- [x] Swap IN / OUT / FEEの表示
+- [x] 元通貨 / JPY valuation表示
+- [x] unavailable valuationを0表示しない
+- [x] 日付Grouping / pagination追加読込
+
+### 実装結果
+
+- Activity画面の`mock-data.ts`を外し、`GET /api/v1/activities`をTanStack Query Infinite Queryで取得する。cursorで追加読込し、全ページをイベント発生日時の日付単位でまとめる。
+- Header・provider stateとActivity LegsのIN / OUT / FEE、raw quantityとoriginal amount / currency、JPY評価を表示する。Perpetual Fill DetailはSpot資産移動と分けて表示する。
+- Loading / Empty / Error / Partial Error / STALE / UNAVAILABLEを実装し、値がnullのJPY評価や数量を0と誤認させない。
+- Frontend Test 8件でSwap / Perpetual表示、JPYと原通貨の区別、Unavailable、状態表示、既知emptyと未接続の区別、日付Grouping、cursor追加読込、追加ページ失敗後の再試行を検証する。
 
 ---
 

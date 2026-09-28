@@ -193,22 +193,25 @@ Googleアカウントでユーザーを認証し、本人のPortfolio画面へ�
 
 ### 確認・操作すること
 
-- 日付ごとのイベント、サービス、イベント種別、銘柄・数量、評価額、日時、処理状態を確認する。
+- 日付ごとのイベントHeader、サービス、イベント種別、資産移動Leg、原通貨数量、JPY評価、日時、処理状態を確認する。
 - 接続状態に問題がある場合にConnectionsで確認する。
 
 ### 主なUI要素
 
-- 日付でグループ化したイベントタイムライン。
+- 日付でグループ化したcursor pagination対応イベントタイムライン。
 - イベント種別アイコンとラベル（Buy、Sell、Deposit、Withdraw、Transfer、Perp、Fundingなど）。
-- サービスバッジ・名称、イベント概要、銘柄・数量、JPY評価額、日時。
+- サービスバッジ・名称、Activity Header、処理状態、同期状態、日時。
+- Activity LegごとのIN / OUT / FEE、Asset、quantityとoriginal amount / currency、JPY評価額と評価状態。
+- Perpetual FillはSpot資産移動Legと分け、Position方向・約定数量・価格・開始Position・実現PnLを表示する。
 - 取得できる場合はPendingなどの処理状態。
 - 追加の期間・種別フィルターは現行UIにないため、必要なら別途要件化する。
 
 ### 表示するデータ
 
 - 認証済みユーザーのbitbank、Solana Wallet Address（UI表示例: Phantom）、Hyperliquidに関連するイベント。
-- 共通イベント種別、サービス、銘柄、数量、JPY評価額、日時、取得可能な処理状態。
-- 元サービスのイベント額がUSD建ての場合は、通貨単位を明示したUSD表示も許容する。
+- 共通イベント種別、サービス、Leg単位のdirection、銘柄、quantity、原通貨金額、JPY評価額、日時、取得可能な処理状態。
+- Entry / fill priceなどUSD建てが自然な値はUSDを含む元通貨を明示する。JPY評価がない場合はUnavailableとし、0円に置き換えない。
+- Perpetual FillはActivity Headerに対するDetailであり、Fill数量をIN / OUT資産移動にしない。実際のFeeはFEE Legに分ける。
 - 取得元のイベントID等を用いて重複イベントを避ける。イベント種別を共通化できない場合は元サービスの種別を表示する。
 
 ### 主な操作
@@ -219,9 +222,9 @@ Googleアカウントでユーザーを認証し、本人のPortfolio画面へ�
 
 ### Loading / Empty / Error
 
-- **Loading:** 日付見出しとイベント行のスケルトンを表示する。接続先単位で取得できた履歴を順次表示する。
-- **Empty:** 履歴がない場合は「表示できるActivityはありません」と表示する。接続が未設定ならConnectionsへの案内も表示する。
-- **Error:** 取得失敗の接続先を明示し、他接続先のイベントは表示する。全件取得失敗では再試行を提供する。古い履歴が表示される場合は更新状態を明示する。
+- **Loading:** 日付見出しとイベント行のスケルトンを表示する。ページを追加取得中も既に取得した履歴を表示する。
+- **Empty:** 成功同期後に履歴がない場合は「No Activity yet」と表示する。接続がない場合はConnectionsへの案内を表示する。同期またはActivityデータがUnavailableの場合は既知の0件として扱わない。
+- **Error:** 初回取得失敗では再試行を提供する。部分同期は成功履歴と件数を示し、取得済みページを維持する。追加ページ取得失敗時は既存履歴を残して再試行できる。古い履歴には最後の成功同期時刻を示す。
 
 ### 他画面への遷移
 
@@ -230,8 +233,8 @@ Googleアカウントでユーザーを認証し、本人のPortfolio画面へ�
 
 ### 現行UIとの差分
 
-- **要修正:** Activityの評価額は現在USD表示。イベントの集計評価額はJPYを基本とし、元データのUSD表示を併記する場合は通貨単位を明示する。
-- **要修正:** 現行一覧は静的モックであり、ユーザー単位の認可、重複排除、接続先別の部分失敗表示は未実装。
+- **対応済み:** Activity一覧を`GET /api/v1/activities`へ接続し、Header + Legs、Perpetual Fill Detail、日付Grouping、追加取得、JPY評価と取得状態を表示する。評価不能値は0円にしない。
+- **対応済み:** User ownership、論理削除ConnectionのHistory、dedup済み履歴をAPIで扱う。部分同期・stale・追加ページErrorを表示し、取得済み履歴を保持する。
 
 ## 7. Connections
 
@@ -297,7 +300,7 @@ Googleアカウントでユーザーを認証し、本人のPortfolio画面へ�
 | --- | --- | --- |
 | 認証・ユーザー表示 | Sign inなし、固定プロフィール | Googleログインを必須にし、本人のデータだけを表示する。 |
 | 通貨 | 金額・評価額の大半がUSD | 集計値はJPY。価格として自然な単価・Perpetual建値はUSD表示可。 |
-| データ取得 | Dashboardの概要カード・チャート・Activityは `mock-data.ts` の静的データ。Dashboard Perpetual Positions、Assets、ConnectionsはBackend API接続済み。 | 残る領域をユーザー単位の実データへ順次移行し、未取得とゼロを区別する。 |
+| データ取得 | Dashboardの概要カード・チャートは `mock-data.ts` の静的データ。Dashboard Perpetual Positions、Assets、Activity、ConnectionsはBackend API接続済み。 | 残るDashboard領域をユーザー単位の実データへ順次移行し、未取得とゼロを区別する。 |
 | 同期 | 時刻表示・ボタンが固定または未接続 | 接続先別の状態、最終同期時刻、部分失敗、再試行を扱う。 |
 | 履歴チャート | 期間ボタンがデータを切り替えない | 選択期間の履歴を表示し、データがない場合を明示する。 |
 | Solana接続 | ConnectionsのProviderは `SOLANA`、表示バッジはPhantom。旧Mock画面にはサービスID `phantom` が残る。 | 内部対象はSolana Wallet Address。UIラベルはPhantom可。 |
