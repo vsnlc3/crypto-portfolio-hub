@@ -47,6 +47,27 @@ public class SyncRunResult {
     protected SyncRunResult() {
     }
 
+    public SyncRunResult(
+            SyncRun syncRun,
+            SyncCapability capability,
+            SyncResultStatus status,
+            Integer recordsFetched,
+            Integer recordsPersisted,
+            Instant startedAt,
+            Instant finishedAt,
+            String errorCategory,
+            String safeErrorDetail) {
+        this.id = new SyncRunResultId(syncRun.getId(), capability);
+        this.syncRun = syncRun;
+        this.status = status;
+        this.recordsFetched = recordsFetched;
+        this.recordsPersisted = recordsPersisted;
+        this.startedAt = startedAt;
+        this.finishedAt = finishedAt;
+        this.errorCategory = errorCategory;
+        this.safeErrorDetail = safeErrorDetail;
+    }
+
     public SyncRunResultId getId() {
         return id;
     }

@@ -26,6 +26,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 import com.cryptoportfoliohub.connection.api.ConnectionAlreadyExistsException;
 import com.cryptoportfoliohub.connection.api.ConnectionRequestValidationException;
 import com.cryptoportfoliohub.connection.credential.CredentialEncryptionException;
+import com.cryptoportfoliohub.sync.application.SyncAlreadyRunningException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -80,6 +81,13 @@ public class ApiExceptionHandler {
             ConnectionAlreadyExistsException exception, HttpServletRequest request) {
         return response(HttpStatus.CONFLICT, problemResponseFactory.create(
                 HttpStatus.CONFLICT, ProblemCodes.CONNECTION_ALREADY_EXISTS, exception.getMessage(), request));
+    }
+
+    @ExceptionHandler(SyncAlreadyRunningException.class)
+    ResponseEntity<Map<String, Object>> handleSyncAlreadyRunning(
+            SyncAlreadyRunningException exception, HttpServletRequest request) {
+        return response(HttpStatus.CONFLICT, problemResponseFactory.create(
+                HttpStatus.CONFLICT, ProblemCodes.SYNC_ALREADY_RUNNING, exception.getMessage(), request));
     }
 
     @ExceptionHandler(CredentialEncryptionException.class)

@@ -11,4 +11,7 @@ public interface SyncRunRepository extends JpaRepository<SyncRun, UUID> {
     List<SyncRun> findAllByConnection_User_IdOrderByStartedAtDescIdDesc(UUID authenticatedUserId);
 
     Optional<SyncRun> findByIdAndConnection_User_Id(UUID id, UUID authenticatedUserId);
+
+    Optional<SyncRun> findByIdAndConnection_IdAndConnection_User_Id(
+            UUID id, UUID connectionId, UUID authenticatedUserId);
 }

@@ -808,19 +808,19 @@ Provider DTOをApplication / Domainへ漏らさない。
 
 ### 共通Sync制御
 
-- [ ] Sync APIの共通契約を定め、`api-design.md` へ記録する
-- [ ] 同一Connectionの同時Syncを防止し、`SYNCING` を表現する
-- [ ] 異なるConnectionは独立してSyncできる
-- [ ] Success / Error / Partial Failureいずれでも同期中状態を解放する
-- [ ] `lastAttemptAt` と `lastSuccessAt` の意味を分けて更新する
-- [ ] 認証済みUserとConnection IDの両方で所有権を検証する
+- [x] Sync APIの共通契約を定め、`api-design.md` へ記録する
+- [x] 同一Connectionの同時Syncを防止し、`SYNCING` を表現する
+- [x] 異なるConnectionは独立してSyncできる
+- [x] Success / Error / Partial Failureいずれでも同期中状態を解放する
+- [x] `lastAttemptAt` と `lastSuccessAt` の意味を分けて更新する
+- [x] 認証済みUserとConnection IDの両方で所有権を検証する
 
 ### 共通Sync Test
 
-- [ ] 同一Connectionの重複Sync拒否 / 競合制御
-- [ ] 異なるConnectionの並行Sync
-- [ ] Error後のSync状態解放
-- [ ] User AがUser BのConnectionのSyncを実行できない
+- [x] 同一Connectionの重複Sync拒否 / 競合制御
+- [x] 異なるConnectionの並行Sync
+- [x] Error後のSync状態解放
+- [x] User AがUser BのConnectionのSyncを実行できない
 
 ---
 
@@ -869,9 +869,10 @@ Provider DTOをApplication / Domainへ漏らさない。
 
 ```text
 POST /api/v1/connections/{connectionId}/sync
+GET  /api/v1/connections/{connectionId}/sync-runs/{syncRunId}
 ```
 
-共通Sync契約を利用する。Provider別のCapability、Response、Partial Failure表現を `api-design.md` に記録する。
+共通Sync契約を利用する。Provider別のCapability、Response、Partial Failure表現を `api-design.md` に記録する。POSTは202で受付結果を返し、GETはUser ownershipを検証してCapability別結果を返す。
 
 ### 完了条件
 

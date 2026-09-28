@@ -52,6 +52,14 @@ public class SyncRun extends CreatedEntity {
     protected SyncRun() {
     }
 
+    public SyncRun(ConnectionEntity connection, SyncTriggerType triggerType, Instant startedAt) {
+        this.connection = connection;
+        this.userId = connection.getUserId();
+        this.triggerType = triggerType;
+        this.status = SyncRunStatus.RUNNING;
+        this.startedAt = startedAt;
+    }
+
     public ConnectionEntity getConnection() {
         return connection;
     }
@@ -74,5 +82,15 @@ public class SyncRun extends CreatedEntity {
 
     public Instant getFinishedAt() {
         return finishedAt;
+    }
+
+    public void finish(SyncRunStatus status, String errorCategory, String safeErrorDetail, Instant finishedAt) {
+        if (status == SyncRunStatus.RUNNING) {
+            throw new IllegalArgumentException("A finished sync run must have a terminal status.");
+        }
+        this.status = status;
+        this.errorCategory = errorCategory;
+        this.safeErrorDetail = safeErrorDetail;
+        this.finishedAt = finishedAt;
     }
 }

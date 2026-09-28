@@ -108,9 +108,30 @@ Invalid fields return `400 VALIDATION_ERROR` with safe field names only. An acti
 
 ### `DELETE /api/v1/connections/{connectionId}`
 
-Soft-deletes only a Connection owned by the authenticated User and returns `204 No Content`. An unknown, deleted, or other user's Connection returns `404 RESOURCE_NOT_FOUND`.
+Soft-deletes only a Connection owned by the authenticated User and returns `204 No Content`. An unknown, deleted, or other user's Connection returns `404 RESOURCE_NOT_FOUND`. Deletion is rejected with `409 SYNC_ALREADY_RUNNING` while a Sync Run is active so a Provider operation cannot write Current State after the Connection's state has been removed.
 
 Within the same transaction, it removes that Connection's encrypted Credentials, Current Balances, Current Positions, Provider Account States, and Connection Sync States. The Connection is retained with `status: DISCONNECTED` and `deletedAt`. Activity (including Legs and detail rows) and Sync Run history (including results) remain available to their owner; User-level Portfolio Snapshots are unchanged. Repeating the delete returns `404`.
+
+### Manual Connection Sync (Step 7-1 contract; implementation in Step 7-3)
+
+`POST /api/v1/connections/{connectionId}/sync` requires an authenticated Google Session and CSRF token. It has no request body; the Backend derives the owner from the Session and always uses trigger type `MANUAL`.
+
+The Backend atomically reserves the active Connection, records a `RUNNING` Sync Run, updates supported Capability states to `SYNCING`, and dispatches Provider work asynchronously. Response `202 Accepted`:
+
+```json
+{
+  "syncRunId": "<sync-run-uuid>",
+  "connectionId": "<connection-uuid>",
+  "triggerType": "MANUAL",
+  "status": "RUNNING",
+  "capabilities": ["BALANCE", "ACTIVITY"],
+  "startedAt": "2026-09-28T12:00:00Z"
+}
+```
+
+If any Capability is already `SYNCING` for the Connection, a second request returns `409` Problem Details with `code: SYNC_ALREADY_RUNNING`. An unknown, deleted, or other User's Connection returns `404 RESOURCE_NOT_FOUND`. Provider bodies, credentials, and raw exception messages are never returned.
+
+`GET /api/v1/connections/{connectionId}/sync-runs/{syncRunId}` requires the same authenticated Session and returns the owner-scoped run status and Capability results (`SUCCESS`, `FAILED`, or `SKIPPED`), including safe error categories and optional fetched / persisted record counts. This allows the Frontend to poll an accepted run. A partial run remains `PARTIAL`; successful Capabilities keep their own success timestamps while failed Capabilities retain their previous successful Current State.
 
 ### `POST /api/v1/auth/logout`
 

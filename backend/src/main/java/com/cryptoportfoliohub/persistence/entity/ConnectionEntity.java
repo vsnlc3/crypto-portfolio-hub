@@ -100,6 +100,26 @@ public class ConnectionEntity extends UpdatedEntity {
         return deletedAt;
     }
 
+    public void recordSyncStarted(Instant attemptedAt) {
+        if (deletedAt != null) {
+            throw new IllegalStateException("A deleted connection cannot be synchronized.");
+        }
+        this.lastAttemptAt = attemptedAt;
+        this.status = ConnectionStatus.SYNCING;
+    }
+
+    public void recordSyncFinished(boolean hadSuccess, Instant finishedAt) {
+        if (deletedAt != null) {
+            return;
+        }
+        if (hadSuccess) {
+            this.lastSuccessAt = finishedAt;
+            this.status = ConnectionStatus.CONNECTED;
+        } else {
+            this.status = ConnectionStatus.ERROR;
+        }
+    }
+
     public void softDelete(Instant deletedAt) {
         this.deletedAt = deletedAt;
         this.status = ConnectionStatus.DISCONNECTED;

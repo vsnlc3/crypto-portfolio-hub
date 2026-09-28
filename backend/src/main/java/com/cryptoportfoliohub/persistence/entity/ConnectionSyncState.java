@@ -49,6 +49,14 @@ public class ConnectionSyncState {
     protected ConnectionSyncState() {
     }
 
+    public ConnectionSyncState(ConnectionEntity connection, SyncCapability capability, Instant attemptedAt) {
+        this.id = new ConnectionSyncStateId(connection.getId(), connection.getUserId(), capability);
+        this.connection = connection;
+        this.status = ConnectionSyncStatus.SYNCING;
+        this.lastAttemptAt = attemptedAt;
+        this.updatedAt = attemptedAt;
+    }
+
     public ConnectionSyncStateId getId() {
         return id;
     }
@@ -59,5 +67,40 @@ public class ConnectionSyncState {
 
     public ConnectionSyncStatus getStatus() {
         return status;
+    }
+
+    public Instant getLastSuccessAt() {
+        return lastSuccessAt;
+    }
+
+    public UUID getLastSuccessSyncRunId() {
+        return lastSuccessSyncRunId;
+    }
+
+    public void startAttempt(Instant attemptedAt) {
+        this.status = ConnectionSyncStatus.SYNCING;
+        this.lastAttemptAt = attemptedAt;
+        this.lastErrorCategory = null;
+        this.updatedAt = attemptedAt;
+    }
+
+    public void recordSuccess(UUID syncRunId, Instant succeededAt) {
+        this.status = ConnectionSyncStatus.READY;
+        this.lastSuccessAt = succeededAt;
+        this.lastSuccessSyncRunId = syncRunId;
+        this.lastErrorCategory = null;
+        this.updatedAt = succeededAt;
+    }
+
+    public void recordFailure(String errorCategory, Instant failedAt) {
+        this.status = ConnectionSyncStatus.ERROR;
+        this.lastErrorCategory = errorCategory;
+        this.updatedAt = failedAt;
+    }
+
+    public void recordSkipped(Instant finishedAt) {
+        this.status = lastSuccessAt == null ? ConnectionSyncStatus.NOT_SYNCED : ConnectionSyncStatus.READY;
+        this.lastErrorCategory = null;
+        this.updatedAt = finishedAt;
     }
 }

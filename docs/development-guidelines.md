@@ -36,8 +36,9 @@
 - **Existing:** `backend/src/main/java/com/cryptoportfoliohub/domain/money/` に通貨付きMoney / Price / Quantity / FX Value、JPY換算、PerpetualのPosition Value / 線形Unrealized PnL、表示用丸め基盤がある。Javaの計算には `BigDecimal` を使い、金融数値のUnit Testを持つ。
 - **Existing:** `backend/src/main/java/com/cryptoportfoliohub/persistence/` に12 Entityと12 Repositoryがある。Hibernate `ddl-auto: validate` でFlyway Schemaとの整合を検証し、所有データQueryにはUser IDを含める。TestcontainersでUser A / Bの分離とConnection論理削除後の履歴参照を検証する。
 - **Existing:** BackendにGoogle OIDC Login、SubjectによるUser作成・再紐付け、Session Cookie、CSRF対応のLogout、認証User確認API、Connection一覧・追加・削除APIを実装し、`.env`から注入したCredentialでローカル実Google OAuth E2Eを確認した。Secret値はGit管理外である。公開環境のHost / Schemeに対応したRedirect URI登録はDeployment設計時に行う。
+- **Existing:** BackendにProvider Sync Portと共通非同期Sync lifecycleを追加した。Connection行のPessimistic Lockで重複Syncを防ぎ、Capability別状態とSync Run結果、User所有権、失敗後の再実行をTestcontainersで検証する。Provider AdapterとSync API Controllerは未実装。
 - **Existing:** BackendにCoinGecko DemoのCurrent Price / 24h quote / USDJPY FX Provider Adapter、Canonical Asset ID mapping、共有Cache、鮮度判定、Provider error分類を実装した。両API keyはBackend環境変数で任意注入し、未設定時はUnavailableを返す。2026-09-28に実API Smoke Testで両Providerのresponseと評価時刻の読み取りを確認した。
-- **未実装:** Provider Account / Balance / Position / Activity取得とSync、Portfolio評価、Portfolio業務API、デプロイ環境。Provider API keyを`.env`へ注入する設定は任意である。
+- **未実装:** Provider Account / Balance / Position / Activity取得、Providerごとの同期Adapter/API、Portfolio評価、Portfolio業務API、デプロイ環境。Provider API keyを`.env`へ注入する設定は任意である。
 
 この一覧は本リポジトリのファイル・設定に基づく。以下の採用方針は、別途Existingと記載したものを除き、実装済みであることを意味しない。
 

@@ -19,10 +19,12 @@ import com.cryptoportfoliohub.connection.api.ConnectionResponse;
 import com.cryptoportfoliohub.connection.credential.CredentialEncryptionService;
 import com.cryptoportfoliohub.connection.credential.EncryptedCredential;
 import com.cryptoportfoliohub.error.ResourceNotFoundException;
+import com.cryptoportfoliohub.sync.application.SyncAlreadyRunningException;
 import com.cryptoportfoliohub.persistence.entity.ConnectionCredential;
 import com.cryptoportfoliohub.persistence.entity.ConnectionEntity;
 import com.cryptoportfoliohub.persistence.entity.ConnectionProvider;
 import com.cryptoportfoliohub.persistence.entity.ConnectionStatus;
+import com.cryptoportfoliohub.persistence.entity.ConnectionSyncStatus;
 import com.cryptoportfoliohub.persistence.entity.SyncCapability;
 import com.cryptoportfoliohub.persistence.entity.User;
 import com.cryptoportfoliohub.persistence.repository.AssetBalanceRepository;
@@ -103,8 +105,13 @@ public class ConnectionService {
     public void delete(UUID connectionId, User authenticatedUser) {
         UUID userId = authenticatedUser.getId();
         ConnectionEntity connection = connectionRepository
-                .findByIdAndUser_IdAndDeletedAtIsNull(connectionId, userId)
+                .findActiveByIdAndUserIdForUpdate(connectionId, userId)
                 .orElseThrow(ResourceNotFoundException::new);
+        boolean syncing = syncStateRepository.findAllByConnectionAndUser(connectionId, userId).stream()
+                .anyMatch(state -> state.getStatus() == ConnectionSyncStatus.SYNCING);
+        if (syncing) {
+            throw new SyncAlreadyRunningException();
+        }
 
         credentialRepository.deleteAllByConnection_IdAndConnection_User_Id(connectionId, userId);
         syncStateRepository.deleteAllByConnection_IdAndConnection_User_Id(connectionId, userId);
