@@ -288,20 +288,20 @@ Googleアカウントでユーザーを認証し、本人のPortfolio画面へ�
 
 - Solana ConnectionはBackendへ`SOLANA`として保存し、Wallet Addressをマスク表示する。表示用バッジはPhantom。
 - Add source、一覧、DisconnectはBackend APIへ接続済み。bitbank Credentialは画面上で再表示せず、Backend APIの応答にも含めない。
-- **後続Stepで対応:** BackendのConnection単位Manual Sync APIはStep 7-3で実装済み。現在のConnections UIではSync操作をまだAPIへ接続していないため、Step 12-4で接続する。Sync中は対象Connectionだけをdisableし、Partial Failure時は成功Capabilityのデータを表示しつつ失敗状態と前回成功時刻を示す。
-- BackendのConnections応答は`portfolioValue`とCapabilityごとの同期状態を返す。Frontendは後続Stepでこれを表示するまで評価額を未取得として扱い、0やUSDとして偽装しない。
+- **実装済み:** ConnectionカードのSyncからManual Sync APIを呼び、Sync Runをpollする。対象ConnectionだけSync / Disconnectをdisableし、成功・部分失敗・失敗を表示する。完了後はConnections、Assets、Positions、Activity、Portfolio Summary / Historyのcacheをinvalidateして再取得する。
+- Connections応答の`portfolioValue`、Capability状態、`lastAttemptAt`、`lastSuccessAt`を表示する。評価不能なJPY額はUnavailableとし、0円に置き換えない。Credentialを画面表示せず、Sync requestにも送信しない。
 - 固定の「Read-only demo」「Google sign-in coming soon」文言は削除済み。
 
 ## 8. 現行UIとの差分のまとめ
 
-以下は現在のv0 UIとMVP要件との差分であり、実装時に対応する。
+以下は元のv0 UIとMVP要件との差分に対する、現在の実装状況を示す。
 
 | 対象 | 現行UI | MVP要件 / 対応 |
 | --- | --- | --- |
-| 認証・ユーザー表示 | Sign inなし、固定プロフィール | Googleログインを必須にし、本人のデータだけを表示する。 |
-| 通貨 | 金額・評価額の大半がUSD | 集計値はJPY。価格として自然な単価・Perpetual建値はUSD表示可。 |
-| データ取得 | Dashboardの概要カード・チャートは `mock-data.ts` の静的データ。Dashboard Perpetual Positions、Assets、Activity、ConnectionsはBackend API接続済み。 | 残るDashboard領域をユーザー単位の実データへ順次移行し、未取得とゼロを区別する。 |
-| 同期 | 時刻表示・ボタンが固定または未接続 | 接続先別の状態、最終同期時刻、部分失敗、再試行を扱う。 |
-| 履歴チャート | 期間ボタンがデータを切り替えない | 選択期間の履歴を表示し、データがない場合を明示する。 |
+| 認証・ユーザー表示 | Google Sign inとログインユーザー表示を実装済み。保護画面は認証後に表示する。 | 本人所有のConnectionsとPortfolioデータを分離する。 |
+| 通貨 | Net Worth、Assets、Exposure、Positions、Connection評価額はJPY。価格・Perpetual建値は原通貨も併記する。 | 集計値はJPYを基本とし、未取得値を0円にしない。 |
+| データ取得 | Dashboard Summary / History、Assets、Positions、Activity、ConnectionsをBackend APIから取得する。 | User所有データを表示し、Loading / Empty / Errorを区別する。 |
+| 同期 | ConnectionカードからManual Syncを実行し、Sync RunとCapability結果を表示する。 | stale値・前回成功時刻・部分失敗を確認し、同じConnectionの重複Syncを防ぐ。 |
+| 履歴チャート | 7D / 30D / 90D / 1YのSnapshotを表示し、欠損Snapshotを0円で補間しない。 | 保存済み履歴がない期間は空状態を明示する。 |
 | Solana接続 | ConnectionsのProviderは `SOLANA`、表示バッジはPhantom。旧Mock画面にはサービスID `phantom` が残る。 | 内部対象はSolana Wallet Address。UIラベルはPhantom可。 |
-| 状態表示 | データ取得中・空・エラーの状態がない | 各画面のLoading / Empty / Errorを本書に沿って実装する。 |
+| 状態表示 | DashboardとConnectionsを含む各データ画面でLoading / Empty / Error、stale / partial状態を表示する。 | API値と同期結果に応じた状態表示を維持する。 |

@@ -28,10 +28,10 @@
 ### 1.2 リポジトリで確認した現在地
 
 - **Existing:** `frontend/` にNext.js、React、TypeScript、Tailwind CSS、shadcn/uiを使ったDashboard、Assets、Activity、Connections画面がある。
-- **Existing:** Dashboard / Assets / Activity画面は `frontend/lib/mock-data.ts` の静的モックを参照する。ConnectionsはBackend APIへ接続済み。Google Sign in画面、Frontend route guard、Session user表示、CSRF付きLogoutも実装済み。Portfolio API接続と永続化は未実装。
+- **Existing:** Dashboard、Assets、Activity、ConnectionsはBackend APIに接続済み。DashboardはPortfolio Summary / History、Assets、Positions、Connectionsは一覧 / 作成 / 削除 / Manual Sync、ActivityはActivity APIを使用する。Google Sign in、Frontend route guard、Session user表示、CSRF付きLogoutも実装済み。`frontend/lib/mock-data.ts`には旧UI用データと書式関数が残るが、現行のPortfolio値の取得元にはしない。
 - **Existing:** ルートのDocker ComposeでFrontend、Backend、PostgreSQLを同一Networkへ接続する。Frontendは3000番、ローカルOAuth callback用にBackendは8080番をHostへ公開し、PostgreSQLは公開せずNamed Volumeへ保存する。ProductionではBackendを直接公開せずreverse proxy経由にする。`frontend/Dockerfile` はNode.js 22とpnpmを使う開発起動設定、`backend/Dockerfile` はMaven buildとJava 25 runtimeのmulti-stage buildである。
 - **Existing:** `frontend/package.json` は `pnpm@12.3.4` を指定し、lockfileもpnpm 12.3.4である。
-- **Existing:** `frontend/tsconfig.json` は `strict: true` で、Next.js build時のTypeScriptエラーを隠さない。Vitest / React Testing Library、`test`、`typecheck` scriptを追加済み。ConnectionsでTanStack Query、React Hook Form、Zodを使い、Provider別Form、Loading / Empty / Error、追加・削除をテストする。Frontend lint scriptとGitHub Actions workflowはまだない。
+- **Existing:** `frontend/tsconfig.json` は `strict: true` で、Next.js build時のTypeScriptエラーを隠さない。Vitest / React Testing Library、`test`、`typecheck` scriptを追加済み。TanStack QueryでDashboard / Assets / Positions / Activity / ConnectionsのServer StateとManual Sync後の再取得を扱う。ConnectionsはReact Hook Form、Zodを使い、Provider別Form、Loading / Empty / Error、追加・削除・同期をテストする。Frontend lint scriptとGitHub Actions workflowはまだない。
 - **Existing:** `backend/` にJava 25 / Spring Boot 4.1.1のMavenプロジェクトがあり、Spring MVC、Jackson 3、JPA、PostgreSQL Driver、Flyway、Security、OAuth2 Client、Validation、Actuator、JUnit、Testcontainersを設定している。`/actuator/health` のHTTP応答、10本のFlyway Migration、主要FK / CHECK制約、Problem DetailsとRequest IDをPostgreSQL Testcontainers付きで検証する。
 - **Existing:** `backend/src/main/java/com/cryptoportfoliohub/domain/money/` に通貨付きMoney / Price / Quantity / FX Value、JPY換算、PerpetualのPosition Value / 線形Unrealized PnL、表示用丸め基盤がある。Javaの計算には `BigDecimal` を使い、金融数値のUnit Testを持つ。
 - **Existing:** `backend/src/main/java/com/cryptoportfoliohub/persistence/` に13 Entityと13 Repositoryがある。Hibernate `ddl-auto: validate` でFlyway Schemaとの整合を検証し、所有データQueryにはUser IDを含める。TestcontainersでUser A / Bの分離とConnection論理削除後の履歴参照を検証する。
@@ -78,7 +78,7 @@
 ### 3.1 現行UIからの移行
 
 - `frontend/app/` と `frontend/components/` の画面構成・部品を土台として、API連携と状態表示を段階的に加える。UIをゼロから作り直さない。
-- Dashboard、Assets、Activity、Connectionsの表示データを静的モックからAPI由来へ置き換える。requirementsとscreen-designで定義したJPY集計、Google認証、ユーザー分離、Loading / Empty / Errorを優先する。
+- Dashboard、Assets、Activity、ConnectionsはAPIのUser所有データを表示する。`mock-data.ts`の旧fixtureを画面の取得元に戻さず、requirementsとscreen-designに沿ったJPY集計、Google認証、ユーザー分離、Loading / Empty / Errorを維持する。
 - `frontend/lib/mock-data.ts` は本番データの取得元にしない。モックを残す場合は開発・テスト専用のfixtureとして扱う。
 - TypeScriptのstrict設定を維持する。`typescript.ignoreBuildErrors` は解除済みとし、buildと `typecheck` を品質ゲートとして使う。
 - pnpmバージョンとlockfileを一致させ、CIとDockerでも `pnpm install --frozen-lockfile` を使う。

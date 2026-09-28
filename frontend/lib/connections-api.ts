@@ -1,6 +1,23 @@
 export type ConnectionProvider = 'BITBANK' | 'SOLANA' | 'HYPERLIQUID'
 export type ConnectionStatus = 'CONNECTED' | 'SYNCING' | 'ERROR' | 'DISCONNECTED'
 export type SyncCapability = 'BALANCE' | 'POSITION' | 'ACTIVITY' | 'ACCOUNT'
+export type ConnectionDataStatus = 'COMPLETE' | 'STALE' | 'PARTIAL' | 'UNAVAILABLE'
+export type CapabilitySyncStatus = 'NOT_SYNCED' | 'SYNCING' | 'READY' | 'ERROR'
+export type SyncRunStatus = 'RUNNING' | 'SUCCESS' | 'PARTIAL' | 'FAILED'
+export type SyncResultStatus = 'SUCCESS' | 'FAILED' | 'SKIPPED'
+
+export type CapabilitySync = {
+  capability: SyncCapability
+  status: CapabilitySyncStatus
+  lastAttemptAt: string | null
+  lastSuccessAt: string | null
+  lastErrorCategory: string | null
+}
+
+export type ConnectionPortfolioValue = {
+  amountJpy: number | null
+  status: ConnectionDataStatus
+}
 
 export type Connection = {
   id: string
@@ -9,8 +26,41 @@ export type Connection = {
   maskedIdentifier?: string
   status: ConnectionStatus
   capabilities: SyncCapability[]
-  lastAttemptAt?: string
-  lastSuccessAt?: string
+  capabilitySync: CapabilitySync[]
+  portfolioValue: ConnectionPortfolioValue
+  lastAttemptAt: string | null
+  lastSuccessAt: string | null
+}
+
+export type SyncAccepted = {
+  syncRunId: string
+  connectionId: string
+  triggerType: 'MANUAL' | string
+  status: 'RUNNING'
+  capabilities: SyncCapability[]
+  startedAt: string
+}
+
+export type SyncRun = {
+  syncRunId: string
+  connectionId: string
+  triggerType: 'MANUAL' | string
+  status: SyncRunStatus
+  startedAt: string
+  finishedAt: string | null
+  errorCategory: string | null
+  safeErrorDetail: string | null
+  capabilities: {
+    capability: SyncCapability
+    status: SyncResultStatus
+    recordsFetched: number | null
+    recordsPersisted: number | null
+    startedAt: string | null
+    finishedAt: string | null
+    errorCategory: string | null
+    safeErrorDetail: string | null
+    continuationAvailable: boolean
+  }[]
 }
 
 export type ConnectionCreateRequest =
@@ -43,6 +93,8 @@ export class ConnectionsApiError extends Error {
 }
 
 export const connectionsQueryKey = ['connections'] as const
+export const syncRunQueryKey = (connectionId: string, syncRunId: string) =>
+  ['connection-sync-run', connectionId, syncRunId] as const
 
 export async function getConnections(): Promise<Connection[]> {
   const response = await fetch('/api/v1/connections', {
@@ -80,6 +132,36 @@ export async function deleteConnection(connectionId: string): Promise<void> {
     headers: { Accept: 'application/json', [csrf.headerName]: csrf.token },
   })
   if (response.status !== 204) throw await toConnectionsApiError(response)
+}
+
+export async function requestConnectionSync(connectionId: string): Promise<SyncAccepted> {
+  const csrf = await getCsrfToken()
+  const response = await fetch(`/api/v1/connections/${encodeURIComponent(connectionId)}/sync`, {
+    method: 'POST',
+    cache: 'no-store',
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json', [csrf.headerName]: csrf.token },
+  })
+  if (response.status !== 202) throw await toConnectionsApiError(response)
+  return (await response.json()) as SyncAccepted
+}
+
+export async function getConnectionSyncRun(
+  connectionId: string,
+  syncRunId: string,
+  signal?: AbortSignal,
+): Promise<SyncRun> {
+  const response = await fetch(
+    `/api/v1/connections/${encodeURIComponent(connectionId)}/sync-runs/${encodeURIComponent(syncRunId)}`,
+    {
+      cache: 'no-store',
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+      signal,
+    },
+  )
+  if (!response.ok) throw await toConnectionsApiError(response)
+  return (await response.json()) as SyncRun
 }
 
 async function getCsrfToken(): Promise<CsrfTokenResponse> {

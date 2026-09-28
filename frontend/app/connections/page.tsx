@@ -6,6 +6,8 @@ import { Check, Plus, RefreshCw, Trash2, TriangleAlert, WalletCards } from 'luci
 import { useEffect, useState } from 'react'
 import { useForm, type FieldPath } from 'react-hook-form'
 import { z } from 'zod'
+import { activitiesQueryKey } from '@/lib/activities-api'
+import { assetsQueryKey } from '@/lib/assets-api'
 import { PageHeader } from '@/components/page-header'
 import { ServiceBadge } from '@/components/service-badge'
 import { Button } from '@/components/ui/button'
@@ -16,14 +18,21 @@ import {
   connectionsQueryKey,
   createConnection,
   deleteConnection,
+  getConnectionSyncRun,
   getConnections,
+  requestConnectionSync,
   type Connection,
   type ConnectionCreateRequest,
   type ConnectionProvider,
   type ConnectionStatus,
+  type SyncAccepted,
   type SyncCapability,
+  type SyncRun,
+  syncRunQueryKey,
 } from '@/lib/connections-api'
-import { fmtRelative } from '@/lib/mock-data'
+import { formatDateTime, formatJpy, formatRelative } from '@/lib/format'
+import { portfolioSummaryQueryKey } from '@/lib/portfolio-api'
+import { positionsQueryKey } from '@/lib/positions-api'
 
 const base58Alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
@@ -104,10 +113,43 @@ const providerMeta: Record<ConnectionProvider, { name: string; kind: string; bad
 }
 
 const capabilityLabels: Record<SyncCapability, string> = {
-  BALANCE: 'spot',
-  POSITION: 'perp',
-  ACTIVITY: 'history',
-  ACCOUNT: 'account',
+  BALANCE: 'Spot',
+  POSITION: 'Perpetual',
+  ACTIVITY: 'History',
+  ACCOUNT: 'Account',
+}
+
+const capabilityStatusLabels = {
+  NOT_SYNCED: 'not synced',
+  SYNCING: 'syncing',
+  READY: 'ready',
+  ERROR: 'error',
+} as const
+
+function portfolioStatusLabel(status: Connection['portfolioValue']['status']) {
+  return status === 'COMPLETE' ? 'Fresh' : status[0] + status.slice(1).toLowerCase()
+}
+
+function resultStatusLabel(status: SyncRun['capabilities'][number]['status']) {
+  return status === 'SUCCESS' ? 'succeeded' : status === 'FAILED' ? 'failed' : 'skipped'
+}
+
+function syncErrorMessage(error: unknown) {
+  if (!(error instanceof ConnectionsApiError)) return 'Sync could not be started. Try again.'
+  if (error.code === 'SYNC_ALREADY_RUNNING') return 'This Connection is already syncing. Its status is being refreshed.'
+  if (error.code === 'RESOURCE_NOT_FOUND') return 'This Connection is no longer available. Refresh the list and try again.'
+  return 'Sync could not be started. Try again.'
+}
+
+async function invalidateSyncedPortfolio(queryClient: ReturnType<typeof useQueryClient>) {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: connectionsQueryKey }),
+    queryClient.invalidateQueries({ queryKey: assetsQueryKey }),
+    queryClient.invalidateQueries({ queryKey: positionsQueryKey }),
+    queryClient.invalidateQueries({ queryKey: activitiesQueryKey }),
+    queryClient.invalidateQueries({ queryKey: portfolioSummaryQueryKey }),
+    queryClient.invalidateQueries({ queryKey: ['portfolio', 'history'] }),
+  ])
 }
 
 export default function ConnectionsPage() {
@@ -115,6 +157,8 @@ export default function ConnectionsPage() {
   const connectionsQuery = useQuery({
     queryKey: connectionsQueryKey,
     queryFn: getConnections,
+    refetchInterval: (query) => query.state.data?.some((connection) =>
+      connection.capabilitySync.some((capability) => capability.status === 'SYNCING')) ? 1_000 : false,
   })
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [toast, setToast] = useState<ToastMessage>(null)
@@ -266,9 +310,49 @@ function ConnectionCard({
   deleting: boolean
   onDelete: () => void
 }) {
+  const queryClient = useQueryClient()
+  const [syncRunId, setSyncRunId] = useState<string | null>(null)
+  const [acceptedRun, setAcceptedRun] = useState<SyncAccepted | null>(null)
+  const syncMutation = useMutation({
+    mutationFn: () => requestConnectionSync(connection.id),
+    onSuccess: async (accepted) => {
+      setSyncRunId(accepted.syncRunId)
+      setAcceptedRun(accepted)
+      await queryClient.invalidateQueries({ queryKey: connectionsQueryKey })
+    },
+    onError: async (error) => {
+      if (error instanceof ConnectionsApiError && error.code === 'SYNC_ALREADY_RUNNING') {
+        await queryClient.invalidateQueries({ queryKey: connectionsQueryKey })
+      }
+    },
+  })
+  const syncRunQuery = useQuery({
+    queryKey: syncRunQueryKey(connection.id, syncRunId ?? 'none'),
+    queryFn: ({ signal }) => getConnectionSyncRun(connection.id, syncRunId!, signal),
+    enabled: syncRunId !== null,
+    refetchInterval: (query) => query.state.data?.status === 'RUNNING' ? 1_000 : false,
+  })
+  const runStatus = syncRunQuery.data?.status
+
+  useEffect(() => {
+    if (runStatus && runStatus !== 'RUNNING') void invalidateSyncedPortfolio(queryClient)
+  }, [queryClient, runStatus, syncRunId])
+
   const provider = providerMeta[connection.provider]
   const status = statusMeta[connection.status]
   const StatusIcon = status.icon
+  const connectionSyncing = connection.status === 'SYNCING'
+    || connection.capabilitySync.some((capability) => capability.status === 'SYNCING')
+  const isSyncing = syncMutation.isPending
+    || connectionSyncing
+    || Boolean(syncRunId && (syncRunQuery.isPending || runStatus === 'RUNNING'))
+
+  function handleSync() {
+    if (isSyncing || deleting) return
+    setSyncRunId(null)
+    setAcceptedRun(null)
+    syncMutation.mutate()
+  }
 
   return (
     <Card className="gap-0 p-5">
@@ -292,36 +376,106 @@ function ConnectionCard({
       <div className="mt-4 flex flex-wrap items-end justify-between gap-4 border-t border-border pt-4">
         <div className="flex flex-wrap gap-8">
           <div>
-            <p className="text-[11px] text-muted-foreground">Value tracked</p>
-            <p className="mt-0.5 font-mono text-lg font-semibold tabular">—</p>
-            <p className="text-[11px] text-muted-foreground">Not valued yet</p>
+            <p className="text-[11px] text-muted-foreground">Value tracked · JPY</p>
+            <p className="mt-0.5 font-mono text-lg font-semibold tabular">{formatJpy(connection.portfolioValue.amountJpy)}</p>
+            <span className={cn(
+              'mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium',
+              connection.portfolioValue.status === 'COMPLETE' ? 'bg-positive/12 text-positive'
+                : connection.portfolioValue.status === 'STALE' ? 'bg-amber-500/12 text-amber-400'
+                  : connection.portfolioValue.status === 'PARTIAL' ? 'bg-amber-500/12 text-amber-400'
+                    : 'bg-muted text-muted-foreground',
+            )}>
+              {portfolioStatusLabel(connection.portfolioValue.status)}
+            </span>
           </div>
           <div>
             <p className="text-[11px] text-muted-foreground">Capabilities</p>
             <div className="mt-1 flex flex-wrap gap-1.5">
-              {connection.capabilities.map((capability) => (
-                <span
-                  key={capability}
-                  className="rounded-md border border-border bg-accent/50 px-2 py-0.5 text-[11px] font-medium uppercase"
-                >
-                  {capabilityLabels[capability]}
-                </span>
-              ))}
+              {connection.capabilities.map((capability) => {
+                const sync = connection.capabilitySync.find((item) => item.capability === capability)
+                const syncStatus = sync?.status ?? 'NOT_SYNCED'
+                return (
+                  <span
+                    key={capability}
+                    title={sync?.lastErrorCategory ? `${syncStatus}: ${sync.lastErrorCategory}` : syncStatus}
+                    className={cn(
+                      'rounded-md border px-2 py-0.5 text-[11px] font-medium',
+                      syncStatus === 'ERROR' ? 'border-destructive/40 bg-destructive/5 text-destructive'
+                        : syncStatus === 'SYNCING' ? 'border-primary/40 bg-primary/5 text-primary'
+                          : 'border-border bg-accent/50 text-muted-foreground',
+                    )}
+                  >
+                    {capabilityLabels[capability]} · {capabilityStatusLabels[syncStatus]}
+                  </span>
+                )
+              })}
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="space-y-0.5 text-[11px] text-muted-foreground">
-            {connection.lastSuccessAt && <p>Last successful sync {fmtRelative(connection.lastSuccessAt)}</p>}
-            {connection.lastAttemptAt && <p>Last attempt {fmtRelative(connection.lastAttemptAt)}</p>}
-            {!connection.lastSuccessAt && !connection.lastAttemptAt && <p>Not synced yet</p>}
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <div className="space-y-0.5 text-right text-[11px] text-muted-foreground">
+            {connection.lastSuccessAt
+              ? <p title={formatDateTime(connection.lastSuccessAt)}>Last successful sync {formatRelative(connection.lastSuccessAt)}</p>
+              : <p>Not synced successfully yet</p>}
+            {connection.lastAttemptAt && <p title={formatDateTime(connection.lastAttemptAt)}>Last attempt {formatRelative(connection.lastAttemptAt)}</p>}
           </div>
-          <Button variant="destructive" size="sm" className="gap-2" onClick={onDelete} disabled={deleting}>
+          <Button size="sm" className="gap-2" onClick={handleSync} disabled={deleting || isSyncing}>
+            <RefreshCw className={cn('size-3.5', isSyncing && 'animate-spin')} />
+            {syncMutation.isPending ? 'Starting…' : isSyncing ? 'Syncing…' : 'Sync'}
+          </Button>
+          <Button variant="destructive" size="sm" className="gap-2" onClick={onDelete} disabled={deleting || isSyncing}>
             <Trash2 className="size-3.5" />
             Disconnect
           </Button>
         </div>
       </div>
+
+      {syncMutation.isError && (
+        <p role="alert" className="mt-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+          {syncErrorMessage(syncMutation.error)}
+        </p>
+      )}
+      {syncRunId && syncRunQuery.isPending && !syncRunQuery.data && (
+        <p role="status" className="mt-3 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-xs text-primary">
+          Sync accepted for {(acceptedRun?.capabilities ?? []).map((capability) => capabilityLabels[capability]).join(', ')}. Checking progress…
+        </p>
+      )}
+      {syncRunId && syncRunQuery.isError && (
+        <div role="alert" className="mt-3 flex items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+          <span className="flex-1">Sync was accepted, but its progress could not be loaded.</span>
+          <Button size="sm" variant="outline" onClick={() => void syncRunQuery.refetch()}>Retry status</Button>
+        </div>
+      )}
+      {syncRunQuery.data?.status === 'RUNNING' && (
+        <p role="status" className="mt-3 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-xs text-primary">
+          Syncing {(acceptedRun?.capabilities ?? syncRunQuery.data.capabilities.map((item) => item.capability))
+            .map((capability) => capabilityLabels[capability]).join(', ')}…
+        </p>
+      )}
+      {syncRunQuery.data && syncRunQuery.data.status !== 'RUNNING' && (
+        <div
+          role={syncRunQuery.data.status === 'SUCCESS' ? 'status' : 'alert'}
+          className={cn(
+            'mt-3 rounded-lg border px-3 py-2 text-xs',
+            syncRunQuery.data.status === 'SUCCESS' ? 'border-positive/30 bg-positive/5 text-positive'
+              : 'border-amber-500/30 bg-amber-500/5 text-amber-400',
+          )}
+        >
+          <p className="font-medium">
+            {syncRunQuery.data.status === 'SUCCESS' ? 'Sync completed.'
+              : syncRunQuery.data.status === 'PARTIAL' ? 'Sync completed with partial failures.'
+                : 'Sync failed. Previously saved data and last successful sync are retained.'}
+          </p>
+          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+            {syncRunQuery.data.capabilities.map((result) => (
+              <span key={result.capability} title={result.errorCategory ?? undefined}>
+                {capabilityLabels[result.capability]} {resultStatusLabel(result.status)}
+                {result.errorCategory ? ` · ${result.errorCategory}` : ''}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
     </Card>
   )
 }

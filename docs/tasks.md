@@ -1556,25 +1556,27 @@ API仕様を `api-design.md` に反映する。
 
 Provider Sync APIはStep 7-3で実装済み。Portfolio / Valuation後にConnections画面で評価額とManual SyncをUIへ統合する。
 
-- [ ] ConnectionごとのJPY評価額を表示する
-- [ ] Capabilitiesを表示する
-- [ ] fresh / stale / unavailableを表示する
-- [ ] lastAttemptAt / last successful syncを表示する
-- [ ] Syncボタンから対象Connectionの `POST /api/v1/connections/{connectionId}/sync` を呼ぶ
-- [ ] Syncing中はボタンをdisableし、同一Connectionへの重複操作を防ぐ
-- [ ] Success / Partial Failure / Errorを表示する
-- [ ] Sync完了後にConnection状態を再取得する
-- [ ] `connections`、`assets`、`positions`、`activity`、Portfolio Summary / History等の関連TanStack Queryをinvalidateする
-- [ ] Credentialを表示・再送しない
-- [ ] JPY評価不能値を0にしない
+- [x] ConnectionごとのJPY評価額を表示する
+- [x] Capabilitiesを表示する
+- [x] fresh / stale / unavailableを表示する
+- [x] lastAttemptAt / last successful syncを表示する
+- [x] Syncボタンから対象Connectionの `POST /api/v1/connections/{connectionId}/sync` を呼ぶ
+- [x] Syncing中はボタンをdisableし、同一Connectionへの重複操作を防ぐ
+- [x] Success / Partial Failure / Errorを表示する
+- [x] Sync完了後にConnection状態を再取得する
+- [x] `connections`、`assets`、`positions`、`activity`、Portfolio Summary / History等の関連TanStack Queryをinvalidateする
+- [x] Credentialを表示・再送しない
+- [x] JPY評価不能値を0にしない
 
 ### Test / ownership
 
-- [ ] Sync開始中 / Success / Partial Failure / Error表示を検証する
-- [ ] 同一Connectionのボタンが同期中disableされる
-- [ ] Sync成功後のquery invalidation / 状態再取得を検証する
-- [ ] User AがUser BのConnection IDでSyncできないことをAPI / Controller Testで検証する
-- [ ] unavailable valuationを0と区別する
+- [x] Sync開始中 / Success / Partial Failure / Error表示を検証する
+- [x] 同一Connectionのボタンが同期中disableされる
+- [x] Sync成功後のquery invalidation / 状態再取得を検証する
+- [x] User AがUser BのConnection IDでSyncできないことをAPI / Controller Testで検証する
+- [x] unavailable valuationを0と区別する
+
+**実装結果:** Connection一覧にJPY評価額、Complete / Stale / Partial / Unavailable、Capability別状態、最終試行 / 成功時刻を接続した。SyncはCSRF付きのbodyなしPOSTで開始し、Sync Runをpollして結果を表示する。同じConnectionのSync / Disconnectを実行中disableし、終了後Connections / Assets / Positions / Activity / Portfolio Summary / Historyをinvalidateする。Credentialを表示・送信せず、評価不能額はUnavailableのまま表示する。Frontend `pnpm test` は45 tests、失敗0。`pnpm typecheck` と`pnpm exec next build --webpack` 成功。Backend `BitbankSyncIntegrationTests.userCannotSyncOrReadAnotherUsersConnectionCredentialBalanceActivityOrSyncRun` は1 test、失敗 / error 0。
 
 ---
 
