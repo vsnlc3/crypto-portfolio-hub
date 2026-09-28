@@ -89,6 +89,10 @@ public class Activity extends CreatedEntity {
         return status;
     }
 
+    public String getOriginalEventType() {
+        return originalEventType;
+    }
+
     public void updateFromProvider(
             ActivityType eventType,
             String originalEventType,

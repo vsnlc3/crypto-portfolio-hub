@@ -112,7 +112,7 @@ Soft-deletes only a Connection owned by the authenticated User and returns `204 
 
 Within the same transaction, it removes that Connection's encrypted Credentials, Current Balances, Current Positions, Provider Account States, and Connection Sync States. The Connection is retained with `status: DISCONNECTED` and `deletedAt`. Activity (including Legs and detail rows) and Sync Run history (including results) remain available to their owner; User-level Portfolio Snapshots are unchanged. Repeating the delete returns `404`.
 
-### Manual Connection Sync (implemented in Step 7-3)
+### Manual Connection Sync (implemented in Steps 7-3 and 7-5)
 
 `POST /api/v1/connections/{connectionId}/sync` requires an authenticated Google Session and CSRF token. It has no request body; the Backend derives the owner from the Session and always uses trigger type `MANUAL`.
 
@@ -133,7 +133,9 @@ If any Capability is already `SYNCING` for the Connection, a second request retu
 
 `GET /api/v1/connections/{connectionId}/sync-runs/{syncRunId}` requires the same authenticated Session and returns the owner-scoped run status and Capability results (`SUCCESS`, `FAILED`, or `SKIPPED`), including safe error categories and optional fetched / persisted record counts. This allows the Frontend to poll an accepted run. A partial run remains `PARTIAL`; successful Capabilities keep their own success timestamps while failed Capabilities retain their previous successful Current State.
 
-Each capability response includes `continuationAvailable`. For Solana Activity, `true` means the current bounded history window has another provider page. The opaque cursor and query-window start stay server-side; the next manual sync resumes them. The first Activity sync covers the preceding 90 days and fetches at most 100 signatures per manual sync. After that window is exhausted, later syncs request Activity from one hour before the previous successful sync to cover overlap; Activity deduplication prevents duplicate history rows.
+Each capability response includes `continuationAvailable`. For Solana Activity, `true` means the current bounded history window has another provider page. The opaque cursor and query-window start stay server-side; the next manual sync resumes them. The first Solana Activity sync covers the preceding 90 days and fetches at most 100 signatures per manual sync. After that window is exhausted, later syncs request Activity from one hour before the previous successful sync to cover overlap; Activity deduplication prevents duplicate history rows.
+
+For bitbank, `BALANCE` and `ACTIVITY` run as separate capabilities. The first Activity query covers the preceding 90 days; subsequent queries begin one hour before the previous successful Activity sync. The REST endpoints have no cursor, so Adapter-side time-window splitting must finish within its request budget before reporting success. `continuationAvailable` is always `false` for a completed bitbank capability. Both providers keep their `Sync Run`, capability results, and previous successful Current State when another capability fails.
 
 ### `POST /api/v1/auth/logout`
 

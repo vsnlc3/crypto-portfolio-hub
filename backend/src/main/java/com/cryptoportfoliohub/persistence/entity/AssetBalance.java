@@ -103,6 +103,23 @@ public class AssetBalance extends UpdatedEntity {
             BigDecimal totalQuantity,
             Instant fetchedAt,
             UUID lastSuccessSyncRunId) {
+        this(connection, assetKey, symbol, assetName, assetCategory, network, assetRef,
+                totalQuantity, null, null, fetchedAt, lastSuccessSyncRunId);
+    }
+
+    public AssetBalance(
+            ConnectionEntity connection,
+            String assetKey,
+            String symbol,
+            String assetName,
+            AssetCategory assetCategory,
+            String network,
+            String assetRef,
+            BigDecimal totalQuantity,
+            BigDecimal availableQuantity,
+            BigDecimal lockedQuantity,
+            Instant fetchedAt,
+            UUID lastSuccessSyncRunId) {
         this.connection = connection;
         this.assetKey = assetKey;
         this.symbol = symbol;
@@ -111,6 +128,8 @@ public class AssetBalance extends UpdatedEntity {
         this.network = network;
         this.assetRef = assetRef;
         this.totalQuantity = totalQuantity;
+        this.availableQuantity = availableQuantity;
+        this.lockedQuantity = lockedQuantity;
         this.valuationStatus = ValuationStatus.UNAVAILABLE;
         this.fetchedAt = fetchedAt;
         this.lastSuccessSyncRunId = lastSuccessSyncRunId;
@@ -132,6 +151,14 @@ public class AssetBalance extends UpdatedEntity {
         return totalQuantity;
     }
 
+    public BigDecimal getAvailableQuantity() {
+        return availableQuantity;
+    }
+
+    public BigDecimal getLockedQuantity() {
+        return lockedQuantity;
+    }
+
     public BigDecimal getUnitPrice() {
         return unitPrice;
     }
@@ -146,5 +173,9 @@ public class AssetBalance extends UpdatedEntity {
 
     public ValuationStatus getValuationStatus() {
         return valuationStatus;
+    }
+
+    public UUID getLastSuccessSyncRunId() {
+        return lastSuccessSyncRunId;
     }
 }

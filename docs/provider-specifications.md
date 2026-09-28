@@ -144,6 +144,16 @@ Deposit historyはdestination tag、memo、bank accountを返さない。Withdra
 - `activities` + `activity_legs` はtrade、deposit、withdrawalとFeeを表現できるためSchema変更不要。
 - Connector入力はAPI Key / API SecretだけをProvider資格情報とし、識別情報が必要ならローカル表示名にする。read-only権限を画面説明と接続手順に明記する。
 
+### Step 7-5 Sync実装
+
+- Syncは既存のConnection単位のManual Sync APIを使い、`BALANCE`と`ACTIVITY`を別Capabilityとして実行・記録する。Provider呼出しとDB保存の間に長時間Transactionを保持しない。各Capabilityの`lastAttemptAt` / `lastSuccessAt`、Sync Run / Result、失敗状態は共通Sync lifecycleで管理する。
+- bitbank RESTは最古の取得可能日を定義していない。Application policyとして初回Activity queryをSync受付時刻から遡る90日に限定し、2回目以降はActivity Capabilityの前回成功時刻から1時間前をinclusiveに再取得する。queryの終了時刻はSync受付時刻とする。この期間をProviderが保証する履歴保存期間とは扱わない。
+- Activity APIにcursorはなく、取得可能なwindowはAdapterが件数上限に応じて時間分割する。全windowを上限内に取得できた場合だけCapabilityを成功にする。続きのProvider cursorは保存しないため、正常完了時の`continuationAvailable`は`false`。1ミリ秒windowでも上限を解消できない場合やendpoint当たりのrequest budgetを超えた場合はActivityを失敗にし、前回履歴を保持する。
+- BalanceはAdapterの全responseを検証してから単一DB TransactionでConnectionのCurrent Balance集合を置換する。成功した空集合は現在残高なしを示す。Provider取得または保存に失敗した場合は削除・置換をRollbackし、前回成功したBalanceとその`last_success_sync_run_id`を保持する。`onhand_amount`をtotal、`free_amount` / `locked_amount`を別列へ保存し、`withdrawing_amount`は重複加算しない。
+- Activity Headerとその全Legは同一DB Transactionで保存する。`dedup_key`をConnection / User内で再利用し、重複SyncではHeaderやLegを増やさない。同じProvider Eventのstatusが進んだ場合はHeaderを更新し、既存Legは維持する。保存途中のLeg制約違反等では同じTransactionをRollbackし、部分Activityを残さない。
+- `original_amount` / `original_currency`にはAdapterが取得した資産額と通貨を保存する。価格・FXはこのStepで適用しないため、`jpy_value`とvaluation metadataはNULL / `UNAVAILABLE`のままとする。取得不能値を0として補わない。
+- Credential、Balance、Activity、Sync情報へのQueryと保存は`authenticated user id`を含める。所有者が異なるConnectionへのSyncは404とし、Providerへ渡さない。Activity Legの所有権は親Activity経由で検証する。
+
 ## Solana (Step 4-2)
 
 公式資料のAdapter契約は2026-09-28に再確認した。Step 7-2ではFixture / Mock HTTPで契約を実装検証し、HeliusへのLive requestは行っていない。

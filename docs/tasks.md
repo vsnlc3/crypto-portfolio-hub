@@ -912,19 +912,21 @@ Trade amountのbase quantity解釈は公式CLI注文例に基づく推論であ�
 
 ## Step 7-5: bitbank Sync
 
-- [ ] Sync Run / Result / Capability State
-- [ ] Balance Current State更新
-- [ ] Activity Header / Legsを同一Transactionで保存
-- [ ] originalAmount / originalCurrencyと取得済みvaluation metadataを保持
-- [ ] 取得できない値を推測せず、NULL / unavailableにする
-- [ ] 重複排除・再実行時の冪等性
-- [ ] Partial Failure
-- [ ] Sync失敗時に前回成功値を保持
-- [ ] lastAttemptAt / lastSuccessAt
-- [ ] stale情報
-- [ ] User ownership
-- [ ] User AがUser BのCredential / Balance / Activity / Sync情報へアクセスできない
-- [ ] Sync Integration Test
+- [x] Sync Run / Result / Capability State
+- [x] Balance Current State更新
+- [x] Activity Header / Legsを同一Transactionで保存
+- [x] originalAmount / originalCurrencyと取得済みvaluation metadataを保持
+- [x] 取得できない値を推測せず、NULL / unavailableにする
+- [x] 重複排除・再実行時の冪等性
+- [x] Partial Failure
+- [x] Sync失敗時に前回成功値を保持
+- [x] lastAttemptAt / lastSuccessAt
+- [x] stale情報
+- [x] User ownership
+- [x] User AがUser BのCredential / Balance / Activity / Sync情報へアクセスできない
+- [x] Sync Integration Test
+
+Application policyとしてActivity初回同期は受付時刻から過去90日、以降は前回成功時刻から1時間の重複を含めて再取得する。Providerが最古の履歴日を保証しないことは`provider-specifications.md`に記録した。Balanceは完全成功時だけ置換し、Activityはdedup keyで重複排除してstatus変更をHeaderへ反映する。`BitbankSyncIntegrationTests`でBalance / Activity保存、original amount / currency、valuation unavailable、部分失敗時の前回Balance保持、Header / LegsのRollback、User ownershipをTestcontainersで検証した。
 
 ---
 

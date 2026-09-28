@@ -75,6 +75,10 @@ public class ConnectionSyncState {
         return status;
     }
 
+    public Instant getLastAttemptAt() {
+        return lastAttemptAt;
+    }
+
     public Instant getLastSuccessAt() {
         return lastSuccessAt;
     }
