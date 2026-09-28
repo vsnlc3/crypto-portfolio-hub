@@ -12,7 +12,8 @@ public final class CoinGeckoAssetMapping {
             "SOL", "solana",
             "XRP", "ripple",
             "HYPE", "hyperliquid",
-            "USDC", "usd-coin");
+            "USDC", "usd-coin",
+            "USDT", "tether");
 
     private CoinGeckoAssetMapping() {
     }
@@ -22,6 +23,6 @@ public final class CoinGeckoAssetMapping {
     }
 
     public static List<String> allCoinIds() {
-        return List.of("bitcoin", "ethereum", "solana", "ripple", "hyperliquid", "usd-coin");
+        return List.of("bitcoin", "ethereum", "solana", "ripple", "hyperliquid", "usd-coin", "tether");
     }
 }

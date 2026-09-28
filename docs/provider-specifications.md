@@ -27,14 +27,23 @@ CoinGeckoのSymbolは一意でないためsymbol検索ではなくAPI IDを指�
 | XRP | `ripple` | Canonical XRP |
 | HYPE | `hyperliquid` | Hyperliquid native HYPE。`hype-3`の別Tokenと混同しない |
 | USDC | `usd-coin` | Canonical USDC。Network別Mint / Contractを検証し、別の同名・bridged tokenをSymbolだけで同一視しない |
+| USDT | `tether` | Canonical Tether USD。Provider固有のMint / Token IDが確認できる場合のみ対応 |
 
 Provider `asset_key`からCanonical AssetへのMappingが不明なAsset、CoinGeckoにないAsset、複数候補が残るAssetは推測せず価格をUnavailableとする。将来Assetを追加する場合はProvider識別子・network・token address等でIdentityを確定してからMarket IDを追加する。
+
+Step 8-1の資産Identity対応:
+
+- bitbankのCanonicalな`asset_key`が上表のCoinGecko IDに直接対応する場合だけMappingする。
+- Solana Native SOLは`asset_key=SOL`かつ`asset_ref=NATIVE`を使用する。TokenはmainnetのUSDC mint `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`とUSDT mint `Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB`だけをCanonical stablecoinとして扱う。Symbolだけが同じ別MintはMappingしない。
+- Hyperliquid SpotはNetworkとToken IDで識別する。公式`spotMeta`のUSDC例にあるCanonical token ID `0x6d1e7cde53ba9467b783cb7c530ce054`だけをCanonical USDCとして扱う。2026-09-28の公開read-only `spotMeta` responseでHYPE token index `150` / Token ID `0x0d01dc56dcaaca66ad901c959b4011ec`を確認し、公式Asset ID docsのmainnet HYPE token indexとSpot `@107`対応に基づき、この完全一致IDだけをHYPEへ対応させる。別Token IDはSymbolが同じでも推測で結合しない。
+- USDC / USDTの価格は1 USDへ固定せずCoinGeckoのUSD market priceを使う。通貨建てUSDC / USDTをJPYへ換算するときはそのUSD market priceとUSD/JPYを掛け合わせ、両観測の古い方の時刻をFX evaluatedAtとする。どちらかを得られない場合は換算不能とする。
+- HyperliquidのSpot BalanceカテゴリはMarket Data評価で確定済みToken IDを使ってStablecoinへ補正する。未確認TokenはProviderが返すカテゴリを維持する。
 
 ### Timestamp、鮮度、失敗
 
 - `price_evaluated_at`はCoinGecko `last_updated`、`fx_evaluated_at`はExchangeRate-API `time_last_update_unix`に対応する。HTTP取得時刻とProviderデータ時刻は混同しない。取得時刻はObservability / cache control上で別途保持してよい。
 - Application鮮度方針として、暗号資産価格はProvider時刻から15分、日次FXは72時間を超えた値をSTALEとする。これはProviderが保証する更新間隔ではなく、Demo planの更新頻度と共有Cacheを踏まえたUI / Valuation向けのMVP判定値。運用データに応じて設定化する。
-- FX取得元通貨と対象通貨が同一の場合はRate 1、Source `IDENTITY`とする。MVP Portfolio換算ではJPY→JPYをidentityとし、USD→JPYは上記FX Rateを使う。
+- FX取得元通貨と対象通貨が同一の場合はRate 1、Source `IDENTITY`とする。MVP Portfolio換算ではJPY→JPYをidentityとし、USD→JPYは上記FX Rate、USDC / USDT→JPYはCoinGecko評価とUSD/JPYを合成したRateを使う。
 - CoinGeckoまたはFX API障害時に第二Providerへ自動fallbackしない。成功済みresponseは共有Cacheとして利用し、Provider observationからの経過時間が鮮度上限を超えたらSTALEとする。必要なPrice / FXがUnavailableまたは鮮度上限を超え、全体のNet Worthを正しく算出できないときはそのデータを0扱いせず、新しいSnapshotを作らない。前回成功済みの全体Current Stateを再利用する場合は既存方針に従いSTALEとして示す。
 - `price_change_percentage_24h`がnull / 欠落 / staleの場合は24h quoteだけをUnavailableにする。現在価格とFXが有効ならPortfolio valuationは継続できる。Comparison periodは`24h`、Quote sourceは`COINGECKO`、quote evaluatedAtはPriceと同じ`last_updated`とする。
 - Hyperliquid Perpetual PositionのPosition Value / Unrealized PnLでは、Hyperliquidから取得した当該PositionのMark Price / Provider PnLを使う。Spot向けCoinGecko価格へ置換・fallbackせず、価格通貨ごとのFX換算だけを適用する。
@@ -64,6 +73,12 @@ Step 4-4では公式仕様およびIDを確認し、実価格値を検証Fixture
 - 429 / timeout等の失敗は分類し、bounded backoffの間は再Fetchしない。前回成功値は評価時刻からSTALE判定し、存在しなければUnavailableとする。別Providerやゼロ値へfallbackしない。
 - Provider Key未設定でもBackendは起動できる。CoinGecko Demo keyはHeaderからのみ送信し、ExchangeRate-API keyは要求Pathに含まれるためrequest URIをアプリケーションログ・例外メッセージへ記録しない。
 - 2026-09-28、`.env`から注入したCredentialで`MarketDataLiveSmokeTests`を実行・再確認し、CoinGecko DemoのCurrent PriceとExchangeRate-APIのUSD/JPY responseを取得してresponse shapeおよびProvider評価時刻の読み取りを確認した（今回の再実行も1 test成功）。値とCredentialはログ・文書へ記録しない。
+
+### Step 8-1 Valuation実装状況
+
+- Provider asset identityをNetwork / Token ID / Mintに基づいて解決する。未対応Identityは価格Unavailableのまま数量を保持し、CoinGeckoのSymbolから推測しない。
+- USDC / USDTの円換算は実USD市場価格とUSD/JPYの合成値を使い、1 USD固定をしない。
+- Asset Balanceの価格、FX、JPY Value、Source、Provider evaluatedAtをCurrent Stateに保存する。Perpetual PositionはPosition Price / Margin / PnLそれぞれの通貨FXを別々に保存する。Provider Account Equityは`account_equity_jpy`とFX Source / evaluatedAtを保存し、Currency / FXが不明なときはJPY値をNULLにする。
 
 ### Step 6-2 実装状況
 

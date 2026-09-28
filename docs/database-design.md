@@ -720,6 +720,7 @@ Providerが返すAccount Scope単位のMode / Equity / Collateral等を保持す
 | `cash_balance` | numeric(38,18) | YES | |
 | `collateral_balance` | numeric(38,18) | YES | |
 | `account_equity` | numeric(38,18) | YES | |
+| `account_equity_jpy` | numeric(38,8) | YES | Account Equityを評価できる場合のJPY額。FX unavailableならNULL |
 | `unrealized_pnl` | numeric(38,18) | YES | |
 | `equity_includes_unrealized_pnl` | boolean | YES | Provider仕様確認済みの場合設定 |
 | `fx_rate_to_jpy` | numeric(24,12) | YES | |
@@ -740,6 +741,7 @@ FK (last_success_sync_run_id, connection_id, user_id)
 CHECK (account_mode IS NULL OR account_mode IN (
   'STANDARD', 'UNIFIED_ACCOUNT', 'PORTFOLIO_MARGIN', 'UNKNOWN', 'UNSUPPORTED'
 ))
+CHECK (account_equity_jpy IS NULL OR account_equity IS NOT NULL)
 CHECK (provider_abstraction_mode IS NULL OR provider_abstraction_mode IN (
   'disabled', 'unifiedAccount', 'portfolioMargin', 'default', 'dexAbstraction', 'UNKNOWN'
 ))
@@ -768,6 +770,8 @@ Balance + 未反映Unrealized PnL
 同じ資産をBalanceとAccount Equityの両方から加算しない。
 
 HyperliquidのNet Worth mappingはProvider仕様書 §Account Modeに従う。StandardではPerp DEXごとに `marginSummary.accountValue` を使用し、これはUnrealized PnLを含むためPnLを重ねて加算しない。Unified / Portfolio Marginでは`spotClearinghouseState`のbalanceを基準にし、Perp Account Equityを加算しない。Mode不明・未対応、JPY評価に必要な残高・PnL・通貨・FXが不足した場合、既存成功状態がなければPortfolio Snapshotを作成しない。
+
+`account_equity_jpy`はProvider Account Equityと、その`account_currency`からJPYへの対応FXを掛けて算出する。対応するRate / Source / evaluatedAtを同じ行に保存し、Equity自体、Currency、またはFXが取得不能ならJPY額をNULLとする。JPY値はPortfolio集計値の重複保存ではなく、Providerが返すAccount Equityの換算値である。
 
 ---
 
@@ -1744,6 +1748,7 @@ V7__create_portfolio_snapshots.sql
 V8__create_indexes.sql
 V9__persist_provider_sync_continuation.sql
 V10__support_hyperliquid_account_modes_and_perp_fills.sql
+V11__persist_provider_account_equity_jpy.sql
 ```
 
 実際のSQL作成時に、1 Migrationが過度に細分化されない範囲で調整してよい。

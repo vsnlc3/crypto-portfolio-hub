@@ -143,6 +143,22 @@ public class AssetBalance extends UpdatedEntity {
         return assetKey;
     }
 
+    public String getAssetName() {
+        return assetName;
+    }
+
+    public AssetCategory getAssetCategory() {
+        return assetCategory;
+    }
+
+    public String getNetwork() {
+        return network;
+    }
+
+    public String getAssetRef() {
+        return assetRef;
+    }
+
     public String getSymbol() {
         return symbol;
     }
@@ -167,6 +183,26 @@ public class AssetBalance extends UpdatedEntity {
         return fxRateToJpy;
     }
 
+    public String getPriceCurrency() {
+        return priceCurrency;
+    }
+
+    public String getPriceSource() {
+        return priceSource;
+    }
+
+    public Instant getPriceEvaluatedAt() {
+        return priceEvaluatedAt;
+    }
+
+    public String getFxSource() {
+        return fxSource;
+    }
+
+    public Instant getFxEvaluatedAt() {
+        return fxEvaluatedAt;
+    }
+
     public BigDecimal getJpyValue() {
         return jpyValue;
     }
@@ -177,5 +213,28 @@ public class AssetBalance extends UpdatedEntity {
 
     public UUID getLastSuccessSyncRunId() {
         return lastSuccessSyncRunId;
+    }
+
+    public void recordValuation(
+            AssetCategory category,
+            BigDecimal unitPrice,
+            String priceCurrency,
+            String priceSource,
+            Instant priceEvaluatedAt,
+            BigDecimal fxRateToJpy,
+            String fxSource,
+            Instant fxEvaluatedAt,
+            BigDecimal jpyValue,
+            ValuationStatus valuationStatus) {
+        this.assetCategory = category;
+        this.unitPrice = unitPrice;
+        this.priceCurrency = priceCurrency;
+        this.priceSource = priceSource;
+        this.priceEvaluatedAt = priceEvaluatedAt;
+        this.fxRateToJpy = fxRateToJpy;
+        this.fxSource = fxSource;
+        this.fxEvaluatedAt = fxEvaluatedAt;
+        this.jpyValue = jpyValue;
+        this.valuationStatus = valuationStatus;
     }
 }

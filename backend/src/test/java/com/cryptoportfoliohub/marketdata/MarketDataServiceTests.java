@@ -66,7 +66,8 @@ class MarketDataServiceTests {
                 MarketPriceChange.Unit.PERCENTAGE,
                 MarketPriceChange.ComparisonPeriod.H24));
         assertThat(second.price()).isEqualTo(first.get("BTC").price());
-        verify(coinGeckoClient).fetchPrices(List.of("bitcoin", "ethereum", "solana", "ripple", "hyperliquid", "usd-coin"));
+        verify(coinGeckoClient).fetchPrices(List.of(
+                "bitcoin", "ethereum", "solana", "ripple", "hyperliquid", "usd-coin", "tether"));
     }
 
     @Test
@@ -148,6 +149,22 @@ class MarketDataServiceTests {
         assertThat(quote.rate().orElseThrow().rate()).isEqualByComparingTo("149.4567890123");
         assertThat(quote.source()).contains(MarketDataSource.EXCHANGERATE_API);
         assertThat(quote.evaluatedAt()).contains(updatedAt);
+        assertThat(quote.freshness()).isEqualTo(DataFreshness.FRESH);
+    }
+
+    @Test
+    void derivesStablecoinJpyFxFromItsUsdMarketPriceAndUsdJpyRate() {
+        Instant coinUpdatedAt = START.minusSeconds(30);
+        Instant fxUpdatedAt = START.minusSeconds(60);
+        when(coinGeckoClient.fetchPrices(CoinGeckoAssetMapping.allCoinIds())).thenReturn(Map.of(
+                "tether", new CoinGeckoPriceObservation(new BigDecimal("0.998"), coinUpdatedAt)));
+        when(exchangeRateApiClient.fetchUsdToJpy()).thenReturn(new FxObservation(new BigDecimal("150.25"), fxUpdatedAt));
+
+        var quote = marketDataService.fxRate(new CurrencyCode("USDT"), CurrencyCode.JPY);
+
+        assertThat(quote.rate().orElseThrow().rate()).isEqualByComparingTo("149.94950");
+        assertThat(quote.source()).contains(MarketDataSource.COINGECKO_AND_EXCHANGERATE_API);
+        assertThat(quote.evaluatedAt()).contains(fxUpdatedAt);
         assertThat(quote.freshness()).isEqualTo(DataFreshness.FRESH);
     }
 

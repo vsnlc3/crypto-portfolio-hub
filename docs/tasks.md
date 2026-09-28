@@ -1005,23 +1005,23 @@ Fixture Adapter TestでMode mapping、未知値時のfail closed、StandardとUn
 
 Phase 7で取得・正規化したBalance / Position / Account Stateに、Phase 6で実装したCurrent Price / FXを適用する。`requirements.md` の定義を正として、評価と集計を行う。
 
-- [ ] Holdings Value
-- [ ] Directional Value
-- [ ] Stablecoin Value
-- [ ] Net Worth
-- [ ] Market Exposure
-- [ ] Position Value
-- [ ] Margin JPY
-- [ ] Unrealized PnL JPY
-- [ ] Exposure Ratio
+- [x] Holdings Value
+- [x] Directional Value
+- [x] Stablecoin Value
+- [x] Net Worth
+- [x] Market Exposure
+- [x] Position Value
+- [x] Margin JPY
+- [x] Unrealized PnL JPY
+- [x] Exposure Ratio
 
 ### Valuation persistence
 
-- [ ] Asset BalanceのPrice / FX / JPY ValueとSource / evaluatedAtを保存する
-- [ ] Perpetual PositionのPosition Value / Margin / Unrealized PnLをそれぞれの通貨でJPY評価する
-- [ ] Position Price FX / Margin FX / PnL FXのRate / Source / evaluatedAtを別々に保存する
-- [ ] Provider Account StateのJPY Value / Source / evaluatedAtを保存する
-- [ ] Market Data取得失敗時も既知のProvider数量・状態を0評価にせず保持する
+- [x] Asset BalanceのPrice / FX / JPY ValueとSource / evaluatedAtを保存する
+- [x] Perpetual PositionのPosition Value / Margin / Unrealized PnLをそれぞれの通貨でJPY評価する
+- [x] Position Price FX / Margin FX / PnL FXのRate / Source / evaluatedAtを別々に保存する
+- [x] Provider Account StateのJPY Value / Source / evaluatedAtを保存する
+- [x] Market Data取得失敗時も既知のProvider数量・状態を0評価にせず保持する
 
 ### FX
 
@@ -1043,38 +1043,47 @@ Unrealized PnL
 
 ### 重要
 
-- [ ] Position ValueをNet Worthへ加算しない
-- [ ] Marginを資産として二重計上しない
-- [ ] Account EquityとBalanceを二重計上しない
-- [ ] Unrealized PnLを二重計上しない
-- [ ] Realized PnLを残高へ別途再加算しない
-- [ ] Long / ShortをMarket Exposureで相殺しない
-- [ ] Price取得不能値を0扱いしない
-- [ ] FX取得不能値を0扱いしない
-- [ ] 未取得と実際の0を区別する
+- [x] Position ValueをNet Worthへ加算しない
+- [x] Marginを資産として二重計上しない
+- [x] Account EquityとBalanceを二重計上しない
+- [x] Unrealized PnLを二重計上しない
+- [x] Realized PnLを残高へ別途再加算しない
+- [x] Long / ShortをMarket Exposureで相殺しない
+- [x] Price取得不能値を0扱いしない
+- [x] FX取得不能値を0扱いしない
+- [x] 未取得と実際の0を区別する
 
 ### テスト
 
-- [ ] JPY Assetのidentity conversion
-- [ ] USD AssetのJPY換算
-- [ ] Crypto AssetのCurrent PriceによるJPY評価
-- [ ] Spotのみ
-- [ ] Stablecoinのみ
-- [ ] Long Position
-- [ ] Short Position
-- [ ] 複数Position
-- [ ] EquityがUnrealized PnLを含むケース
-- [ ] EquityがUnrealized PnLを含まないケース
-- [ ] Price Currency / Margin Currency / PnL Currencyが異なるケース
-- [ ] FX不足
-- [ ] Price不足
-- [ ] 0 Balance
-- [ ] Long + Short Exposure
-- [ ] stale price / stale FXを反映した評価状態
-- [ ] unavailable valuationが0へ変換されないこと
-- [ ] Price / Margin / PnLのCurrencyが異なるPerpetual Position
-- [ ] Provider Account Stateのvalue / source / evaluatedAtを保持する
-- [ ] Provider Account Stateの評価とEquity / Balance二重計上防止
+- [x] JPY Assetのidentity conversion
+- [x] USD AssetのJPY換算
+- [x] Crypto AssetのCurrent PriceによるJPY評価
+- [x] Spotのみ
+- [x] Stablecoinのみ
+- [x] Long Position
+- [x] Short Position
+- [x] 複数Position
+- [x] EquityがUnrealized PnLを含むケース
+- [x] EquityがUnrealized PnLを含まないケース
+- [x] Price Currency / Margin Currency / PnL Currencyが異なるケース
+- [x] FX不足
+- [x] Price不足
+- [x] 0 Balance
+- [x] Long + Short Exposure
+- [x] stale price / stale FXを反映した評価状態
+- [x] unavailable valuationが0へ変換されないこと
+- [x] Price / Margin / PnLのCurrencyが異なるPerpetual Position
+- [x] Provider Account Stateのvalue / source / evaluatedAtを保持する
+- [x] Provider Account Stateの評価とEquity / Balance二重計上防止
+
+### 実装結果
+
+- User IDを必須とするPortfolio Valuation Serviceを追加し、Current StateのRepository Queryを認証済みUser IDで絞る。
+- Holdings Valueは現物Balance全体、Directional ValueはCRYPTO、Stablecoin ValueはSTABLECOIN、FIATはHoldings / Net Worthに含める。Market ExposureはDirectional Valueと全Perpetual Position Valueの絶対額を合算する。
+- Net WorthではHyperliquid StandardのPerp DEX Account Equityを各一度だけ加算し、Account Equityに含まれるPnLを重複加算しない。Unified / Portfolio MarginはSpot BalanceにPosition PnLを一度だけ反映し、Perp EquityとPosition Valueを加えない。
+- `account_equity_jpy`をV11で追加し、Equity Currency FX Rate / Source / evaluatedAtとJPY額を保存する。Price / Margin / PnLは独立したJPY換算を行い、Perpetual Positionには意味別FXを保存する。
+- Solanaの公式USDC / USDT MintおよびHyperliquidの公式Spot USDC / HYPE Token IDをProvider identityとして確認した。未知TokenはSymbolから推定しない。USDC / USDTをUSDへ固定せずCoinGecko評価価格からJPY換算する。
+- Unit TestとPostgreSQL Testcontainers Integration TestでUser分離、Identity Mapping、Spot / Stablecoin / Perpetual計算、FX不足、既知0と未取得、JPY Identity、Stale、Equity / PnLの二重計上を確認する。
 
 ---
 

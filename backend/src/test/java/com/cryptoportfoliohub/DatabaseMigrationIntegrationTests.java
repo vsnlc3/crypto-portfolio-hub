@@ -34,7 +34,7 @@ class DatabaseMigrationIntegrationTests {
                 """, Integer.class);
 
         assertThat(tableCount).isEqualTo(13);
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("10");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("11");
         assertThat(jdbcTemplate.queryForObject("""
                 SELECT COUNT(*)
                 FROM information_schema.columns
@@ -56,8 +56,8 @@ class DatabaseMigrationIntegrationTests {
                 FROM information_schema.columns
                 WHERE table_schema = 'public'
                   AND table_name = 'provider_account_states'
-                  AND column_name IN ('account_scope', 'account_mode', 'provider_abstraction_mode')
-                """, Integer.class)).isEqualTo(3);
+                  AND column_name IN ('account_scope', 'account_mode', 'provider_abstraction_mode', 'account_equity_jpy')
+                """, Integer.class)).isEqualTo(4);
         assertThat(jdbcTemplate.queryForObject("""
                 SELECT is_nullable
                 FROM information_schema.columns

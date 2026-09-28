@@ -99,6 +99,10 @@ public class MarketDataService {
                     DataFreshness.FRESH,
                     Optional.empty());
         }
+        if (CurrencyCode.JPY.equals(toCurrency)
+                && (new CurrencyCode("USDC").equals(fromCurrency) || new CurrencyCode("USDT").equals(fromCurrency))) {
+            return stablecoinFxRate(fromCurrency, toCurrency);
+        }
         if (!CurrencyCode.USD.equals(fromCurrency) || !CurrencyCode.JPY.equals(toCurrency)) {
             return unavailableFx(fromCurrency, toCurrency, Optional.empty(), Optional.empty());
         }
@@ -122,6 +126,35 @@ public class MarketDataService {
                 Optional.of(value.evaluatedAt()),
                 freshness,
                 failure);
+    }
+
+    private MarketFxQuote stablecoinFxRate(CurrencyCode fromCurrency, CurrencyCode toCurrency) {
+        MarketPriceQuote stablecoinUsd = currentPrice(fromCurrency.value());
+        MarketFxQuote usdJpy = fxRate(CurrencyCode.USD, CurrencyCode.JPY);
+        if (stablecoinUsd.price().isEmpty() || usdJpy.rate().isEmpty()) {
+            Optional<ProviderErrorCategory> failure = stablecoinUsd.failureCategory().isPresent()
+                    ? stablecoinUsd.failureCategory() : usdJpy.failureCategory();
+            return unavailableFx(fromCurrency, toCurrency,
+                    Optional.of(MarketDataSource.COINGECKO_AND_EXCHANGERATE_API), failure);
+        }
+
+        var stablecoinPrice = stablecoinUsd.price().orElseThrow();
+        var usdToJpy = usdJpy.rate().orElseThrow();
+        Instant evaluatedAt = min(
+                stablecoinUsd.evaluatedAt().orElseThrow(), usdJpy.evaluatedAt().orElseThrow());
+        DataFreshness freshness = stablecoinUsd.freshness() == DataFreshness.STALE
+                || usdJpy.freshness() == DataFreshness.STALE
+                ? DataFreshness.STALE : DataFreshness.FRESH;
+        return new MarketFxQuote(
+                fromCurrency,
+                toCurrency,
+                Optional.of(new FxRate(fromCurrency, toCurrency,
+                        stablecoinPrice.amount().multiply(usdToJpy.rate()))),
+                Optional.of(MarketDataSource.COINGECKO_AND_EXCHANGERATE_API),
+                Optional.of(evaluatedAt),
+                freshness,
+                stablecoinUsd.failureCategory().isPresent()
+                        ? stablecoinUsd.failureCategory() : usdJpy.failureCategory());
     }
 
     private synchronized void refreshPricesIfNeeded() {
@@ -238,6 +271,10 @@ public class MarketDataService {
 
     private static Instant max(Instant left, Instant right) {
         return left.isAfter(right) ? left : right;
+    }
+
+    private static Instant min(Instant left, Instant right) {
+        return left.isBefore(right) ? left : right;
     }
 
     private static Duration retryBackoff(int failureCount) {

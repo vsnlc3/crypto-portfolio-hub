@@ -203,11 +203,54 @@ public class PerpetualPosition extends UpdatedEntity {
         return priceFxRateToJpy;
     }
 
+    public String getPriceFxSource() {
+        return priceFxSource;
+    }
+
+    public Instant getPriceFxEvaluatedAt() {
+        return priceFxEvaluatedAt;
+    }
+
     public BigDecimal getMarginFxRateToJpy() {
         return marginFxRateToJpy;
     }
 
+    public String getMarginFxSource() {
+        return marginFxSource;
+    }
+
+    public Instant getMarginFxEvaluatedAt() {
+        return marginFxEvaluatedAt;
+    }
+
     public BigDecimal getPnlFxRateToJpy() {
         return pnlFxRateToJpy;
+    }
+
+    public String getPnlFxSource() {
+        return pnlFxSource;
+    }
+
+    public Instant getPnlFxEvaluatedAt() {
+        return pnlFxEvaluatedAt;
+    }
+
+    public String getInstrumentCode() {
+        return instrumentCode;
+    }
+
+    public void recordFxValuations(
+            BigDecimal priceRate, String priceSource, Instant priceEvaluatedAt,
+            BigDecimal marginRate, String marginSource, Instant marginEvaluatedAt,
+            BigDecimal pnlRate, String pnlSource, Instant pnlEvaluatedAt) {
+        this.priceFxRateToJpy = priceRate;
+        this.priceFxSource = priceSource;
+        this.priceFxEvaluatedAt = priceEvaluatedAt;
+        this.marginFxRateToJpy = marginRate;
+        this.marginFxSource = marginSource;
+        this.marginFxEvaluatedAt = marginEvaluatedAt;
+        this.pnlFxRateToJpy = pnlRate;
+        this.pnlFxSource = pnlSource;
+        this.pnlFxEvaluatedAt = pnlEvaluatedAt;
     }
 }

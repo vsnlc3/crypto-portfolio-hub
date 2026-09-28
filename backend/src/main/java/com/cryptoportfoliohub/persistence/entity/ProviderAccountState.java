@@ -46,6 +46,9 @@ public class ProviderAccountState extends UpdatedEntity {
     @Column(name = "account_equity", precision = 38, scale = 18)
     private BigDecimal accountEquity;
 
+    @Column(name = "account_equity_jpy", precision = 38, scale = 8)
+    private BigDecimal accountEquityJpy;
+
     @Column(name = "unrealized_pnl", precision = 38, scale = 18)
     private BigDecimal unrealizedPnl;
 
@@ -121,6 +124,10 @@ public class ProviderAccountState extends UpdatedEntity {
         return accountEquity;
     }
 
+    public BigDecimal getAccountEquityJpy() {
+        return accountEquityJpy;
+    }
+
     public BigDecimal getCashBalance() {
         return cashBalance;
     }
@@ -131,6 +138,14 @@ public class ProviderAccountState extends UpdatedEntity {
 
     public BigDecimal getFxRateToJpy() {
         return fxRateToJpy;
+    }
+
+    public String getFxSource() {
+        return fxSource;
+    }
+
+    public Instant getFxEvaluatedAt() {
+        return fxEvaluatedAt;
     }
 
     public BigDecimal getUnrealizedPnl() {
@@ -147,5 +162,13 @@ public class ProviderAccountState extends UpdatedEntity {
 
     public UUID getLastSuccessSyncRunId() {
         return lastSuccessSyncRunId;
+    }
+
+    public void recordFxValuation(
+            BigDecimal rate, String source, Instant evaluatedAt, BigDecimal accountEquityJpy) {
+        this.fxRateToJpy = rate;
+        this.fxSource = source;
+        this.fxEvaluatedAt = evaluatedAt;
+        this.accountEquityJpy = accountEquityJpy;
     }
 }
