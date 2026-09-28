@@ -1237,26 +1237,33 @@ API仕様を `api-design.md` に反映する。
 
 静的mockをAPIへ置き換える。
 
-- [ ] TanStack Query
-- [ ] JPY表示
-- [ ] Source表示
-- [ ] Current Price / Price Currency表示
-- [ ] 24h Price Change / 24h比較期間表示
-- [ ] Market Data Source / evaluatedAtの状態表示
-- [ ] unavailable price change表示（0と区別）
-- [ ] Loading
-- [ ] Empty
-- [ ] Error
-- [ ] Partial Error
-- [ ] stale表示
-- [ ] unavailable表示
+- [x] TanStack Query
+- [x] JPY表示
+- [x] Source表示
+- [x] Current Price / Price Currency表示
+- [x] 24h Price Change / 24h比較期間表示
+- [x] Market Data Source / evaluatedAtの状態表示
+- [x] unavailable price change表示（0と区別）
+- [x] Loading
+- [x] Empty
+- [x] Error
+- [x] Partial Error
+- [x] stale表示
+- [x] unavailable表示
 
 ### Frontend Test
 
-- [ ] JPY金額と価格通貨の表示
-- [ ] 24h changeとcomparison periodの表示
-- [ ] unavailableを0として表示しない
-- [ ] Partial Error / stale表示
+- [x] JPY金額と価格通貨の表示
+- [x] 24h changeとcomparison periodの表示
+- [x] unavailableを0として表示しない
+- [x] Partial Error / stale表示
+
+### 実装結果
+
+- Assets画面の静的mockを `GET /api/v1/assets` のTanStack Queryへ置き換えた。Summary、銘柄行、AllocationをAPI値で表示し、JPYの集計・評価額と通貨単位付きCurrent Priceを区別する。
+- Sourceと評価時刻を表示し、24h changeが未取得なら `24h unavailable`、staleなら `24h stale` として数値0を表示しない。既知の接続別残高はPartial時に表示し、完全な集計値が不明な場合はUnavailableとして残す。
+- Loading / no-Connection / no-asset Empty / Error・Retry / Partial / stale / unavailableの画面状態を実装した。Testで表示状態とJPY・価格通貨・Quote metadataを確認した。
+- Frontend検証: `pnpm test` 20 tests、`pnpm typecheck` 成功、`pnpm exec next build --webpack` 成功。既定のTurbopack buildは実行環境でCSS loaderのhelper processがportをbindできず失敗したため、Webpack buildで本番コンパイルを確認した。
 
 ---
 

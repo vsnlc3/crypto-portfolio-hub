@@ -183,8 +183,7 @@ Googleアカウントでユーザーを認証し、本人のPortfolio画面へ�
 
 ### 現行UIとの差分
 
-- **要修正:** Spot holdings、Directional、Stablecoins、Allocation、銘柄評価額はいずれも現在USD表示。ポートフォリオ集計値はJPY表示にし、単価として表示する暗号資産価格はUSD表示を許容する。
-- **要修正:** 現行画面は静的モックを常に一覧表示する。実データ取得時は未取得、残高ゼロ、部分取得失敗を区別する。
+- Assetsは `GET /api/v1/assets` へ接続済み。集計値と評価額をJPY、銘柄単価はAPIの通貨コード付きで表示し、部分取得・stale・unavailable・空・Loading・Errorを区別する。
 
 ## 6. Activity
 
@@ -298,7 +297,7 @@ Googleアカウントでユーザーを認証し、本人のPortfolio画面へ�
 | --- | --- | --- |
 | 認証・ユーザー表示 | Sign inなし、固定プロフィール | Googleログインを必須にし、本人のデータだけを表示する。 |
 | 通貨 | 金額・評価額の大半がUSD | 集計値はJPY。価格として自然な単価・Perpetual建値はUSD表示可。 |
-| データ取得 | Dashboard / Assets / Activityは `mock-data.ts` の静的データ。ConnectionsはBackend API接続済み。 | 各画面をユーザー単位の実データへ順次移行し、未取得とゼロを区別する。 |
+| データ取得 | Dashboard / Activityは `mock-data.ts` の静的データ。Assets / ConnectionsはBackend API接続済み。 | 残る画面をユーザー単位の実データへ順次移行し、未取得とゼロを区別する。 |
 | 同期 | 時刻表示・ボタンが固定または未接続 | 接続先別の状態、最終同期時刻、部分失敗、再試行を扱う。 |
 | 履歴チャート | 期間ボタンがデータを切り替えない | 選択期間の履歴を表示し、データがない場合を明示する。 |
 | Solana接続 | ConnectionsのProviderは `SOLANA`、表示バッジはPhantom。旧Mock画面にはサービスID `phantom` が残る。 | 内部対象はSolana Wallet Address。UIラベルはPhantom可。 |
