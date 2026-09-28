@@ -244,6 +244,80 @@ Supported assets aggregate by the exact canonical identity in the market mapping
 
 The endpoint revalues owner-scoped current Balances before creating the DTO. It returns no JPA Entity and never reads another User's Balances or Connections.
 
+## Positions
+
+### `GET /api/v1/positions`
+
+Requires an authenticated Google Session. The owner is taken from the Session. The response contains current Perpetual Positions from active supported Connections, currently Hyperliquid, and exposes the separate JPY valuation inputs for Position Value, Margin, and Unrealized PnL.
+
+Response `200`:
+
+```json
+{
+  "summary": {
+    "positionValueJpy": 30000,
+    "marginJpy": 420,
+    "unrealizedPnlJpy": -520,
+    "status": "COMPLETE",
+    "connectionCount": 1,
+    "syncedConnectionCount": 1
+  },
+  "positions": [
+    {
+      "positionKey": "DEFAULT:BTC",
+      "instrumentCode": "BTC",
+      "side": "LONG",
+      "leverage": 2,
+      "quantity": 2,
+      "entryPrice": 90,
+      "markPrice": 100,
+      "liquidationPrice": 50,
+      "priceCurrency": "USD",
+      "positionValueJpy": 30000,
+      "marginAmount": 3,
+      "marginCurrency": "USDC",
+      "marginJpy": 420,
+      "unrealizedPnl": -4,
+      "pnlCurrency": "USDT",
+      "unrealizedPnlJpy": -520,
+      "priceFx": {
+        "currency": "USD",
+        "rateToJpy": 150,
+        "source": "EXCHANGERATE_API",
+        "evaluatedAt": "2026-09-28T03:00:00Z",
+        "status": "COMPLETE"
+      },
+      "marginFx": {
+        "currency": "USDC",
+        "rateToJpy": 140,
+        "source": "COINGECKO_AND_EXCHANGERATE_API",
+        "evaluatedAt": "2026-09-28T03:00:00Z",
+        "status": "COMPLETE"
+      },
+      "pnlFx": {
+        "currency": "USDT",
+        "rateToJpy": 130,
+        "source": "COINGECKO_AND_EXCHANGERATE_API",
+        "evaluatedAt": "2026-09-28T03:00:00Z",
+        "status": "COMPLETE"
+      },
+      "status": "COMPLETE",
+      "connectionId": "<connection-uuid>",
+      "provider": "HYPERLIQUID",
+      "connectionDisplayName": "Hyperliquid",
+      "fetchedAt": "2026-09-28T03:00:00Z",
+      "lastSuccessAt": "2026-09-28T03:00:00Z"
+    }
+  ]
+}
+```
+
+Position Value JPY uses `abs(quantity × markPrice)` and `priceFx.rateToJpy`. Margin JPY uses the reported margin amount and `marginFx.rateToJpy`. Unrealized PnL JPY uses the reported signed PnL and `pnlFx.rateToJpy`; when a Provider has omitted PnL but entry / mark price and the price currency are available, the same linear unrealized PnL calculation used by Portfolio Valuation is exposed in the price currency. The three FX objects retain their own currency, rate, source, evaluation time, and status.
+
+JPY fields remain `null` when the required raw value or non-zero amount's FX rate is unavailable; an unavailable conversion is never replaced with zero. A genuinely known raw zero may convert to zero without an FX rate. `status` is `COMPLETE`, `STALE`, `PARTIAL`, or `UNAVAILABLE`: stale successful Position data remains visible, partial rows retain individually available JPY values, and the summary totals are `null` unless all active position-supporting Connections have successful Position sync history and every Position in that metric can be valued. A successful empty Position sync yields known zero totals. No active Connections returns `UNAVAILABLE` and null totals. The summary Connection counts apply to active Position-supporting Connections; Connections without Position capability do not make the Position total unknown.
+
+The endpoint recalculates owner-scoped FX metadata before creating the DTO. It returns no JPA Entity and queries Positions and sync state using the authenticated User ID. A row's `positionKey` is a provider-normalized key, not a user selector.
+
 ## Error and ownership conventions
 
 - API responses do not expose JPA entities, OAuth tokens, credentials, or provider error bodies.

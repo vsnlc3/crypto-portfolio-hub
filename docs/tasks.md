@@ -1271,25 +1271,25 @@ API仕様を `api-design.md` に反映する。
 
 ## Step 10-1: Positions API
 
-- [ ] Symbol
-- [ ] Long / Short
-- [ ] Leverage
-- [ ] Quantity
-- [ ] Entry Price
-- [ ] Mark Price
-- [ ] Liquidation Price
-- [ ] Price Currency
-- [ ] Position Value JPY
-- [ ] Margin Amount
-- [ ] Margin Currency
-- [ ] Margin JPY
-- [ ] Unrealized PnL
-- [ ] PnL Currency
-- [ ] Unrealized PnL JPY
-- [ ] Price FX metadata
-- [ ] Margin FX metadata
-- [ ] PnL FX metadata
-- [ ] Freshness
+- [x] Symbol
+- [x] Long / Short
+- [x] Leverage
+- [x] Quantity
+- [x] Entry Price
+- [x] Mark Price
+- [x] Liquidation Price
+- [x] Price Currency
+- [x] Position Value JPY
+- [x] Margin Amount
+- [x] Margin Currency
+- [x] Margin JPY
+- [x] Unrealized PnL
+- [x] PnL Currency
+- [x] Unrealized PnL JPY
+- [x] Price FX metadata
+- [x] Margin FX metadata
+- [x] PnL FX metadata
+- [x] Freshness
 
 JPY換算不能値を0として返さない。
 
@@ -1297,9 +1297,15 @@ API仕様を `api-design.md` に反映する。
 
 ### API Test / ownership
 
-- [ ] Price / Margin / PnL FXが独立して適用されることを検証する
-- [ ] FX不足を0へ変換しない
-- [ ] User AがUser BのPositionを取得できない
+- [x] Price / Margin / PnL FXが独立して適用されることを検証する
+- [x] FX不足を0へ変換しない
+- [x] User AがUser BのPositionを取得できない
+
+### 実装結果
+
+- Authenticated User所有の現行Perpetual Positionを返す `GET /api/v1/positions` を追加した。instrument / side / leverage / quantity / Entry / Mark / Liquidation、各raw currency valueとJPY評価、Connection、取得・同期時刻を含む。
+- Position Value、Margin、Unrealized PnLはPrice / Margin / PnLの各通貨とFX metadataで別々に換算する。必要値・FXが未取得なら対応するJPY値はnullとし、既知のzeroだけをzeroで返す。Summaryもすべての対象Connectionを把握して全Positionを評価できる場合だけ合計を返す。
+- API契約を `docs/api-design.md` に追加した。Testcontainersで異なる3 FX、PnL FX unavailable、Margin FX stale、User ownership、未認証、未接続状態を検証した。
 
 ---
 
