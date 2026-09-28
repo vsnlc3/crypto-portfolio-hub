@@ -26,6 +26,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 import com.cryptoportfoliohub.connection.api.ConnectionAlreadyExistsException;
 import com.cryptoportfoliohub.connection.api.ConnectionRequestValidationException;
 import com.cryptoportfoliohub.connection.credential.CredentialEncryptionException;
+import com.cryptoportfoliohub.activity.api.ActivityCursorException;
 import com.cryptoportfoliohub.sync.application.SyncAlreadyRunningException;
 import com.cryptoportfoliohub.sync.application.SyncProviderNotAvailableException;
 
@@ -63,6 +64,15 @@ public class ApiExceptionHandler {
                                                        HttpServletRequest request) {
         return response(HttpStatus.NOT_FOUND, problemResponseFactory.create(
                 HttpStatus.NOT_FOUND, ProblemCodes.RESOURCE_NOT_FOUND, exception.getMessage(), request));
+    }
+
+    @ExceptionHandler(ActivityCursorException.class)
+    ResponseEntity<Map<String, Object>> handleActivityCursor(
+            ActivityCursorException exception, HttpServletRequest request) {
+        Map<String, Object> problem = problemResponseFactory.create(
+                HttpStatus.BAD_REQUEST, ProblemCodes.VALIDATION_ERROR,
+                exception.getMessage(), request);
+        return response(HttpStatus.BAD_REQUEST, problem);
     }
 
     @ExceptionHandler(ConnectionRequestValidationException.class)

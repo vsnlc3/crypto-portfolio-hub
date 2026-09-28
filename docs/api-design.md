@@ -318,6 +318,97 @@ JPY fields remain `null` when the required raw value or non-zero amount's FX rat
 
 The endpoint recalculates owner-scoped FX metadata before creating the DTO. It returns no JPA Entity and queries Positions and sync state using the authenticated User ID. A row's `positionKey` is a provider-normalized key, not a user selector.
 
+## Activity
+
+### `GET /api/v1/activities`
+
+Requires an authenticated Google Session. The endpoint returns Activity Headers and their ordered Legs across the authenticated User's Connections, including history whose Connection has been logically deleted. Every Header query includes the authenticated User ID; the deleted Connection filter is intentionally omitted for history. Leg and Perpetual Fill detail queries also include the authenticated User ID through their parent Activity.
+
+Query parameters:
+
+| Parameter | Default | Limit | Description |
+| --- | --- | --- | --- |
+| `limit` | `20` | `1`–`100` | Maximum Headers returned. |
+| `cursor` | none | opaque | Continue after the last `occurredAt DESC, id DESC` item from the prior response. |
+
+Response `200`:
+
+```json
+{
+  "summary": {
+    "status": "COMPLETE",
+    "connectionCount": 1,
+    "syncedConnectionCount": 1,
+    "lastSuccessAt": "2026-09-28T03:00:00Z"
+  },
+  "activities": [
+    {
+      "id": "<activity-uuid>",
+      "connectionId": "<connection-uuid>",
+      "provider": "SOLANA",
+      "connectionDisplayName": "Solana Wallet",
+      "providerEventId": "<provider-event-id>",
+      "eventType": "SWAP",
+      "originalEventType": "SWAP",
+      "status": "CONFIRMED",
+      "occurredAt": "2026-09-28T02:59:00Z",
+      "importedAt": "2026-09-28T03:00:00Z",
+      "dataStatus": "COMPLETE",
+      "lastSuccessAt": "2026-09-28T03:00:00Z",
+      "legs": [
+        {
+          "legIndex": 0,
+          "direction": "OUT",
+          "assetKey": "SOL",
+          "symbol": "SOL",
+          "quantity": 10,
+          "originalAmount": 10,
+          "originalCurrency": "SOL",
+          "jpyValue": null,
+          "valuationStatus": "UNAVAILABLE",
+          "valuationBasis": "UNAVAILABLE",
+          "priceUsed": null,
+          "priceCurrency": null,
+          "priceSource": null,
+          "priceEvaluatedAt": null,
+          "fxRateToJpy": null,
+          "fxSource": null,
+          "fxEvaluatedAt": null
+        },
+        {
+          "legIndex": 1,
+          "direction": "IN",
+          "assetKey": "USDC",
+          "symbol": "USDC",
+          "quantity": 1500,
+          "originalAmount": 1500,
+          "originalCurrency": "USDC",
+          "jpyValue": 225000,
+          "valuationStatus": "VALUED",
+          "valuationBasis": "EVENT_TIME_MARKET",
+          "priceUsed": 1,
+          "priceCurrency": "USD",
+          "priceSource": "COINGECKO",
+          "priceEvaluatedAt": "2026-09-28T02:59:00Z",
+          "fxRateToJpy": 150,
+          "fxSource": "EXCHANGERATE_API",
+          "fxEvaluatedAt": "2026-09-28T02:59:00Z"
+        }
+      ],
+      "perpetualFill": null
+    }
+  ],
+  "nextCursor": "<opaque-cursor-or-null>",
+  "hasMore": false
+}
+```
+
+`summary.status` is `COMPLETE`, `STALE`, `PARTIAL`, or `UNAVAILABLE` for active Connection Activity Sync states. A prior successful history with a failed or running later attempt remains visible as stale; an incomplete set of synced Connections is partial; missing sync history is unavailable. An Activity whose Connection has been deleted remains visible with `dataStatus: STALE`. Per-Leg `valuationStatus` and nullable valuation metadata are independent: unavailable values are `null`, never fabricated as zero.
+
+`legs` are ordered by `legIndex`. `direction` is `IN`, `OUT`, or `FEE`; quantity is positive when known, while unavailable quantity and valuation are `null`. Swap assets and actual fees appear as separate Legs. Header-only events retain an empty Legs array rather than guessed movements. Perpetual fills use `perpetualFill` for instrument, side, position effect, fill quantity / price, start position, and closed PnL; their Position quantity is not duplicated as an `IN` / `OUT` Leg. A separately charged asset fee may still be a `FEE` Leg. Non-fill Events have `perpetualFill: null`.
+
+The response includes no JPA Entities, credentials, or provider error bodies. `cursor` is an opaque continuation token for the stable `(occurredAt, id)` order. Invalid cursors or limits outside `1`–`100` return `400 VALIDATION_ERROR`.
+
 ## Error and ownership conventions
 
 - API responses do not expose JPA entities, OAuth tokens, credentials, or provider error bodies.

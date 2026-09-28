@@ -13,6 +13,8 @@ public interface ConnectionSyncStateRepository extends JpaRepository<ConnectionS
 
     List<ConnectionSyncState> findAllByConnection_User_IdAndConnection_DeletedAtIsNull(UUID authenticatedUserId);
 
+    List<ConnectionSyncState> findAllByConnection_User_Id(UUID authenticatedUserId);
+
     Optional<ConnectionSyncState> findByIdAndConnection_User_IdAndConnection_DeletedAtIsNull(
             ConnectionSyncStateId id, UUID authenticatedUserId);
 

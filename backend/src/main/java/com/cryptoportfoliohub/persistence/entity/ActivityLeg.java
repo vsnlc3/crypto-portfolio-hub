@@ -115,6 +115,10 @@ public class ActivityLeg extends CreatedEntity {
         return assetKey;
     }
 
+    public String getSymbol() {
+        return symbol;
+    }
+
     public BigDecimal getQuantity() {
         return quantity;
     }
@@ -134,4 +138,37 @@ public class ActivityLeg extends CreatedEntity {
     public ValuationStatus getValuationStatus() {
         return valuationStatus;
     }
+
+    public ValuationBasis getValuationBasis() {
+        return valuationBasis;
+    }
+
+    public BigDecimal getPriceUsed() {
+        return priceUsed;
+    }
+
+    public String getPriceCurrency() {
+        return priceCurrency;
+    }
+
+    public String getPriceSource() {
+        return priceSource;
+    }
+
+    public Instant getPriceEvaluatedAt() {
+        return priceEvaluatedAt;
+    }
+
+    public BigDecimal getFxRateToJpy() {
+        return fxRateToJpy;
+    }
+
+    public String getFxSource() {
+        return fxSource;
+    }
+
+    public Instant getFxEvaluatedAt() {
+        return fxEvaluatedAt;
+    }
+
 }

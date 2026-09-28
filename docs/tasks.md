@@ -1344,34 +1344,34 @@ Dashboard上のPerpetual Position表示を実APIへ置き換える。
 
 UserのConnectionを横断してActivity Header + Legsを取得する。論理削除済みConnectionのActivity Historyも所有Userには表示する。検索では `authenticated user id` を必須条件とし、Activity取得に `connection.deleted_at IS NULL` を必須条件として使用しない。
 
-- [ ] `occurredAt DESC, id DESC`
-- [ ] Cursor Pagination
-- [ ] Default limit
-- [ ] Max limit
-- [ ] Provider
-- [ ] Event Type
-- [ ] Original Event Type
-- [ ] Status
-- [ ] Activity Legs
-- [ ] direction
-- [ ] assetKey
-- [ ] symbol
-- [ ] quantity
-- [ ] originalAmount
-- [ ] originalCurrency
-- [ ] jpyValue
-- [ ] valuationStatus
-- [ ] valuationBasis
-- [ ] priceUsed
-- [ ] priceCurrency
-- [ ] priceSource
-- [ ] priceEvaluatedAt
-- [ ] fxRateToJpy
-- [ ] fxSource
-- [ ] fxEvaluatedAt
-- [ ] Fee Leg
-- [ ] valuation availability
-- [ ] 取得不能値のNULL表現
+- [x] `occurredAt DESC, id DESC`
+- [x] Cursor Pagination
+- [x] Default limit
+- [x] Max limit
+- [x] Provider
+- [x] Event Type
+- [x] Original Event Type
+- [x] Status
+- [x] Activity Legs
+- [x] direction
+- [x] assetKey
+- [x] symbol
+- [x] quantity
+- [x] originalAmount
+- [x] originalCurrency
+- [x] jpyValue
+- [x] valuationStatus
+- [x] valuationBasis
+- [x] priceUsed
+- [x] priceCurrency
+- [x] priceSource
+- [x] priceEvaluatedAt
+- [x] fxRateToJpy
+- [x] fxSource
+- [x] fxEvaluatedAt
+- [x] Fee Leg
+- [x] valuation availability
+- [x] 取得不能値のNULL表現
 
 ### Activity Leg
 
@@ -1398,12 +1398,19 @@ API仕様を `api-design.md` に記録する。取得済みの元情報・評価
 
 ### API Test / ownership
 
-- [ ] Cursor順序とpagination境界を検証する
-- [ ] Activity dedup / Header + Legs / Swap / Feeを検証する
-- [ ] User AがUser BのActivity / Activity Legsを取得できない
-- [ ] 論理削除Connectionの履歴を所有Userが取得できる
-- [ ] 論理削除Connectionの履歴を別Userが取得できない
-- [ ] valuation unavailableをnullで返し、0にしない
+- [x] Cursor順序とpagination境界を検証する
+- [x] Activity dedup / Header + Legs / Swap / Feeを検証する
+- [x] User AがUser BのActivity / Activity Legsを取得できない
+- [x] 論理削除Connectionの履歴を所有Userが取得できる
+- [x] 論理削除Connectionの履歴を別Userが取得できない
+- [x] valuation unavailableをnullで返し、0にしない
+
+### 実装結果
+
+- `GET /api/v1/activities`を追加。認証User単位でActivity Header + Legs / Perpetual Fill Detailを取得し、`occurredAt DESC, id DESC` のopaque cursor paginationを実装した。Default limitは20、最大100。
+- 論理削除ConnectionのActivity Historyを所有者へ返し、同期状態を失った削除済みConnectionの履歴はSTALEとする。active Connectionの未同期・partial・stale状態をResponse Summaryへ含める。
+- Legの数量、original amount / currency、JPY評価、valuation basis、価格・FX metadataを保持し、評価不能値はnullを返す。Perpetual fillはFill Detailとして返し、資産移動Legへ変換しない。
+- `ActivitiesApiIntegrationTests`でCursor境界、default / max limit、User分離、論理削除履歴、Swap IN / OUT / FEE、Perpetual Fill、unavailable null、partial / stale状態を検証した。重複Sync時のHeader dedupは`BitbankSyncIntegrationTests#repeatedHistoryIsIdempotentAndProviderStatusCanAdvance`で検証する。Backend `mvn verify` は163 tests、failure / error / skippedなしで成功し、最後のJSON null assertion追加後もActivity API 4 testsを再実行して成功した。
 
 ---
 
