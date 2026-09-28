@@ -1459,25 +1459,27 @@ Dashboardは他機能の集約になるため後半に実装する。
 
 返すもの:
 
-- [ ] Net Worth
-- [ ] 24h Change
-- [ ] Holdings
-- [ ] Directional
-- [ ] Stablecoins
-- [ ] Market Exposure
-- [ ] Exposure Ratio
-- [ ] Unrealized PnL
-- [ ] Connection別評価額
-- [ ] Connection別Data Status
-- [ ] last successful sync metadata
+- [x] Net Worth
+- [x] 24h Change response field（Step 12-2でSnapshot比較が実装されるまで値は `UNAVAILABLE`）
+- [x] Holdings
+- [x] Directional
+- [x] Stablecoins
+- [x] Market Exposure
+- [x] Exposure Ratio
+- [x] Unrealized PnL
+- [x] Connection別評価額
+- [x] Connection別Data Status
+- [x] last successful sync metadata
 
 巨大なDatabase Entity Graphを返さない。
 
 ### API Test / ownership
 
-- [ ] User AのSummaryにUser Bの保有情報が含まれない
-- [ ] Connection別Data Statusのpartial / stale / unavailableを検証する
-- [ ] 二重計上がないことを検証する
+- [x] User AのSummaryにUser Bの保有情報が含まれない
+- [x] Connection別Data Statusのpartial / stale / unavailableを検証する
+- [x] 二重計上がないことを検証する
+
+`GET /api/v1/portfolio/summary`を追加した。Sessionから解決したUser IDだけでCurrent State、Connections、Sync Stateを照会し、Entity Graphではなく集計DTOを返す。24h ChangeはSnapshot API（Step 12-2）完成までUnavailableとし、現在のMarket QuoteからPortfolio変化を推定しない。Testcontainers Integration TestでUser間分離、Net WorthへのPerpetual Position Value / Margin / PnLの二重計上防止、Connectionのpartial / stale / unavailable、Activity失敗がPortfolio状態へ影響しないことを検証した。
 
 ---
 

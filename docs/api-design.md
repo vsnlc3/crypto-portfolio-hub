@@ -165,6 +165,70 @@ Requires an authenticated Session and a valid CSRF header. Invalidates the serve
 
 Missing or invalid CSRF token returns `403` Problem Details. Authentication errors use the common Problem Details contract.
 
+## Portfolio Summary
+
+### `GET /api/v1/portfolio/summary`
+
+Requires an authenticated Google Session. The owner is resolved from the Session. The response returns an owner-scoped JPY portfolio summary, active Connection contributions, and each supported Capability's sync metadata. It returns DTOs and does not expose JPA Entities.
+
+Response `200`:
+
+```json
+{
+  "summary": {
+    "netWorthJpy": 46800,
+    "change24h": {
+      "amountJpy": null,
+      "percentage": null,
+      "status": "UNAVAILABLE",
+      "comparedAt": null
+    },
+    "holdingsValueJpy": 45300,
+    "directionalValueJpy": 30000,
+    "stablecoinValueJpy": 15300,
+    "marketExposureJpy": 32800,
+    "exposureRatio": 0.7008547,
+    "unrealizedPnlJpy": -150,
+    "status": "COMPLETE",
+    "dataAsOfAt": "2026-09-28T02:00:00Z",
+    "lastSuccessfulSyncAt": "2026-09-28T02:00:00Z"
+  },
+  "connections": [
+    {
+      "id": "<connection-uuid>",
+      "provider": "SOLANA",
+      "displayName": "Phantom",
+      "netWorthJpy": 15000,
+      "dataStatus": "COMPLETE",
+      "lastAttemptAt": "2026-09-28T02:00:00Z",
+      "lastSuccessfulSyncAt": "2026-09-28T02:00:00Z",
+      "capabilitySync": [
+        {
+          "capability": "BALANCE",
+          "status": "READY",
+          "lastAttemptAt": "2026-09-28T02:00:00Z",
+          "lastSuccessAt": "2026-09-28T02:00:00Z",
+          "lastErrorCategory": null
+        },
+        {
+          "capability": "ACTIVITY",
+          "status": "NOT_SYNCED",
+          "lastAttemptAt": null,
+          "lastSuccessAt": null,
+          "lastErrorCategory": null
+        }
+      ]
+    }
+  ]
+}
+```
+
+`summary` reports Net Worth, Holdings, Directional assets, Stablecoins, Market Exposure, Exposure Ratio, and Unrealized PnL using the existing portfolio calculation definitions. Position Value and Margin are not added to Net Worth. The summary `status` is `COMPLETE`, `STALE`, `PARTIAL`, or `UNAVAILABLE`; each Connection's `dataStatus` uses the same values. An unavailable metric is `null`, never a synthetic zero. A failed Activity Capability is reported in `capabilitySync` and does not make otherwise current portfolio valuation stale or partial.
+
+`change24h` compares Portfolio Snapshots, not the market price change of an individual asset. Until Step 12-2 adds the authenticated user's comparable 24-hour Snapshot lookup, `amountJpy`, `percentage`, and `comparedAt` are `null` and `status` is `UNAVAILABLE`. The API never uses a mock or reports unavailable change as zero.
+
+Only active Connections owned by the authenticated User are returned. `lastSuccessfulSyncAt` is the newest successful supported Capability timestamp; each Capability has its own state and timestamps. Missing Capability state is represented as `NOT_SYNCED`. History is unaffected by this current-state summary.
+
 ## Assets
 
 ### `GET /api/v1/assets`
