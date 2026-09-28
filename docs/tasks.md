@@ -458,7 +458,7 @@ Sign in
 - [x] Activity Legsへの変換方法
 - [x] Event dedup key
 
-Confirmed behavior and unresolved API documentation details are recorded in [provider-specifications.md](./provider-specifications.md). Unresolved pagination boundaries and trade amount interpretation must be validated with fixtures before the bitbank Adapter is implemented.
+Confirmed behavior and unresolved API documentation details are recorded in [provider-specifications.md](./provider-specifications.md). The Adapter uses millisecond window splitting with conservative boundary overlap and fails closed when a provider cap cannot be cleared. Spot trade amount is interpreted as base quantity from the official CLI order examples and is identified in the Provider specification as an inference pending read-only account smoke validation.
 
 ---
 
@@ -891,18 +891,20 @@ GET  /api/v1/connections/{connectionId}/sync-runs/{syncRunId}
 
 ## Step 7-4: bitbank Adapter
 
-- [ ] Credential復号処理の呼出し
-- [ ] API署名
-- [ ] Provider DTO
-- [ ] Balance取得・正規化
-- [ ] Activity / Transaction取得・正規化
-- [ ] BUY / SELLのActivity Header / Legs
-- [ ] Deposit / WithdrawalのActivity Header / Legs
-- [ ] Fee Leg
-- [ ] dedup key mapping
-- [ ] Error mapping
-- [ ] Timeout / Rate Limit
-- [ ] fixture / Adapter Test
+- [x] Credential復号処理の呼出し（connection_id + authenticated user idのowner-scoped query）
+- [x] API署名（TIME-WINDOW HMAC-SHA256と公式signature example）
+- [x] Provider DTO
+- [x] Balance取得・正規化（onhandをtotalとし、available / lockedを別保持）
+- [x] Activity / Transaction取得・正規化
+- [x] BUY / SELLのActivity Header / Legs
+- [x] Deposit / WithdrawalのActivity Header / Legs
+- [x] Fee Leg（通貨が明示されたspot trade Fee。Withdrawal Fee単位は未確定としてLegを作らない）
+- [x] dedup key mapping
+- [x] Error mapping
+- [x] Timeout / Rate Limit
+- [x] fixture / Adapter Test
+
+Trade amountのbase quantity解釈は公式CLI注文例に基づく推論であり、実アカウントRead-only Smoke Testは外部確認事項として残す。Withdrawal Feeのcurrencyは公式REST資料に明記されないためunavailableとし、Net WorthやBalanceには加算・減算しない。
 
 取得できない項目を推測せず、必要情報がないLegはNULL / unavailableにする。
 

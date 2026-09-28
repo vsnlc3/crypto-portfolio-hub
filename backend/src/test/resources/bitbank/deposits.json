@@ -1,0 +1,18 @@
+{
+  "success": 1,
+  "data": {
+    "deposits": [
+      {
+        "uuid": "fixture-deposit-1",
+        "asset": "btc",
+        "network": "BTC",
+        "amount": 0.125,
+        "txid": "fixture-txid",
+        "status": "DONE",
+        "category": "NORMAL",
+        "found_at": 1790553603123,
+        "confirmed_at": 1790553604123
+      }
+    ]
+  }
+}

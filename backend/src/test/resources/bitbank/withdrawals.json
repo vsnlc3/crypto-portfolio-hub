@@ -1,0 +1,18 @@
+{
+  "success": 1,
+  "data": {
+    "withdrawals": [
+      {
+        "uuid": "fixture-withdrawal-1",
+        "asset": "eth",
+        "amount": "1.5",
+        "fee": "0.005",
+        "network": "ETH",
+        "txid": "fixture-withdrawal-txid",
+        "status": "DONE",
+        "requested_at": 1790553605123,
+        "address": "sensitive-address-must-not-be-persisted"
+      }
+    ]
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "success": 1,
+  "data": {
+    "pairs": [
+      { "name": "btc_jpy", "base_asset": "btc", "quote_asset": "jpy" },
+      { "name": "eth_btc", "base_asset": "eth", "quote_asset": "btc" }
+    ]
+  }
+}

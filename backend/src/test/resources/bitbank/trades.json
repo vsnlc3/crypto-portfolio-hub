@@ -1,0 +1,49 @@
+{
+  "success": 1,
+  "data": {
+    "trades": [
+      {
+        "trade_id": 12001,
+        "pair": "btc_jpy",
+        "side": "buy",
+        "position_side": null,
+        "type": "limit",
+        "amount": "0.25",
+        "price": "100000",
+        "maker_taker": "maker",
+        "fee_amount_base": "0.0001",
+        "fee_amount_quote": "12.5",
+        "fee_occurred_amount_quote": "12.5",
+        "executed_at": 1790553600123
+      },
+      {
+        "trade_id": 12002,
+        "pair": "eth_btc",
+        "side": "sell",
+        "position_side": null,
+        "type": "market",
+        "amount": "2",
+        "price": "0.05",
+        "maker_taker": "taker",
+        "fee_amount_base": "0",
+        "fee_amount_quote": "0.001",
+        "fee_occurred_amount_quote": "0.001",
+        "executed_at": 1790553601123
+      },
+      {
+        "trade_id": 12003,
+        "pair": "btc_jpy",
+        "side": "sell",
+        "position_side": "long",
+        "type": "limit",
+        "amount": "0.1",
+        "price": "110000",
+        "maker_taker": "maker",
+        "fee_amount_base": "0",
+        "fee_amount_quote": "0",
+        "fee_occurred_amount_quote": "0",
+        "executed_at": 1790553602123
+      }
+    ]
+  }
+}
