@@ -63,7 +63,7 @@ Step 4-4では公式仕様およびIDを確認し、実価格値を検証Fixture
 - PriceはBackend単一Instance内でユーザー間共有する10分のin-memory Cache、Provider評価時刻から15分をfreshness上限として判定する。FXはresponse更新時刻を保持し、Free planの1日更新を前提に最低24時間ごとの同Cache、72時間をfreshness上限とする。各上限は設定値。複数Backend Instance間のCache共有は将来のDeployment設計事項。
 - 429 / timeout等の失敗は分類し、bounded backoffの間は再Fetchしない。前回成功値は評価時刻からSTALE判定し、存在しなければUnavailableとする。別Providerやゼロ値へfallbackしない。
 - Provider Key未設定でもBackendは起動できる。CoinGecko Demo keyはHeaderからのみ送信し、ExchangeRate-API keyは要求Pathに含まれるためrequest URIをアプリケーションログ・例外メッセージへ記録しない。
-- 2026-09-28、`.env`から注入したCredentialで`MarketDataLiveSmokeTests`を実行し、CoinGecko DemoのCurrent PriceとExchangeRate-APIのUSD/JPY responseを取得してresponse shapeおよびProvider評価時刻の読み取りを確認した（1 test成功）。値とCredentialはログ・文書へ記録しない。
+- 2026-09-28、`.env`から注入したCredentialで`MarketDataLiveSmokeTests`を実行・再確認し、CoinGecko DemoのCurrent PriceとExchangeRate-APIのUSD/JPY responseを取得してresponse shapeおよびProvider評価時刻の読み取りを確認した（今回の再実行も1 test成功）。値とCredentialはログ・文書へ記録しない。
 
 ### Step 6-2 実装状況
 
