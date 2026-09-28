@@ -1720,28 +1720,30 @@ Repository / Application / Controllerの各境界を確認する。DBのComposit
 
 # Phase 17: CI
 
-GitHub Actionsを追加する。
+GitHub Actionsを`.github/workflows/ci.yml`へ追加し、Pull RequestとPushで実行する。
 
 ## Frontend
 
-- [ ] lint
-- [ ] typecheck
-- [ ] test
-- [ ] production build
+- [x] lint
+- [x] typecheck
+- [x] test
+- [x] production build
 
 ## Backend
 
-- [ ] compile
-- [ ] unit test
-- [ ] integration test
-- [ ] Testcontainers test
+- [x] compile
+- [x] unit test
+- [x] integration test
+- [x] Testcontainers test
 
 ## Container
 
-- [ ] Docker build
-- [ ] Docker Compose configuration validation
+- [x] Docker build
+- [x] Docker Compose configuration validation
 
 CIでは実Provider CredentialやGoogle Client Secretを使わない。
+
+**実装結果:** Frontendはpnpm 12.3.4 / Node.js 22でfrozen install、lint、typecheck、Vitest、webpack production buildを実行する。BackendはJava 25 / Maven Wrapperで`verify`し、PostgreSQL Testcontainersを含むJUnitを実行する。Container JobはダミーDB Passwordと空の環境ファイルを使ってCompose構成を検証し、Frontend / Backend imageをbuildする。Provider Key、OAuth Secret、Encryption KeyをCIへ渡さない。ローカル検証: Frontend lint / typecheck / 55 tests / production build、Compose構成検証、Frontend / Backend image buildが成功した。Backend `verify`はPhase 15でJava 25 / Testcontainers上の179 tests成功を確認済み。GitHub-hosted runner上のWorkflow実行結果はPush後に確認する。
 
 ---
 

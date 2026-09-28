@@ -31,7 +31,7 @@
 - **Existing:** Dashboard、Assets、Activity、ConnectionsはBackend APIに接続済み。DashboardはPortfolio Summary / History、Assets、Positions、Connectionsは一覧 / 作成 / 削除 / Manual Sync、ActivityはActivity APIを使用する。Google Sign in、Frontend route guard、Session user表示、CSRF付きLogoutも実装済み。`frontend/lib/mock-data.ts`には旧UI用データと書式関数が残るが、現行のPortfolio値の取得元にはしない。
 - **Existing:** ルートのDocker ComposeでFrontend、Backend、PostgreSQLを同一Networkへ接続する。Frontendは3000番、ローカルOAuth callback用にBackendは8080番をHostへ公開し、PostgreSQLは公開せずNamed Volumeへ保存する。ProductionではBackendを直接公開せずreverse proxy経由にする。`frontend/Dockerfile` はNode.js 22とpnpmを使う開発起動設定、`backend/Dockerfile` はMaven buildとJava 25 runtimeのmulti-stage buildである。
 - **Existing:** `frontend/package.json` は `pnpm@12.3.4` を指定し、lockfileもpnpm 12.3.4である。
-- **Existing:** `frontend/tsconfig.json` は `strict: true` で、Next.js build時のTypeScriptエラーを隠さない。Vitest / React Testing Library、`test`、`typecheck` scriptを追加済み。TanStack QueryでDashboard / Assets / Positions / Activity / ConnectionsのServer StateとManual Sync後の再取得を扱う。ConnectionsはReact Hook Form、Zodを使い、Provider別Form、Loading / Empty / Error、追加・削除・同期をテストする。Frontend lint scriptとGitHub Actions workflowはまだない。
+- **Existing:** `frontend/tsconfig.json` は `strict: true` で、Next.js build時のTypeScriptエラーを隠さない。Vitest / React Testing Library、`test`、`typecheck`、`lint` scriptがある。TanStack QueryでDashboard / Assets / Positions / Activity / ConnectionsのServer StateとManual Sync後の再取得を扱う。ConnectionsはReact Hook Form、Zodを使い、Provider別Form、Loading / Empty / Error、追加・削除・同期をテストする。`.github/workflows/ci.yml` でFrontend検査を自動実行する。
 - **Existing:** `backend/` にJava 25 / Spring Boot 4.1.1のMavenプロジェクトがあり、Spring MVC、Jackson 3、JPA、PostgreSQL Driver、Flyway、Security、OAuth2 Client、Validation、Actuator、JUnit、Testcontainersを設定している。`/actuator/health` のHTTP応答、10本のFlyway Migration、主要FK / CHECK制約、Problem DetailsとRequest IDをPostgreSQL Testcontainers付きで検証する。
 - **Existing:** `backend/src/main/java/com/cryptoportfoliohub/domain/money/` に通貨付きMoney / Price / Quantity / FX Value、JPY換算、PerpetualのPosition Value / 線形Unrealized PnL、表示用丸め基盤がある。Javaの計算には `BigDecimal` を使い、金融数値のUnit Testを持つ。
 - **Existing:** `backend/src/main/java/com/cryptoportfoliohub/persistence/` に13 Entityと13 Repositoryがある。Hibernate `ddl-auto: validate` でFlyway Schemaとの整合を検証し、所有データQueryにはUser IDを含める。TestcontainersでUser A / Bの分離とConnection論理削除後の履歴参照を検証する。
@@ -68,7 +68,7 @@
 | Public reverse proxy | Caddy | Planned | HTTPS終端とFrontend / APIの経路振り分けを単純化する |
 | Backend tests | JUnit 5 / Spring Boot Test / Testcontainers PostgreSQL | Existing | 起動health check、初期Migration / 制約、Error Response、Entity Schema mapping、User ownershipのIntegration TestとMoney / FXのUnit Testを実装済み |
 | Frontend tests | Vitest / React Testing Library | Existing | 認証画面・Route Guardの状態テストを導入済み。Portfolio/API機能のカバレッジは各Vertical Sliceで追加する |
-| CI | GitHub Actions | Planned | まず検査とbuildを自動化し、deployは後段にする |
+| CI | GitHub Actions | Existing | Frontend、Backend、Compose build / validationをPull RequestとPushで実行する |
 | Queue / cache / orchestration | Kafka、Redis、Kubernetes等 | Future / MVPでは不採用 | 現在の規模・要件では運用対象を増やす明確な必要がない |
 
 バージョン表記のあるFrontend値は現在のmanifestやDockerfileから確認したもの。BackendはJava 25 / Spring Boot 4.1.1で初期プロジェクトを構成し、Maven WrapperでMaven 3.9.12を使う。Spring Bootの管理依存によりSecurity、JPA、Flyway、PostgreSQL Driver等のバージョンを揃える。Java 25はOracleのLTSロードマップに記載され、Spring Boot 4.1.1はJava 17以上を必要としJava 26まで互換性がある。詳細は[Java SE roadmap](https://www.oracle.com/java/technologies/java-se-support-roadmap.html)と[Spring Boot system requirements](https://docs.spring.io/spring-boot/system-requirements.html)を参照する。
@@ -345,7 +345,7 @@ FrontendにはVitest / React Testing Libraryによるtest scriptがある。Back
 
 ### 品質ゲート
 
-- CIではFrontend lint / typecheck / test / production buildを実行する。typecheckとtest scriptは追加済みで、lint scriptとCI workflowは後続Stepで整える。
+- CIではFrontend lint / typecheck / test / production build、Backend Maven verifyとPostgreSQL Testcontainers、Docker Compose validation / image buildを実行する。`.github/workflows/ci.yml`をPull RequestとPushで動かす。
 - Backendではformat / compile / unit test / integration testを段階的に加える。
 - Test用CredentialやOAuth Client SecretをCIへ登録しない。外部APIテストfixtureは公開可能な匿名データのみを使う。
 
@@ -371,13 +371,14 @@ RDS、ECS、EKS、Kubernetesは明確な可用性・運用上の要件が出る�
 
 ## 16. CI/CD
 
-GitHub Actionsは未導入。以下の順に小さく導入する。
+`.github/workflows/ci.yml`でGitHub Actionsを導入済み。
 
-1. Frontendのlint、typecheck、unit test、buildをPull Requestで実行する。
-2. Backend追加後はJunit / Testcontainersのテストとcompileを実行する。
-3. `docker compose build` と必要なContainer buildをCIで確認する。
-4. 成果物が安定した段階でContainer RegistryへのPushを検討する。
-5. 最初の公開は手動Deployを基本とし、health check、DB backup、rollback方法を確認した後に自動Deployを検討する。
+- Pull RequestとPushでFrontend lint / typecheck / test / production buildを実行する。
+- BackendでMaven `verify`を実行し、JUnitとPostgreSQL Testcontainersを含む全テストを実行する。
+- Docker Composeの構成検証とFrontend / BackendのImage buildを実行する。
+- CIは実Provider Credential、Google Client Secret、Encryption Keyに依存しない。Compose検証では一時的なダミーDB Passwordを使う。
+- 成果物が安定した段階でContainer RegistryへのPushを検討する。
+- 最初の公開は手動Deployを基本とし、health check、DB backup、rollback方法を確認した後に自動Deployを検討する。
 
 Google Client Secret、Provider Credential、Encryption KeyをGitHub Actions logやBuild artifactへ出力しない。自動Deployを先に作ることを品質の代替としない。
 
