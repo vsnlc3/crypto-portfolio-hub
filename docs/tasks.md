@@ -979,21 +979,23 @@ Fixture Adapter TestでMode mapping、未知値時のfail closed、StandardとUn
 
 ## Step 7-7: Hyperliquid Sync
 
-- [ ] Sync Run / Result / Capability State
-- [ ] Balance / Account State / Position Current State更新
-- [ ] Activity Header / Legsを同一Transactionで保存
-- [ ] Perp Fill Activity Header / Detailを同一Transactionで冪等保存
-- [ ] Perp Fee / Funding / Spot Fill LegsとPerp Fill Detailを混同しない
-- [ ] originalAmount / originalCurrencyと取得済みvaluation metadataを保持
-- [ ] 取得できない値を推測せず、NULL / unavailableにする
-- [ ] 重複排除・再実行時の冪等性
-- [ ] Partial Failure
-- [ ] Sync失敗時に前回成功値を保持
-- [ ] lastAttemptAt / lastSuccessAt
-- [ ] stale情報
-- [ ] User ownership
-- [ ] User AがUser BのBalance / Position / Account State / Activity / Sync情報へアクセスできない
-- [ ] Sync Integration Test
+- [x] Sync Run / Result / Capability State
+- [x] Balance / Account State / Position Current State更新
+- [x] Activity Header / Legsを同一Transactionで保存
+- [x] Perp Fill Activity Header / Detailを同一Transactionで冪等保存
+- [x] Perp Fee / Funding / Spot Fill LegsとPerp Fill Detailを混同しない
+- [x] originalAmount / originalCurrencyと取得済みvaluation metadataを保持
+- [x] 取得できない値を推測せず、NULL / unavailableにする
+- [x] 重複排除・再実行時の冪等性
+- [x] Partial Failure
+- [x] Sync失敗時に前回成功値を保持
+- [x] lastAttemptAt / lastSuccessAt
+- [x] stale情報
+- [x] User ownership
+- [x] User AがUser BのBalance / Position / Account State / Activity / Sync情報へアクセスできない
+- [x] Sync Integration Test
+
+`HyperliquidSyncIntegrationTests`でCurrent State置換、Spot / Perp / Fundingの保存形、Perp Fill Detail、同じイベント再取得時の重複排除、Provider履歴上限時にActivity Syncを完了扱いしないこと、Current State失敗時の前回成功値保持、lastAttempt / lastSuccess、User ownershipをTestcontainers PostgreSQLで検証した。初回Activity queryはSync開始時刻から90日、以後は前回Activity成功時刻から1時間の重複を含め、APIの10,000 fills上限に達した場合はDataを保存した上でActivity Capabilityをfailedにし、最終成功時刻を進めない。
 
 ---
 

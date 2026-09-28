@@ -349,3 +349,12 @@ Modeごとの集計:
 - Perp FillをActivity Headerと`activity_perpetual_fill_details`へ1:1で保存できるSchema / Entity / Repositoryを追加した。Perp Fill数量はAsset IN / OUT legにせず、実際のFeeはFEE leg、Fee rebateはIN legにする。Spot FillはIN / OUT / FEE legsのまま扱う。
 - `userFillsByTime`の直近10,000件上限に達した結果はhistory-limited metadataとして返す。Hyperliquid APIに古い履歴が残る保証はなく、完全なActivity履歴として表示しない。
 - Adapter fixture testsでMode / Balance / Position / currency / fill / funding / Fee / rate limit / timeoutを確認し、TestcontainersでV10 Migration / Schema validation / Fill Detail ownershipを確認する。
+
+### Step 7-7 Sync application policy
+
+- Hyperliquid初回Activity query windowはSync開始時刻から90日前とする。以後はActivity Capabilityの前回成功時刻から1時間前をinclusiveに再取得し、終了時刻はSync開始時刻とする。時刻をmillisecondに揃え、重複結果はConnection-scoped dedup keyで排除する。
+- Spot Balance、Perp DEX別 Account State、Positionは一つのCurrent State responseを取得し、検証後に同じDB Transactionで置換する。取得または保存が失敗した場合、Balance / Account / Position Capabilityの前回成功値と`lastSuccessAt`を保持する。Activity取得は独立CapabilityなのでCurrent State failureとActivity success / failureは別に記録する。
+- Activity Header、Spot / Funding Legs、Perp Fill Detailは同じDB Transactionで保存する。Perp Fill quantityはDetailだけに保持し、口座から動いた正のfeeはFEE Leg、負のfee rebateはIN Leg、Spot FillはIN / OUT / FEE Legsで保存する。再取得時はHeader / Leg / Perp Detailを重複作成しない。
+- `userFillsByTime`で直近10,000件のProvider上限に達した場合、返されたEventsは保存するがActivity Capabilityを未完了として失敗記録し、`lastSuccessAt`を進めない。APIが保証しない古い履歴を取得済みとして報告しない。
+- 不明・未対応のAccount ModeはProvider AdapterでUNKNOWN / UNSUPPORTEDとして記録される。Sync自体は取得済みのRaw Current Stateを保持できるが、Portfolio評価ではModeが解決しない限りNet Worthを成功値として扱わない。
+- 各Capabilityの`lastAttemptAt`は開始時に更新する。完全成功したCapabilityだけ`lastSuccessAt`とCurrent Stateの`last_success_sync_run_id`を進める。失敗時は最後の成功時刻とCurrent Stateを残し、Dataをstaleとして判定できるようにする。
