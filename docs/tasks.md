@@ -523,7 +523,7 @@ Confirmed behavior and unresolved API documentation details are recorded in [pro
 - [x] Funding signed amountからIN / OUTへの変換規則
 - [x] Perp Fill DetailとActivity Header / asset Legsのmapping
 
-確認結果と公式資料は[provider-specifications.md](./provider-specifications.md)と[database-design.md](./database-design.md)へ反映した。`userAbstraction`の公式Response値をModeへMappingし、`default` / legacy `dexAbstraction` / 未知値はUNSUPPORTED / UNKNOWNとして推測集計しない。Unified Account / Portfolio MarginはSpot Clearinghouse Balanceを基準とし、Perp account balance/equityを重ねない。StandardはSpotとPerp DEXごとのAccount Equityを分ける。Perp Fillは1:1 `activity_perpetual_fill_details`へ保存し、`activity_legs`には現物のIN / OUTを作らない。実APIの直接照会は開発環境のDNS制限で未実施だが、公式Schema確認とfail-closed mappingでStep 4-3を完了とする。Adapter Fixture TestはStep 7-6で行う。
+確認結果と公式資料は[provider-specifications.md](./provider-specifications.md)と[database-design.md](./database-design.md)へ反映した。`userAbstraction`の公式Response値をModeへMappingし、`default` / legacy `dexAbstraction` / 未知値はUNSUPPORTED / UNKNOWNとして推測集計しない。Unified Account / Portfolio MarginはSpot Clearinghouse Balanceを基準とし、Perp account balance/equityを重ねない。StandardはSpotとPerp DEXごとのAccount Equityを分ける。Perp Fillは1:1 `activity_perpetual_fill_details`へ保存し、`activity_legs`には現物のIN / OUTを作らない。公式例のZero Addressへread-only queryを行い、`default` responseを確認したが、実User AddressのModeは未確認である。Adapter Fixture TestはStep 7-6で完了した。
 
 特に以下を確認する。
 
@@ -932,46 +932,48 @@ Application policyとしてActivity初回同期は受付時刻から過去90日�
 
 ## Step 7-6: Hyperliquid Adapter
 
-- [ ] `V9__support_hyperliquid_account_modes_and_perp_fills.sql` MigrationとJPA / Repositoryを追加する
-- [ ] `provider_account_states.account_scope`でPerp DEXごとのAccount Stateを保持する
-- [ ] Account Stateへ正規化ModeとProvider `userAbstraction`値を保存する
-- [ ] Provider DTO
-- [ ] `userAbstraction`を取得し、既知値をModeへ厳密にMappingする
-- [ ] `default` / `dexAbstraction` / 欠落 / 未知値 / API失敗をUNKNOWN / UNSUPPORTEDとし、誤集計しない
-- [ ] Spot Balance取得・正規化
-- [ ] `total`をBalanceとして評価し、`hold`を加算しない
-- [ ] Account State取得・正規化
-- [ ] Position取得・正規化
-- [ ] Funding signed amountをIN / OUTへ正規化
-- [ ] Spot Fill Activity Header / Legs
-- [ ] Perp Fill Activity Header / Perpetual Fill Detail
-- [ ] Perp Fill quantityを資産IN / OUT legsにしない
-- [ ] Perp FeeをFEE Leg、Fee rebateをIN Legへ変換する
-- [ ] Event ID / Position stable key mapping
-- [ ] Standard / Unified / Portfolio MarginのNet Worth mappingとEquity / PnL二重計上防止
-- [ ] Account Equityの意味を反映
-- [ ] Collateralの意味を反映
-- [ ] Unrealized PnLの意味を反映
-- [ ] Price Currencyを保持
-- [ ] Margin Currencyを保持
-- [ ] PnL Currencyを保持
-- [ ] Provider Error mapping
-- [ ] Timeout / Rate Limit
-- [ ] fixture / Adapter Test
+- [x] `V10__support_hyperliquid_account_modes_and_perp_fills.sql` MigrationとJPA / Repositoryを追加する
+- [x] `provider_account_states.account_scope`でPerp DEXごとのAccount Stateを保持する
+- [x] Account Stateへ正規化ModeとProvider `userAbstraction`値を保存する
+- [x] Info API responseをdecodeし、共通形式へ正規化するDTOを追加する
+- [x] `userAbstraction`を取得し、既知値をModeへ厳密にMappingする
+- [x] `default` / `dexAbstraction` / 欠落 / 未知値 / API失敗をUNKNOWN / UNSUPPORTEDとし、誤集計しない
+- [x] Spot Balance取得・正規化
+- [x] `total`をBalanceとして評価し、`hold`を加算しない
+- [x] Account State取得・正規化
+- [x] Position取得・正規化
+- [x] Funding signed amountをIN / OUTへ正規化
+- [x] Spot Fill Activity Header / Legs
+- [x] Perp Fill Activity Header / Perpetual Fill Detail
+- [x] Perp Fill quantityを資産IN / OUT legsにしない
+- [x] Perp FeeをFEE Leg、Fee rebateをIN Legへ変換する
+- [x] Event ID / Position stable key mapping
+- [x] Standard / Unified / Portfolio MarginのNet Worth mappingとEquity / PnL二重計上防止
+- [x] Account Equityの意味を反映
+- [x] Collateralの意味を反映
+- [x] Unrealized PnLの意味を反映
+- [x] Price Currencyを保持
+- [x] Margin Currencyを保持
+- [x] PnL Currencyを保持
+- [x] Provider Error mapping
+- [x] Timeout / Rate Limit
+- [x] fixture / Adapter Test
 
 ### Hyperliquid Mapping Tests
 
-- [ ] `disabled` → Standard; `unifiedAccount` → Unified; `portfolioMargin` → Portfolio Margin
-- [ ] `default` / `dexAbstraction` / unknown / missing modeでNet Worth valuation unavailable
-- [ ] StandardでSpot totalと各Perp DEX accountValueを一度ずつ利用し、accountValue内のPnLを重ねない
-- [ ] Unified / Portfolio MarginでSpot totalを利用し、Perp accountValueを加算しない
-- [ ] Per-Position Unrealized PnLは意味・Currencyを確認できる場合のみ一度加算
-- [ ] Position margin / Position ValueをNet Worthへ加算しない
-- [ ] Spot holdをtotalへ追加しない
-- [ ] Fundingの正数・負数・ゼロをIN / OUT / no legへ対応
-- [ ] Perp Fill Detailのside / direction / quantity / price / startPosition / closedPnl mapping
-- [ ] Perp Fill quantityはIN / OUT legsにならず、Feeのみ資産legになる
-- [ ] DetailのUser ownershipは親Activityから継承され、cross-user参照を拒否する
+- [x] `disabled` → Standard; `unifiedAccount` → Unified; `portfolioMargin` → Portfolio Margin
+- [x] `default` / `dexAbstraction` / unknown / missing modeでNet Worth valuation unavailable
+- [x] StandardでSpot totalと各Perp DEX accountValueを一度ずつ利用し、accountValue内のPnLを重ねない
+- [x] Unified / Portfolio MarginでSpot totalを利用し、Perp accountValueを加算しない
+- [x] Per-Position Unrealized PnLは意味・Currencyを確認できる場合のみ一度加算
+- [x] Position margin / Position ValueをNet Worthへ加算しない
+- [x] Spot holdをtotalへ追加しない
+- [x] Fundingの正数・負数・ゼロをIN / OUT / no legへ対応
+- [x] Perp Fill Detailのside / direction / quantity / price / startPosition / closedPnl mapping
+- [x] Perp Fill quantityはIN / OUT legsにならず、Feeのみ資産legになる
+- [x] DetailのUser ownershipは親Activityから継承され、cross-user参照を拒否する
+
+Fixture Adapter TestでMode mapping、未知値時のfail closed、StandardとUnified / Portfolio Marginの残高元、Spot hold、spot / perp fill、fee rebate、funding、Position通貨、Perp Fill Detail、rate limit / timeoutを確認した。Testcontainers Integration TestでV10 Schema / Hibernate validateとPerp Fill Detailの親Activity経由User ownershipを確認した。Fill履歴が直近10,000件の上限へ達した場合、`ActivityPage.limitedByProviderHistory`をtrueにして完全な履歴と誤認しない。
 
 ---
 

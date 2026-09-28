@@ -259,7 +259,7 @@ Deposit historyはdestination tag、memo、bank accountを返さない。Withdra
 - [Rate limits and user limits](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/rate-limits-and-user-limits)
 - [WebSocket response types](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/websocket/subscriptions) — `tid` uniqueness note
 
-Hyperliquid公式Info Endpointは `userAbstraction` Queryと、`unifiedAccount` / `portfolioMargin` / `disabled` / `default` / `dexAbstraction` のResponse値を現在掲載している。Info EndpointのMode列挙は確認済み。開発環境からMainnet Info APIへ送ったread-only確認RequestはDNS解決に失敗したため、実APIレスポンスは確認できていない。実データ接続時も列挙外・NULL・取得失敗を許容し、未知値を追加Mappingしない。
+2026-09-28に現行のHyperliquid公式Info Endpointを確認し、`userAbstraction` Queryと `unifiedAccount` / `portfolioMargin` / `disabled` / `default` / `dexAbstraction` のResponse値が掲載されていることを確認した。同日、公式Schema例にある公開Zero Addressへのread-only Info API requestでは文字列`default`が返った。これは実UserのMode確認ではない。実接続先でも列挙外・NULL・取得失敗を許容し、未知値を追加Mappingしない。
 
 ### ConnectionとRead API
 
@@ -340,4 +340,12 @@ Modeごとの集計:
 - `userAbstraction`の各既知値を上記Mappingへ厳密に分岐する。`default`、`dexAbstraction`、欠落、未知Response、取得失敗をStandardへfallbackしない。
 - Unknown / Unsupported Modeでは新しいPortfolio評価を成功扱いにせず、完全なNet Worthを算出できないときはSnapshotを作成しない。過去のModeとStateを使う場合は既存STALE方針に従う。
 - `userFills`の集約で一つのResponse fillが複数Trade IDを表す場合、個々のIDとの対応が保証できないものを個別取引Activityに偽装しない。dedupとdetail mappingはfixtureで確認する。
-- `userAbstraction`とPerp Fill DetailのRead API仕様は確定した。ネットワーク制限によりLive API responseは未確認のため、API fixture testをAdapter実装Stepで追加する。Live OAuth Smoke Testのような外部確認は通常回帰テストの前提にしない。
+- `userAbstraction`とPerp Fill DetailのRead API仕様は確定した。公式のZero Addressに対するread-only queryでは`default`を確認したが、実User AddressのModeは未確認である。実User Addressの照会をAdapter通常テストの前提にはしない。
+
+### Step 7-6 Adapter実装状況
+
+- Hyperliquid Read-only AdapterはInfo APIのAccount Mode、Spot Balance、Perp DEX別Account State / Position、Spot / Perp Fill、Fundingを共通Provider DTOへ正規化する。
+- `disabled` / `unifiedAccount` / `portfolioMargin`のfixture、`default` / `dexAbstraction` / unknown / 欠落 / mode endpoint失敗のfail-closed処理をAdapter Testで確認した。実Userのmodeは接続時に取得し、未対応値や取得失敗を成功したNet Worthとして扱わない。
+- Perp FillをActivity Headerと`activity_perpetual_fill_details`へ1:1で保存できるSchema / Entity / Repositoryを追加した。Perp Fill数量はAsset IN / OUT legにせず、実際のFeeはFEE leg、Fee rebateはIN legにする。Spot FillはIN / OUT / FEE legsのまま扱う。
+- `userFillsByTime`の直近10,000件上限に達した結果はhistory-limited metadataとして返す。Hyperliquid APIに古い履歴が残る保証はなく、完全なActivity履歴として表示しない。
+- Adapter fixture testsでMode / Balance / Position / currency / fill / funding / Fee / rate limit / timeoutを確認し、TestcontainersでV10 Migration / Schema validation / Fill Detail ownershipを確認する。

@@ -621,7 +621,7 @@ Position履歴は保持せず、売買・Funding等の履歴はActivityで扱う
 | `entry_price` | numeric(38,18) | YES | |
 | `mark_price` | numeric(38,18) | YES | |
 | `liquidation_price` | numeric(38,18) | YES | |
-| `price_currency` | varchar(8) | NO | 原則USD等 |
+| `price_currency` | varchar(8) | YES | Market仕様で確定できない場合NULL。NULLのPosition Valueは評価不能とする |
 | `leverage` | numeric(18,8) | YES | |
 | `margin_amount` | numeric(38,18) | YES | |
 | `margin_currency` | varchar(8) | YES | |
@@ -923,6 +923,8 @@ CHECK (price > 0)
 ```
 
 Hyperliquid FillではProvider `side`の`B` / `A`をそれぞれBUY / SELLへ正規化する。Provider `dir`のOpen / Close Long / Shortをdirectionへ写し、未知の値は推測分類せず`UNKNOWN`として元値を`provider_direction`へ保持する。`sz`はquantityの正の値、`startPosition`は符号付きquantity、`px`はprice、`closedPnl`は取得された符号付きPnLとして保存する。Currencyが確定しないMarketでは`price_currency` / `closed_pnl_currency`をNULLとし、JPY評価不能を0にしない。
+
+`perpetual_positions.price_currency`もHyperliquid HIP-3等で市場通貨を公式情報から特定できない場合はNULLを許容する。Providerの数値だけ保存し通貨を推測しない。`price_currency`がNULLならPosition Value / JPY valuationをUnavailableとし、Net Worthへの換算へ使わない。V10で既存列のNOT NULL制約を外す。
 
 `activities.event_type = 'PERP'` の約定DetailをこのTableへ保存する。Spot Fillは引き続き`activity_legs`のIN / OUT / FEEで表す。Perp Fillの約定quantityを資産移動のIN / OUT legへ複製しない。Provider Feeが実際の資産減少となる場合のみFee資産・正の数量を`activity_legs.direction = 'FEE'`へ保存する。Fee rebateで実際に資産が増える場合はIN legとし、負数量を保存しない。Hyperliquid `builderFee`はProviderの`fee`に含まれるため追加計上しない。
 

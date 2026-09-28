@@ -33,8 +33,8 @@ class DatabaseMigrationIntegrationTests {
                   AND table_name <> 'flyway_schema_history'
                 """, Integer.class);
 
-        assertThat(tableCount).isEqualTo(12);
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("9");
+        assertThat(tableCount).isEqualTo(13);
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("10");
         assertThat(jdbcTemplate.queryForObject("""
                 SELECT COUNT(*)
                 FROM information_schema.columns
@@ -50,6 +50,24 @@ class DatabaseMigrationIntegrationTests {
                 WHERE table_schema = 'public'
                   AND table_name = 'connection_sync_states'
                   AND constraint_name = 'ck_connection_sync_states_cursor_window_pair'
+                """, Integer.class)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'provider_account_states'
+                  AND column_name IN ('account_scope', 'account_mode', 'provider_abstraction_mode')
+                """, Integer.class)).isEqualTo(3);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT is_nullable
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'perpetual_positions'
+                  AND column_name = 'price_currency'
+                """, String.class)).isEqualTo("YES");
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*) FROM information_schema.tables
+                WHERE table_schema = 'public' AND table_name = 'activity_perpetual_fill_details'
                 """, Integer.class)).isEqualTo(1);
         assertThatCode(flyway::validate).doesNotThrowAnyException();
         assertThatCode(flyway::migrate).doesNotThrowAnyException();
@@ -84,6 +102,13 @@ class DatabaseMigrationIntegrationTests {
         assertThatThrownBy(() -> jdbcTemplate.update("""
                 INSERT INTO activity_legs (id, activity_id, leg_index, direction, asset_key, valuation_status)
                 VALUES (?, ?, 0, 'IN', 'BTC', 'UNAVAILABLE')
+                """, UUID.randomUUID(), UUID.randomUUID()))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        assertThatThrownBy(() -> jdbcTemplate.update("""
+                INSERT INTO activity_perpetual_fill_details
+                    (id, activity_id, instrument_code, side, direction, quantity, price)
+                VALUES (?, ?, 'BTC', 'BUY', 'OPEN_LONG', 1, 50000)
                 """, UUID.randomUUID(), UUID.randomUUID()))
                 .isInstanceOf(DataIntegrityViolationException.class);
 

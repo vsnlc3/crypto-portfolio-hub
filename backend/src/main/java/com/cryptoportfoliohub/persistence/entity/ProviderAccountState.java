@@ -14,7 +14,8 @@ import jakarta.persistence.UniqueConstraint;
 
 @Entity
 @Table(name = "provider_account_states", uniqueConstraints =
-        @UniqueConstraint(name = "uq_provider_account_states_connection", columnNames = {"connection_id", "user_id"}))
+        @UniqueConstraint(name = "uq_provider_account_states_connection_scope",
+                columnNames = {"connection_id", "user_id", "account_scope"}))
 public class ProviderAccountState extends UpdatedEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -23,6 +24,15 @@ public class ProviderAccountState extends UpdatedEntity {
             @JoinColumn(name = "user_id", referencedColumnName = "user_id", nullable = false)
     })
     private ConnectionEntity connection;
+
+    @Column(name = "account_scope", nullable = false, length = 191)
+    private String accountScope;
+
+    @Column(name = "account_mode", length = 30)
+    private String accountMode;
+
+    @Column(name = "provider_abstraction_mode", length = 32)
+    private String providerAbstractionMode;
 
     @Column(name = "account_currency", length = 8)
     private String accountCurrency;
@@ -60,6 +70,33 @@ public class ProviderAccountState extends UpdatedEntity {
     protected ProviderAccountState() {
     }
 
+    public ProviderAccountState(
+            ConnectionEntity connection,
+            String accountScope,
+            String accountMode,
+            String providerAbstractionMode,
+            String accountCurrency,
+            BigDecimal cashBalance,
+            BigDecimal collateralBalance,
+            BigDecimal accountEquity,
+            BigDecimal unrealizedPnl,
+            Boolean equityIncludesUnrealizedPnl,
+            Instant fetchedAt,
+            UUID lastSuccessSyncRunId) {
+        this.connection = connection;
+        this.accountScope = accountScope;
+        this.accountMode = accountMode;
+        this.providerAbstractionMode = providerAbstractionMode;
+        this.accountCurrency = accountCurrency;
+        this.cashBalance = cashBalance;
+        this.collateralBalance = collateralBalance;
+        this.accountEquity = accountEquity;
+        this.unrealizedPnl = unrealizedPnl;
+        this.equityIncludesUnrealizedPnl = equityIncludesUnrealizedPnl;
+        this.fetchedAt = fetchedAt;
+        this.lastSuccessSyncRunId = lastSuccessSyncRunId;
+    }
+
     public ConnectionEntity getConnection() {
         return connection;
     }
@@ -68,11 +105,47 @@ public class ProviderAccountState extends UpdatedEntity {
         return accountCurrency;
     }
 
+    public String getAccountScope() {
+        return accountScope;
+    }
+
+    public String getAccountMode() {
+        return accountMode;
+    }
+
+    public String getProviderAbstractionMode() {
+        return providerAbstractionMode;
+    }
+
     public BigDecimal getAccountEquity() {
         return accountEquity;
     }
 
+    public BigDecimal getCashBalance() {
+        return cashBalance;
+    }
+
+    public BigDecimal getCollateralBalance() {
+        return collateralBalance;
+    }
+
     public BigDecimal getFxRateToJpy() {
         return fxRateToJpy;
+    }
+
+    public BigDecimal getUnrealizedPnl() {
+        return unrealizedPnl;
+    }
+
+    public Boolean getEquityIncludesUnrealizedPnl() {
+        return equityIncludesUnrealizedPnl;
+    }
+
+    public Instant getFetchedAt() {
+        return fetchedAt;
+    }
+
+    public UUID getLastSuccessSyncRunId() {
+        return lastSuccessSyncRunId;
     }
 }

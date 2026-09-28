@@ -12,6 +12,7 @@ import com.cryptoportfoliohub.persistence.entity.ConnectionSyncStateId;
 import com.cryptoportfoliohub.persistence.entity.SyncRunResultId;
 import com.cryptoportfoliohub.persistence.entity.SyncCapability;
 import com.cryptoportfoliohub.persistence.repository.ActivityLegRepository;
+import com.cryptoportfoliohub.persistence.repository.ActivityPerpetualFillDetailRepository;
 import com.cryptoportfoliohub.persistence.repository.ActivityRepository;
 import com.cryptoportfoliohub.persistence.repository.AssetBalanceRepository;
 import com.cryptoportfoliohub.persistence.repository.ConnectionCredentialRepository;
@@ -67,6 +68,9 @@ class OwnedRepositoriesIntegrationTests {
     private ActivityLegRepository activityLegRepository;
 
     @Autowired
+    private ActivityPerpetualFillDetailRepository perpetualFillDetailRepository;
+
+    @Autowired
     private PortfolioSnapshotRepository snapshotRepository;
 
     @Test
@@ -116,12 +120,16 @@ class OwnedRepositoriesIntegrationTests {
                 fixture.accountStateA(), fixture.userB())).isEmpty();
 
         assertThat(activityRepository.findAllByConnection_User_IdOrderByOccurredAtDescIdDesc(fixture.userA()))
-                .hasSize(1);
+                .hasSize(2);
         assertThat(activityRepository.findByIdAndConnection_User_Id(fixture.activityA(), fixture.userB())).isEmpty();
         assertThat(activityLegRepository.findAllByActivity_IdAndActivity_Connection_User_IdOrderByLegIndexAsc(
                 fixture.activityA(), fixture.userA())).hasSize(1);
         assertThat(activityLegRepository.findByIdAndActivity_Connection_User_Id(
                 fixture.activityLegA(), fixture.userB())).isEmpty();
+        assertThat(perpetualFillDetailRepository.findByActivity_IdAndActivity_Connection_User_Id(
+                fixture.perpetualActivityA(), fixture.userA())).isPresent();
+        assertThat(perpetualFillDetailRepository.findByActivity_IdAndActivity_Connection_User_Id(
+                fixture.perpetualActivityA(), fixture.userB())).isEmpty();
 
         assertThat(snapshotRepository.findAllByUser_IdOrderBySnapshotAtDescIdDesc(fixture.userA())).hasSize(1);
         assertThat(snapshotRepository.findByIdAndUser_Id(fixture.snapshotA(), fixture.userB())).isEmpty();
@@ -180,6 +188,8 @@ class OwnedRepositoriesIntegrationTests {
         UUID accountStateA = UUID.randomUUID();
         UUID activityA = UUID.randomUUID();
         UUID activityLegA = UUID.randomUUID();
+        UUID perpetualActivityA = UUID.randomUUID();
+        UUID perpetualFillDetailA = UUID.randomUUID();
         UUID snapshotA = UUID.randomUUID();
         UUID credentialB = UUID.randomUUID();
         UUID balanceB = UUID.randomUUID();
@@ -187,6 +197,8 @@ class OwnedRepositoriesIntegrationTests {
         UUID accountStateB = UUID.randomUUID();
         UUID activityB = UUID.randomUUID();
         UUID activityLegB = UUID.randomUUID();
+        UUID perpetualActivityB = UUID.randomUUID();
+        UUID perpetualFillDetailB = UUID.randomUUID();
         UUID snapshotB = UUID.randomUUID();
         String googleSubjectA = "subject-" + UUID.randomUUID();
         String googleSubjectB = "subject-" + UUID.randomUUID();
@@ -242,6 +254,7 @@ class OwnedRepositoriesIntegrationTests {
                 INSERT INTO activity_legs (id, activity_id, leg_index, direction, asset_key, valuation_status)
                 VALUES (?, ?, 0, 'OUT', 'SOLANA:SPL:SOL', 'UNAVAILABLE')
                 """, activityLegA, activityA);
+        insertPerpetualFillDetail(perpetualActivityA, perpetualFillDetailA, connectionA, userA);
         jdbcTemplate.update("""
                 INSERT INTO portfolio_snapshots
                     (id, user_id, snapshot_at, data_as_of_at, net_worth_jpy, holdings_value_jpy,
@@ -292,6 +305,7 @@ class OwnedRepositoriesIntegrationTests {
                 INSERT INTO activity_legs (id, activity_id, leg_index, direction, asset_key, valuation_status)
                 VALUES (?, ?, 0, 'OUT', 'SOLANA:SPL:SOL', 'UNAVAILABLE')
                 """, activityLegB, activityB);
+        insertPerpetualFillDetail(perpetualActivityB, perpetualFillDetailB, connectionB, userB);
         jdbcTemplate.update("""
                 INSERT INTO portfolio_snapshots
                     (id, user_id, snapshot_at, data_as_of_at, net_worth_jpy, holdings_value_jpy,
@@ -301,7 +315,20 @@ class OwnedRepositoriesIntegrationTests {
                 """, snapshotB, userB);
 
         return new Fixture(userA, userB, connectionA, connectionB, syncRunA, credentialA, balanceA,
-                positionA, accountStateA, activityA, activityLegA, snapshotA, googleSubjectA);
+                positionA, accountStateA, activityA, activityLegA, perpetualActivityA, snapshotA, googleSubjectA);
+    }
+
+    private void insertPerpetualFillDetail(UUID activityId, UUID detailId, UUID connectionId, UUID userId) {
+        jdbcTemplate.update("""
+                INSERT INTO activities
+                    (id, connection_id, user_id, dedup_key, event_type, occurred_at, imported_at)
+                VALUES (?, ?, ?, ?, 'PERP', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """, activityId, connectionId, userId, "perp-" + activityId);
+        jdbcTemplate.update("""
+                INSERT INTO activity_perpetual_fill_details
+                    (id, activity_id, instrument_code, side, direction, quantity, price)
+                VALUES (?, ?, 'BTC', 'BUY', 'OPEN_LONG', 1, 50000)
+                """, detailId, activityId);
     }
 
     private void insertConnection(UUID connectionId, UUID userId, String externalAccountRef) {
@@ -330,6 +357,7 @@ class OwnedRepositoriesIntegrationTests {
             UUID accountStateA,
             UUID activityA,
             UUID activityLegA,
+            UUID perpetualActivityA,
             UUID snapshotA,
             String googleSubjectA) {
     }

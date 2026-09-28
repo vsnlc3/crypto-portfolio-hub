@@ -32,14 +32,15 @@
 - **Existing:** ルートのDocker ComposeでFrontend、Backend、PostgreSQLを同一Networkへ接続する。Frontendは3000番、ローカルOAuth callback用にBackendは8080番をHostへ公開し、PostgreSQLは公開せずNamed Volumeへ保存する。ProductionではBackendを直接公開せずreverse proxy経由にする。`frontend/Dockerfile` はNode.js 22とpnpmを使う開発起動設定、`backend/Dockerfile` はMaven buildとJava 25 runtimeのmulti-stage buildである。
 - **Existing:** `frontend/package.json` は `pnpm@12.3.4` を指定し、lockfileもpnpm 12.3.4である。
 - **Existing:** `frontend/tsconfig.json` は `strict: true` で、Next.js build時のTypeScriptエラーを隠さない。Vitest / React Testing Library、`test`、`typecheck` scriptを追加済み。ConnectionsでTanStack Query、React Hook Form、Zodを使い、Provider別Form、Loading / Empty / Error、追加・削除をテストする。Frontend lint scriptとGitHub Actions workflowはまだない。
-- **Existing:** `backend/` にJava 25 / Spring Boot 4.1.1のMavenプロジェクトがあり、Spring MVC、Jackson 3、JPA、PostgreSQL Driver、Flyway、Security、OAuth2 Client、Validation、Actuator、JUnit、Testcontainersを設定している。`/actuator/health` のHTTP応答、9本のFlyway Migration、主要FK / CHECK制約、Problem DetailsとRequest IDをPostgreSQL Testcontainers付きで検証する。
+- **Existing:** `backend/` にJava 25 / Spring Boot 4.1.1のMavenプロジェクトがあり、Spring MVC、Jackson 3、JPA、PostgreSQL Driver、Flyway、Security、OAuth2 Client、Validation、Actuator、JUnit、Testcontainersを設定している。`/actuator/health` のHTTP応答、10本のFlyway Migration、主要FK / CHECK制約、Problem DetailsとRequest IDをPostgreSQL Testcontainers付きで検証する。
 - **Existing:** `backend/src/main/java/com/cryptoportfoliohub/domain/money/` に通貨付きMoney / Price / Quantity / FX Value、JPY換算、PerpetualのPosition Value / 線形Unrealized PnL、表示用丸め基盤がある。Javaの計算には `BigDecimal` を使い、金融数値のUnit Testを持つ。
-- **Existing:** `backend/src/main/java/com/cryptoportfoliohub/persistence/` に12 Entityと12 Repositoryがある。Hibernate `ddl-auto: validate` でFlyway Schemaとの整合を検証し、所有データQueryにはUser IDを含める。TestcontainersでUser A / Bの分離とConnection論理削除後の履歴参照を検証する。
+- **Existing:** `backend/src/main/java/com/cryptoportfoliohub/persistence/` に13 Entityと13 Repositoryがある。Hibernate `ddl-auto: validate` でFlyway Schemaとの整合を検証し、所有データQueryにはUser IDを含める。TestcontainersでUser A / Bの分離とConnection論理削除後の履歴参照を検証する。
 - **Existing:** BackendにGoogle OIDC Login、SubjectによるUser作成・再紐付け、Session Cookie、CSRF対応のLogout、認証User確認API、Connection一覧・追加・削除APIを実装し、`.env`から注入したCredentialでローカル実Google OAuth E2Eを確認した。Secret値はGit管理外である。公開環境のHost / Schemeに対応したRedirect URI登録はDeployment設計時に行う。
 - **Existing:** BackendにProvider Sync Portと共通非同期Sync lifecycle、SolanaおよびbitbankのBalance / Activity Adapterと手動Sync APIを実装した。Connection行のPessimistic Lockで重複Syncを防ぎ、Capability別状態とSync Run結果、Solanaの履歴cursor再開、Activity重複排除、User所有権、部分失敗とCurrent State保持をTestcontainersで検証する。
 - **Existing:** BackendにCoinGecko DemoのCurrent Price / 24h quote / USDJPY FX Provider Adapter、Canonical Asset ID mapping、共有Cache、鮮度判定、Provider error分類を実装した。両API keyはBackend環境変数で任意注入し、未設定時はUnavailableを返す。2026-09-28に実API Smoke Testで両Providerのresponseと評価時刻の読み取りを確認した。
 - **Existing:** Solana Wallet Addressのbase58 / 32-byte validation、Mainnet Native SOL / Classic Token / Token-2022 Balance Adapter、Helius Signature paginationとParsed Eventsから共通Balance / Activity Header / Legsへの変換を追加した。Solana / Helius仕様fixtureのMock HTTP Testを実行済み。Helius API keyは任意Backend環境変数であり、Live履歴requestは未確認。
-- **未実装:** Hyperliquid Balance / Position / Activity Adapter、Portfolio評価、Portfolio業務API、デプロイ環境。Provider API keyを`.env`へ注入する設定は任意である。
+- **Existing:** Hyperliquid Read-only AdapterでAccount Mode、Spot Balance、Perp DEX別Account State / Position、Funding、Spot / Perp Fillを正規化する。Perp Fill DetailはActivity Headerと1:1で保持し、Fill数量をSpotの資産IN / OUTにしない。Fixture TestとV10 Schema / User ownership Integration Testを実装済み。
+- **未実装:** Provider Sync、Portfolio評価、Portfolio業務API、デプロイ環境。Provider API keyを`.env`へ注入する設定は任意である。
 
 この一覧は本リポジトリのファイル・設定に基づく。以下の採用方針は、別途Existingと記載したものを除き、実装済みであることを意味しない。
 
@@ -57,10 +58,10 @@
 | Backend build | Maven Wrapper 3.9.12 | Existing | `backend/mvnw` とWrapper設定でビルドツールを固定する |
 | Market data | CoinGecko Demo + ExchangeRate-API | Existing | Batch price / optional 24h quote / USDJPY FX、全ユーザー共通のInstance内Cache、Provider timestamp freshness。Key未設定時はUnavailable。2026-09-28に両ProviderのLive Smoke Testを確認済み |
 | Backend security | Spring Security / OAuth2 Login | Existing | Google OIDC Login、Backend Session、CSRF保護、Logout、User Subject紐付けを実装し、ローカル実OAuth E2Eを確認済み。公開環境には環境固有のClient設定とRedirect URI登録が必要 |
-| Backend persistence | Spring Data JPA / Hibernate | Existing | 12 Entity / Repositoryを作成済み。Migration SchemaとHibernate validateをIntegration Testで確認し、所有Resource QueryはUser IDを条件に含める |
+| Backend persistence | Spring Data JPA / Hibernate | Existing | 13 Entity / Repositoryを作成済み。Migration SchemaとHibernate validateをIntegration Testで確認し、所有Resource QueryはUser IDを条件に含める |
 | Backend API | REST / JSON、Jackson 3 | Adopted | Next.jsとの責務境界を明確にし、HTTPで確認・テストしやすくする。Problem Details、Connection CRUD、Manual Sync / Sync Run取得Endpointを実装済み |
 | Database | PostgreSQL | Existing | PostgreSQL Driver、Testcontainers、Compose上のPostgreSQLを構成済み。Named Volumeにデータを保持する |
-| Database migration | Flyway | Existing | 9本のSQL Migrationを導入済み。起動時に検証・適用し、HibernateはSchema validateのみ行う |
+| Database migration | Flyway | Existing | 10本のSQL Migrationを導入済み。起動時に検証・適用し、HibernateはSchema validateのみ行う |
 | External integrations | Provider / Adapter | Adopted | bitbank、Solana、Hyperliquid固有形式をアプリの共通モデルから隔離する |
 | Local runtime | Docker Compose | Existing | Frontend、Backend、PostgreSQLを内部Networkで起動する。Frontendは3000番、ローカルOAuth callback用Backendは8080番をHostへ公開し、PostgreSQLは内部のみ |
 | First deployment target | AWS Lightsail + Docker Compose | Planned | 個人開発の単一環境から始め、運用負荷と費用を抑える候補とする |
@@ -435,7 +436,7 @@ Google Client Secret、Provider Credential、Encryption KeyをGitHub Actions log
 
 ### まだ未確定の事項
 
-- Hyperliquid Account Mode / Perp Fill mappingは`provider-specifications.md`と`database-design.md`で確定済み。開発環境のDNS制限でLive Info API responseは未確認のため、Adapter fixture testsをStep 7-6で行う。
+- Hyperliquid Account Mode / Perp Fill mappingは`provider-specifications.md`と`database-design.md`で確定済み。公式Zero Addressへのread-only Info requestで`default` responseを確認したが、実User AddressのModeは未確認である。Adapter fixture testsはStep 7-6で完了済み。
 - CoinGecko Demo APIのCredentialとExchangeRate-API Free planのCredentialは、Step 6-1でBackend Secretとして設定する。Market priceは共有Cache TTL 10分 / STALE判定15分、日次FXは72時間をMVP鮮度基準とする。API障害時の第二Provider fallbackは設けず、評価不能値を0にしない。Demo planのAttributionと外部ユーザー提供前のLicense確認を守る。
 - Heliusの実利用Plan / 最新料金・Rate LimitのLive利用前確認、定期同期間隔。
 - 履歴・価格Snapshotの保持期間。

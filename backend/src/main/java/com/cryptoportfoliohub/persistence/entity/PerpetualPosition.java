@@ -50,7 +50,7 @@ public class PerpetualPosition extends UpdatedEntity {
     @Column(name = "liquidation_price", precision = 38, scale = 18)
     private BigDecimal liquidationPrice;
 
-    @Column(name = "price_currency", nullable = false, length = 8)
+    @Column(name = "price_currency", length = 8)
     private String priceCurrency;
 
     @Column(name = "leverage", precision = 18, scale = 8)
@@ -104,6 +104,41 @@ public class PerpetualPosition extends UpdatedEntity {
     protected PerpetualPosition() {
     }
 
+    public PerpetualPosition(
+            ConnectionEntity connection,
+            String positionKey,
+            String instrumentCode,
+            PositionSide side,
+            BigDecimal quantity,
+            BigDecimal entryPrice,
+            BigDecimal markPrice,
+            BigDecimal liquidationPrice,
+            String priceCurrency,
+            BigDecimal leverage,
+            BigDecimal marginAmount,
+            String marginCurrency,
+            BigDecimal unrealizedPnl,
+            String pnlCurrency,
+            Instant fetchedAt,
+            UUID lastSuccessSyncRunId) {
+        this.connection = connection;
+        this.positionKey = positionKey;
+        this.instrumentCode = instrumentCode;
+        this.side = side;
+        this.quantity = quantity;
+        this.entryPrice = entryPrice;
+        this.markPrice = markPrice;
+        this.liquidationPrice = liquidationPrice;
+        this.priceCurrency = priceCurrency;
+        this.leverage = leverage;
+        this.marginAmount = marginAmount;
+        this.marginCurrency = marginCurrency;
+        this.unrealizedPnl = unrealizedPnl;
+        this.pnlCurrency = pnlCurrency;
+        this.fetchedAt = fetchedAt;
+        this.lastSuccessSyncRunId = lastSuccessSyncRunId;
+    }
+
     public ConnectionEntity getConnection() {
         return connection;
     }
@@ -124,8 +159,44 @@ public class PerpetualPosition extends UpdatedEntity {
         return markPrice;
     }
 
+    public BigDecimal getEntryPrice() {
+        return entryPrice;
+    }
+
+    public BigDecimal getLiquidationPrice() {
+        return liquidationPrice;
+    }
+
     public String getPriceCurrency() {
         return priceCurrency;
+    }
+
+    public BigDecimal getLeverage() {
+        return leverage;
+    }
+
+    public BigDecimal getMarginAmount() {
+        return marginAmount;
+    }
+
+    public String getMarginCurrency() {
+        return marginCurrency;
+    }
+
+    public BigDecimal getUnrealizedPnl() {
+        return unrealizedPnl;
+    }
+
+    public String getPnlCurrency() {
+        return pnlCurrency;
+    }
+
+    public Instant getFetchedAt() {
+        return fetchedAt;
+    }
+
+    public UUID getLastSuccessSyncRunId() {
+        return lastSuccessSyncRunId;
     }
 
     public BigDecimal getPriceFxRateToJpy() {
