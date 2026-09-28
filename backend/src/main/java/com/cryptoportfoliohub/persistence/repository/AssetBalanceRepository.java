@@ -13,5 +13,8 @@ public interface AssetBalanceRepository extends JpaRepository<AssetBalance, UUID
     Optional<AssetBalance> findByIdAndConnection_User_IdAndConnection_DeletedAtIsNull(
             UUID id, UUID authenticatedUserId);
 
+    List<AssetBalance> findAllByConnection_IdAndConnection_User_IdAndConnection_DeletedAtIsNull(
+            UUID connectionId, UUID authenticatedUserId);
+
     long deleteAllByConnection_IdAndConnection_User_Id(UUID connectionId, UUID authenticatedUserId);
 }

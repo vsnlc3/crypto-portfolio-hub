@@ -40,6 +40,9 @@ app:
     helius-api-key: ${HELIUS_API_KEY:}
     connect-timeout: ${SOLANA_CONNECT_TIMEOUT:PT3S}
     read-timeout: ${SOLANA_READ_TIMEOUT:PT5S}
+    activity-initial-backfill-window: ${SOLANA_ACTIVITY_INITIAL_BACKFILL_WINDOW:P90D}
+    activity-sync-overlap: ${SOLANA_ACTIVITY_SYNC_OVERLAP:PT1H}
+    activity-page-size: ${SOLANA_ACTIVITY_PAGE_SIZE:100}
 
 management:
   endpoints:

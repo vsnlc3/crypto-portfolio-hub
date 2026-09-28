@@ -197,14 +197,14 @@ Deposit historyはdestination tag、memo、bank accountを返さない。Withdra
 ### Pagination、履歴範囲、Rate Limit、費用
 
 - Helius gTFAは`transactionDetails: "signatures" | "full"`、昇順/降順、時間/slot/status filters、`paginationToken`を持つ。現在のAPI Referenceでは1 requestあたり最大1,000件。`tokenAccounts` filterは`none` / `balanceChanged` / `all`。履歴ページ取得はcursorがなくなるまで継続し、ページ境界と再開位置を保存する。
-- HeliusはgTFAのArchival DataでGenesis以降の履歴を取得できると案内する。ただしサービス・プラン・API機能の提供条件に依存する。標準Solana RPCのTransaction dataはNodeごとの保持状況に依存し、Solana公式はPublic RPCを本番用に推奨していない。MVPの初回Syncで過去どこまで取り込むかは未決定であり、無制限Backfillを暗黙に行わない。期間を決めた後も取得途中の失敗・上限到達をActivity completeとして報告しない。
+- HeliusはgTFAのArchival DataでGenesis以降の履歴を取得できると案内する。ただしサービス・プラン・API機能の提供条件に依存する。標準Solana RPCのTransaction dataはNodeごとの保持状況に依存し、Solana公式はPublic RPCを本番用に推奨していない。MVPの初回Backfill範囲は直近90日とし、1回のmanual syncでは100件まで取得する。cursorが続く場合は同じ90日範囲を後続manual syncで再開し、範囲を完了するまでは全履歴を取得済みと表示しない。取得途中の失敗・上限到達をActivity completeとして報告しない。
 - Helius現在のPricingページはFree $0 / 月・1M credits・10 RPC requests/s、Developer $49 / 月・10M credits・50 RPC requests/sを掲載する。HeliusのgTFA公開記事は1 callあたり100 credits、利用可能プランはpaidと説明する。これらは単一API Key / ProjectのProvider制限であり、Userごとに増えるQuotaではない。Rate limit / credits超過はbounded backoff後に失敗・partial状態とし、API Keyをログへ出さない。
 - Parsed Events Quickstartは現在、全プランで1 requestあたり10 creditsと記載する。一方Helius Pricingページには「paid planで2026-09-21まで無料、その後の最終credit costは変更され得る」と残っており、2026-09-27時点で公式資料間に料金表記の不一致がある。Provider統合直前にDashboard / 最新公式PricingでgTFA利用可能プラン、Parsed Events費用、共通RPS制限を再確認する。MVP導入はAWS等の有料Infrastructureを増やさず、初期はHeliusの利用量を監視し、必要な場合だけ有料Planを判断する。
 - API KeyはユーザーごとのWallet Credentialではなく、Backendが保護して使うApplication Provider Secret。ローカルはGit管理外の環境変数、本番はDeploymentで確定する保護されたSecret設定から注入する。ConnectionにはWallet Addressとローカル表示名のみ保存する。
 
 ### 実装前確認事項
 
-- 初回Activity Backfillの期間・件数上限は requirements / screen designで指定されていない。Sync実装Stepまでに運用可能な対象期間を確定する。無制限に過去履歴を取り込む仕様として扱わない。
+- 定期同期間隔は未確定。手動Syncの現行動作へ定期実行を追加する場合は別途決める。
 - Helius Parserが認識しないProgram、Token-2022 extension、複合Transactionの分類・Legの境界をfixtureで検証する。未解析のイベントをSWAPや送金として推測分類しない。
 - Helius Parsed Events料金の公式表示が複数ページで不一致のため、Step 7実装で実APIキーを使う前に最新Plan / credits / rate limitを再確認する。外部Keyが未設定でもMock / fixtureによるAdapter実装・テストを先に進める。
 - Token Metadata URIの安全な取得・更新頻度、未知Mintの価格Provider mappingはこの仕様確認の範囲外とし、MetadataをPortfolio valuationの必須条件にしない。
@@ -219,6 +219,14 @@ Deposit historyはdestination tag、memo、bank accountを返さない。Withdra
 - Helius API keyは`HELIUS_API_KEY`からBackendだけへ注入する。キー未設定時はActivity取得を`UNAVAILABLE`にし、BalanceのSolana RPC取得やBackend起動は妨げない。API keyはHelius URLのquery parameterなので、request URL、例外cause、生responseをログへ出さない。3秒接続 / 5秒読取timeoutを使い、HTTP 429は`RATE_LIMIT`、timeoutは`TIMEOUT`として即時retryせずSync層へ返す。Mainnet RPC URLは`SOLANA_RPC_URL`で運用設定できるが、別clusterへ切り替えない。
 - Addressのbase58 decode後32 bytes検証は既存Connection入力とAdapterで共通化した。curve判定や署名は要求しない。
 - Fixture TestではMainnet RPCとHelius形式のMock responseを使い、u64 lamports、2^53超raw token amount、Program横断Mint合算、Swap、failed Transaction、Fee payer、pagination cursor、Helius rate limitを確認した。実Helius API CredentialによるLive Smoke Testは行っていない。
+
+### Step 7-3 Sync実装
+
+- 初回Activity query windowはmanual sync受付時刻から90日前。Helius Signature pageとParsed Eventsは1回のmanual syncで最大100件処理する。ページにcontinuation cursorがあれば、そのopaque cursorと元のquery-window startを`connection_sync_states`へ保存し、次のmanual syncで同じ範囲を再開する。
+- 初回90日windowを完了した後は、Activity Capabilityの前回成功時刻から1時間前をinclusiveに取得開始時刻とする。再取得分はConnectionごとのprovider event / dedup keyで除外する。前回Activity取得が失敗した場合はcursor・query-window start・last-success timeを進めない。
+- Balance CapabilityはSOL、Classic Token、Token-2022の全応答とparseが成功してから単一Transaction内でCurrent Balance集合を置換する。部分応答・失敗時は既存Balanceを保持する。
+- BalanceとActivityはCapability別に実行・保存する。Activity Header / Legsは同一Transactionで保存し、Activity失敗で成功済みBalanceをrollbackしない。historical Activity valuationは取得できたoriginal amount / currencyだけを保持し、価格・FXがないLegはNULL / UNAVAILABLEのままにする。
+- `continuationAvailable`だけをSync APIへ返し、Helius cursorやquery-window timestampは公開しない。各取得・保存Queryはauthenticated user idでscopedし、HistoryはConnection所有者にだけ返す。
 
 ## Hyperliquid (Step 4-3)
 

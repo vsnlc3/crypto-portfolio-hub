@@ -489,7 +489,7 @@ Confirmed behavior and unresolved API documentation details are recorded in [pro
 
 秘密鍵・Seed Phraseは要求しない。
 
-確認結果と公式資料は[provider-specifications.md](./provider-specifications.md)に記録した。HeliusをSolana履歴Providerとして採用し、Wallet配下Token Accountの履歴を含めてcursor取得する。MVPの初回Backfill期間は設計資料に指定がないため、Sync実装Stepまでに決める。Helius Parsed EventsはOpen Betaで公式料金記載に不一致があるため、実API接続前に料金・Plan・Rate Limitを再確認する。未対応ProgramやParser失敗を推測分類せず、FixtureでTransfer / Swap / failed Transactionと数量精度を検証する。
+確認結果と公式資料は[provider-specifications.md](./provider-specifications.md)に記録した。HeliusをSolana履歴Providerとして採用し、Wallet配下Token Accountの履歴を含めてcursor取得する。MVPの初回Backfill範囲は直近90日、1回100件を上限として決定し、続きは同一query windowのcursorから手動再開する。Helius Parsed EventsはOpen Betaで公式料金記載に不一致があるため、実API接続前に料金・Plan・Rate Limitを再確認する。未対応ProgramやParser失敗を推測分類せず、FixtureでTransfer / Swap / failed Transactionと数量精度を検証する。
 
 ---
 
@@ -850,22 +850,22 @@ Provider DTOをApplication / Domainへ漏らさない。
 
 ## Step 7-3: Solana Sync
 
-- [ ] Manual Sync
-- [ ] Sync Run作成
-- [ ] Sync Run Result
-- [ ] Capability Sync State
-- [ ] Current Balance更新
-- [ ] Activity Header / Legs保存
-- [ ] 同一Activityを重複保存しない
-- [ ] Activity Header / Legsを同一Transactionで保存する
-- [ ] Providerから取得できたoriginalAmount / originalCurrencyとvaluation metadataを保持する
-- [ ] Historical Legを現在価格で後から再評価しない。評価情報がなければNULL / unavailableにする
-- [ ] Sync失敗時に前回成功Current Stateを保持する
-- [ ] stale判定に必要な情報を保持する
-- [ ] Balance完全成功時のみCurrent Balance集合を更新する
-- [ ] Activity失敗がBalance成功を巻き戻さない
-- [ ] User AがUser BのConnection / Sync / Balance / Activityへアクセスできない
-- [ ] User AがUser BのActivity Legsを親Activity経由でも取得できない
+- [x] Manual Sync
+- [x] Sync Run作成
+- [x] Sync Run Result
+- [x] Capability Sync State
+- [x] Current Balance更新
+- [x] Activity Header / Legs保存
+- [x] 同一Activityを重複保存しない
+- [x] Activity Header / Legsを同一Transactionで保存する
+- [x] Providerから取得できたoriginalAmount / originalCurrencyとvaluation metadataを保持する
+- [x] Historical Legを現在価格で後から再評価しない。評価情報がなければNULL / unavailableにする
+- [x] Sync失敗時に前回成功Current Stateを保持する
+- [x] stale判定に必要な情報を保持する
+- [x] Balance完全成功時のみCurrent Balance集合を更新する
+- [x] Activity失敗がBalance成功を巻き戻さない
+- [x] User AがUser BのConnection / Sync / Balance / Activityへアクセスできない
+- [x] User AがUser BのActivity Legsを親Activity経由でも取得できない
 
 ### API
 
@@ -874,14 +874,18 @@ POST /api/v1/connections/{connectionId}/sync
 GET  /api/v1/connections/{connectionId}/sync-runs/{syncRunId}
 ```
 
-共通Sync契約を利用する。Provider別のCapability、Response、Partial Failure表現を `api-design.md` に記録する。POSTは202で受付結果を返し、GETはUser ownershipを検証してCapability別結果を返す。
+共通Sync契約を利用する。Provider別のCapability、Response、Partial Failure表現は `api-design.md` に記録済み。POSTは202で受付結果を返し、GETはUser ownershipを検証してCapability別結果と`continuationAvailable`を返す。Heliusのopaque cursorとquery-window startはAPIへ公開しない。
+
+初回Activity取得は直近90日、各manual syncは最大100件とする。続きがあるときはcursorと同じquery windowを保存し、次回manual syncで再開する。初回範囲の取得完了後のincremental syncは前回成功時刻の1時間前から取得し、重複eventはdedupする。
 
 ### 完了条件
 
-- [ ] 1つのCapability失敗が他Capabilityの成功を失敗扱いにしない
-- [ ] 前回成功値が残る
-- [ ] 未取得と0を区別できる
-- [ ] Current State・Activityを取得したUser所有Connectionだけへ保存できることを検証する
+- [x] 1つのCapability失敗が他Capabilityの成功を失敗扱いにしない
+- [x] 前回成功値が残る
+- [x] 未取得と0を区別できる
+- [x] Current State・Activityを取得したUser所有Connectionだけへ保存できることを検証する
+- [x] 90日初回window、1回100件上限、cursor再開、1時間のincremental overlapを検証する
+- [x] TestcontainersによるSync API・Persistence・ownership・partial failureテストを通す
 
 ---
 
@@ -1471,7 +1475,7 @@ API仕様を `api-design.md` に反映する。
 
 ## Step 12-4: Connections評価額 / Manual Sync Frontend統合
 
-Portfolio / ValuationとProvider Sync API完成後にConnections画面を完成させる。
+Provider Sync APIはStep 7-3で実装済み。Portfolio / Valuation後にConnections画面で評価額とManual SyncをUIへ統合する。
 
 - [ ] ConnectionごとのJPY評価額を表示する
 - [ ] Capabilitiesを表示する

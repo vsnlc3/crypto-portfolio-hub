@@ -14,4 +14,7 @@ public interface ActivityRepository extends JpaRepository<Activity, UUID> {
             UUID connectionId, UUID authenticatedUserId);
 
     Optional<Activity> findByIdAndConnection_User_Id(UUID id, UUID authenticatedUserId);
+
+    Optional<Activity> findByConnection_IdAndConnection_User_IdAndDedupKey(
+            UUID connectionId, UUID authenticatedUserId, String dedupKey);
 }

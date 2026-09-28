@@ -27,6 +27,7 @@ import com.cryptoportfoliohub.connection.api.ConnectionAlreadyExistsException;
 import com.cryptoportfoliohub.connection.api.ConnectionRequestValidationException;
 import com.cryptoportfoliohub.connection.credential.CredentialEncryptionException;
 import com.cryptoportfoliohub.sync.application.SyncAlreadyRunningException;
+import com.cryptoportfoliohub.sync.application.SyncProviderNotAvailableException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -88,6 +89,14 @@ public class ApiExceptionHandler {
             SyncAlreadyRunningException exception, HttpServletRequest request) {
         return response(HttpStatus.CONFLICT, problemResponseFactory.create(
                 HttpStatus.CONFLICT, ProblemCodes.SYNC_ALREADY_RUNNING, exception.getMessage(), request));
+    }
+
+    @ExceptionHandler(SyncProviderNotAvailableException.class)
+    ResponseEntity<Map<String, Object>> handleSyncProviderNotAvailable(
+            SyncProviderNotAvailableException exception, HttpServletRequest request) {
+        return response(HttpStatus.NOT_IMPLEMENTED, problemResponseFactory.create(
+                HttpStatus.NOT_IMPLEMENTED, ProblemCodes.SYNC_PROVIDER_NOT_AVAILABLE,
+                exception.getMessage(), request));
     }
 
     @ExceptionHandler(CredentialEncryptionException.class)

@@ -401,6 +401,8 @@ Sync Run履歴とは分離する。
 | `last_success_at` | timestamptz | YES | |
 | `last_success_sync_run_id` | uuid | YES | FK → sync_runs |
 | `last_error_category` | varchar(50) | YES | 安全なエラー分類 |
+| `provider_cursor` | text | YES | CapabilityのProvider paging cursor。Activity履歴継続に使用 |
+| `cursor_window_start_at` | timestamptz | YES | Cursorを取得した元query window。cursorと同時にNULL / 非NULL |
 | `updated_at` | timestamptz | NO | |
 
 ## Primary Key
@@ -413,6 +415,7 @@ Sync Run履歴とは分離する。
 FK (connection_id, user_id) REFERENCES connections(id, user_id)
 FK (last_success_sync_run_id, connection_id, user_id)
   REFERENCES sync_runs(id, connection_id, user_id)
+CHECK ((provider_cursor IS NULL) = (cursor_window_start_at IS NULL))
 ```
 
 ## 意味
@@ -498,6 +501,7 @@ FK (connection_id, user_id) REFERENCES connections(id, user_id)
 | `finished_at` | timestamptz | YES | |
 | `error_category` | varchar(50) | YES | |
 | `safe_error_detail` | varchar(500) | YES | |
+| `continuation_available` | boolean | NO | Provider cursorで同じ履歴範囲の次ページを取得できる |
 
 ## Constraints
 
@@ -1736,7 +1740,8 @@ V5__create_activities.sql
 V6__create_activity_legs.sql
 V7__create_portfolio_snapshots.sql
 V8__create_indexes.sql
-V9__support_hyperliquid_account_modes_and_perp_fills.sql
+V9__persist_provider_sync_continuation.sql
+V10__support_hyperliquid_account_modes_and_perp_fills.sql
 ```
 
 実際のSQL作成時に、1 Migrationが過度に細分化されない範囲で調整してよい。

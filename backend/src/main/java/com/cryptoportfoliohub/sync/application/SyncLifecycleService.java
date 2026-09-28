@@ -122,7 +122,8 @@ public class SyncLifecycleService {
                     ticket.startedAt(),
                     finishedAt,
                     errorCategory,
-                    outcome.status() == SyncResultStatus.FAILED ? SAFE_FAILURE_DETAIL : null));
+                    outcome.status() == SyncResultStatus.FAILED ? SAFE_FAILURE_DETAIL : null,
+                    outcome.continuationAvailable()));
 
             ConnectionSyncState state = statesByCapability.get(capability);
             if (state != null) {

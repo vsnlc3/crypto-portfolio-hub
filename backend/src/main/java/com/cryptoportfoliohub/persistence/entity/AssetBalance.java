@@ -92,6 +92,30 @@ public class AssetBalance extends UpdatedEntity {
     protected AssetBalance() {
     }
 
+    public AssetBalance(
+            ConnectionEntity connection,
+            String assetKey,
+            String symbol,
+            String assetName,
+            AssetCategory assetCategory,
+            String network,
+            String assetRef,
+            BigDecimal totalQuantity,
+            Instant fetchedAt,
+            UUID lastSuccessSyncRunId) {
+        this.connection = connection;
+        this.assetKey = assetKey;
+        this.symbol = symbol;
+        this.assetName = assetName;
+        this.assetCategory = assetCategory;
+        this.network = network;
+        this.assetRef = assetRef;
+        this.totalQuantity = totalQuantity;
+        this.valuationStatus = ValuationStatus.UNAVAILABLE;
+        this.fetchedAt = fetchedAt;
+        this.lastSuccessSyncRunId = lastSuccessSyncRunId;
+    }
+
     public ConnectionEntity getConnection() {
         return connection;
     }

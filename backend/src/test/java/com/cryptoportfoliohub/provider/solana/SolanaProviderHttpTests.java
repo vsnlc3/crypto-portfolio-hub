@@ -28,6 +28,7 @@ class SolanaProviderHttpTests {
     private static final String TOKEN_2022_PROGRAM = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
     private static final String MINT = "So11111111111111111111111111111111111111112";
     private static final Instant NOW = Instant.parse("2026-09-28T00:00:00Z");
+    private static final Instant ACTIVITY_FROM = Instant.ofEpochSecond(1790540000);
 
     @Test
     void fetchesSolAndMergesClassicAndToken2022AccountsWithExactIntegerQuantities() {
@@ -71,6 +72,7 @@ class SolanaProviderHttpTests {
                 .andExpect(jsonPath("$.method").value("getTransactionsForAddress"))
                 .andExpect(jsonPath("$.params[1].filters.tokenAccounts").value("balanceChanged"))
                 .andExpect(jsonPath("$.params[1].filters.status").value("any"))
+                .andExpect(jsonPath("$.params[1].filters.blockTime.gte").value(1790540000))
                 .andExpect(jsonPath("$.params[1].limit").value(1))
                 .andRespond(withSuccess("""
                         {"jsonrpc":"2.0","id":"1","result":{"data":[
@@ -100,7 +102,7 @@ class SolanaProviderHttpTests {
         SolanaActivityProvider provider = new SolanaActivityProvider(
                 new HeliusClient(builder.build(), properties), new SolanaActivityNormalizer());
 
-        var page = provider.fetchActivities(ADDRESS, null, 1);
+        var page = provider.fetchActivities(ADDRESS, null, 1, ACTIVITY_FROM);
 
         assertThat(page.nextCursor()).isEqualTo("10:1");
         assertThat(page.activities()).hasSize(1);
@@ -142,7 +144,7 @@ class SolanaProviderHttpTests {
         SolanaActivityProvider provider = new SolanaActivityProvider(
                 new HeliusClient(builder.build(), properties), new SolanaActivityNormalizer());
 
-        var activity = provider.fetchActivities(ADDRESS, null, 1).activities().getFirst();
+        var activity = provider.fetchActivities(ADDRESS, null, 1, ACTIVITY_FROM).activities().getFirst();
 
         assertThat(activity.status()).isEqualTo("FAILED");
         assertThat(activity.eventType()).isEqualTo(com.cryptoportfoliohub.provider.NormalizedActivityType.OTHER);

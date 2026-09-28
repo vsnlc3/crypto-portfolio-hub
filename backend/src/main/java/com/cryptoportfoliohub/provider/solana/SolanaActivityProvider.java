@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.time.Instant;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 
@@ -25,9 +26,9 @@ public class SolanaActivityProvider implements ActivityProvider {
     }
 
     @Override
-    public ActivityPage fetchActivities(String accountAddress, String cursor, int limit) {
+    public ActivityPage fetchActivities(String accountAddress, String cursor, int limit, Instant fromInclusive) {
         SolanaAddress address = new SolanaAddress(accountAddress);
-        HeliusClient.SignaturePage page = heliusClient.fetchSignaturePage(address, cursor, limit);
+        HeliusClient.SignaturePage page = heliusClient.fetchSignaturePage(address, cursor, limit, fromInclusive);
         if (page.signatures().isEmpty()) {
             return new ActivityPage(List.of(), page.nextCursor());
         }

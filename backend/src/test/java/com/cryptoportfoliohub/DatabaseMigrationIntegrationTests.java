@@ -34,7 +34,23 @@ class DatabaseMigrationIntegrationTests {
                 """, Integer.class);
 
         assertThat(tableCount).isEqualTo(12);
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("8");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("9");
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND ((table_name = 'connection_sync_states'
+                        AND column_name IN ('provider_cursor', 'cursor_window_start_at'))
+                    OR (table_name = 'sync_run_results'
+                        AND column_name = 'continuation_available'))
+                """, Integer.class)).isEqualTo(3);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM information_schema.table_constraints
+                WHERE table_schema = 'public'
+                  AND table_name = 'connection_sync_states'
+                  AND constraint_name = 'ck_connection_sync_states_cursor_window_pair'
+                """, Integer.class)).isEqualTo(1);
         assertThatCode(flyway::validate).doesNotThrowAnyException();
         assertThatCode(flyway::migrate).doesNotThrowAnyException();
     }
@@ -72,6 +88,13 @@ class DatabaseMigrationIntegrationTests {
                 .isInstanceOf(DataIntegrityViolationException.class);
 
         assertThatThrownBy(() -> insertConnection(UUID.randomUUID(), ownerId, "UNKNOWN", null))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        assertThatThrownBy(() -> jdbcTemplate.update("""
+                INSERT INTO connection_sync_states (
+                    connection_id, user_id, capability, status, provider_cursor
+                ) VALUES (?, ?, 'ACTIVITY', 'READY', 'cursor-without-window')
+                """, connectionId, ownerId))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 

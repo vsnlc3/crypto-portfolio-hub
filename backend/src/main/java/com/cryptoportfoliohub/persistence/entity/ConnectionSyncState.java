@@ -43,6 +43,12 @@ public class ConnectionSyncState {
     @Column(name = "last_error_category", length = 50)
     private String lastErrorCategory;
 
+    @Column(name = "provider_cursor", columnDefinition = "text")
+    private String providerCursor;
+
+    @Column(name = "cursor_window_start_at")
+    private Instant cursorWindowStartAt;
+
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
@@ -75,6 +81,27 @@ public class ConnectionSyncState {
 
     public UUID getLastSuccessSyncRunId() {
         return lastSuccessSyncRunId;
+    }
+
+    public String getProviderCursor() {
+        return providerCursor;
+    }
+
+    public Instant getCursorWindowStartAt() {
+        return cursorWindowStartAt;
+    }
+
+    public void updateProviderCursor(String cursor, Instant windowStartAt) {
+        if (cursor == null || cursor.isBlank()) {
+            this.providerCursor = null;
+            this.cursorWindowStartAt = null;
+            return;
+        }
+        if (windowStartAt == null) {
+            throw new IllegalArgumentException("A provider cursor requires the query window it belongs to.");
+        }
+        this.providerCursor = cursor;
+        this.cursorWindowStartAt = windowStartAt;
     }
 
     public void startAttempt(Instant attemptedAt) {

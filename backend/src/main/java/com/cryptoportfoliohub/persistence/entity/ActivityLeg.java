@@ -78,6 +78,27 @@ public class ActivityLeg extends CreatedEntity {
     protected ActivityLeg() {
     }
 
+    public ActivityLeg(
+            Activity activity,
+            int legIndex,
+            ActivityDirection direction,
+            String assetKey,
+            String symbol,
+            BigDecimal quantity,
+            BigDecimal originalAmount,
+            String originalCurrency) {
+        this.activity = activity;
+        this.legIndex = legIndex;
+        this.direction = direction;
+        this.assetKey = assetKey;
+        this.symbol = symbol;
+        this.quantity = quantity;
+        this.originalAmount = originalAmount;
+        this.originalCurrency = originalCurrency;
+        this.valuationStatus = ValuationStatus.UNAVAILABLE;
+        this.valuationBasis = ValuationBasis.UNAVAILABLE;
+    }
+
     public Activity getActivity() {
         return activity;
     }
@@ -96,6 +117,14 @@ public class ActivityLeg extends CreatedEntity {
 
     public BigDecimal getQuantity() {
         return quantity;
+    }
+
+    public BigDecimal getOriginalAmount() {
+        return originalAmount;
+    }
+
+    public String getOriginalCurrency() {
+        return originalCurrency;
     }
 
     public BigDecimal getJpyValue() {

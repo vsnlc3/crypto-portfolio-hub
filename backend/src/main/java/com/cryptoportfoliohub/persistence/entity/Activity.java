@@ -50,6 +50,25 @@ public class Activity extends CreatedEntity {
     protected Activity() {
     }
 
+    public Activity(
+            ConnectionEntity connection,
+            String dedupKey,
+            String providerEventId,
+            ActivityType eventType,
+            String originalEventType,
+            String status,
+            Instant occurredAt,
+            Instant importedAt) {
+        this.connection = connection;
+        this.dedupKey = dedupKey;
+        this.providerEventId = providerEventId;
+        this.eventType = eventType;
+        this.originalEventType = originalEventType;
+        this.status = status;
+        this.occurredAt = occurredAt;
+        this.importedAt = importedAt;
+    }
+
     public ConnectionEntity getConnection() {
         return connection;
     }
@@ -64,6 +83,23 @@ public class Activity extends CreatedEntity {
 
     public ActivityType getEventType() {
         return eventType;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void updateFromProvider(
+            ActivityType eventType,
+            String originalEventType,
+            String status,
+            Instant occurredAt,
+            Instant importedAt) {
+        this.eventType = eventType;
+        this.originalEventType = originalEventType;
+        this.status = status;
+        this.occurredAt = occurredAt;
+        this.importedAt = importedAt;
     }
 
     public Instant getOccurredAt() {

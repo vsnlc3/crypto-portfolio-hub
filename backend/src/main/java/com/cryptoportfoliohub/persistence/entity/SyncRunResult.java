@@ -44,6 +44,9 @@ public class SyncRunResult {
     @Column(name = "safe_error_detail", length = 500)
     private String safeErrorDetail;
 
+    @Column(name = "continuation_available", nullable = false)
+    private boolean continuationAvailable;
+
     protected SyncRunResult() {
     }
 
@@ -56,7 +59,8 @@ public class SyncRunResult {
             Instant startedAt,
             Instant finishedAt,
             String errorCategory,
-            String safeErrorDetail) {
+            String safeErrorDetail,
+            boolean continuationAvailable) {
         this.id = new SyncRunResultId(syncRun.getId(), capability);
         this.syncRun = syncRun;
         this.status = status;
@@ -66,6 +70,7 @@ public class SyncRunResult {
         this.finishedAt = finishedAt;
         this.errorCategory = errorCategory;
         this.safeErrorDetail = safeErrorDetail;
+        this.continuationAvailable = continuationAvailable;
     }
 
     public SyncRunResultId getId() {
@@ -78,5 +83,33 @@ public class SyncRunResult {
 
     public SyncResultStatus getStatus() {
         return status;
+    }
+
+    public Integer getRecordsFetched() {
+        return recordsFetched;
+    }
+
+    public Integer getRecordsPersisted() {
+        return recordsPersisted;
+    }
+
+    public Instant getStartedAt() {
+        return startedAt;
+    }
+
+    public Instant getFinishedAt() {
+        return finishedAt;
+    }
+
+    public String getErrorCategory() {
+        return errorCategory;
+    }
+
+    public String getSafeErrorDetail() {
+        return safeErrorDetail;
+    }
+
+    public boolean isContinuationAvailable() {
+        return continuationAvailable;
     }
 }

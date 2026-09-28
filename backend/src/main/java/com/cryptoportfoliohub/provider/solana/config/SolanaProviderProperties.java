@@ -10,6 +10,9 @@ public class SolanaProviderProperties {
     private String heliusApiKey = "";
     private Duration connectTimeout = Duration.ofSeconds(3);
     private Duration readTimeout = Duration.ofSeconds(5);
+    private Duration activityInitialBackfillWindow = Duration.ofDays(90);
+    private Duration activitySyncOverlap = Duration.ofHours(1);
+    private int activityPageSize = 100;
 
     public String getRpcUrl() {
         return rpcUrl;
@@ -41,5 +44,39 @@ public class SolanaProviderProperties {
 
     public void setReadTimeout(Duration readTimeout) {
         this.readTimeout = readTimeout;
+    }
+
+    public Duration getActivityInitialBackfillWindow() {
+        return activityInitialBackfillWindow;
+    }
+
+    public void setActivityInitialBackfillWindow(Duration activityInitialBackfillWindow) {
+        if (activityInitialBackfillWindow == null || activityInitialBackfillWindow.isNegative()
+                || activityInitialBackfillWindow.isZero()) {
+            throw new IllegalArgumentException("Activity initial backfill window must be positive.");
+        }
+        this.activityInitialBackfillWindow = activityInitialBackfillWindow;
+    }
+
+    public Duration getActivitySyncOverlap() {
+        return activitySyncOverlap;
+    }
+
+    public void setActivitySyncOverlap(Duration activitySyncOverlap) {
+        if (activitySyncOverlap == null || activitySyncOverlap.isNegative()) {
+            throw new IllegalArgumentException("Activity sync overlap cannot be negative.");
+        }
+        this.activitySyncOverlap = activitySyncOverlap;
+    }
+
+    public int getActivityPageSize() {
+        return activityPageSize;
+    }
+
+    public void setActivityPageSize(int activityPageSize) {
+        if (activityPageSize < 1 || activityPageSize > 1_000) {
+            throw new IllegalArgumentException("Activity page size must be between 1 and 1000.");
+        }
+        this.activityPageSize = activityPageSize;
     }
 }

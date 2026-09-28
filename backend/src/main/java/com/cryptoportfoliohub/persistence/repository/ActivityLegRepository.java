@@ -12,4 +12,6 @@ public interface ActivityLegRepository extends JpaRepository<ActivityLeg, UUID> 
             UUID activityId, UUID authenticatedUserId);
 
     Optional<ActivityLeg> findByIdAndActivity_Connection_User_Id(UUID id, UUID authenticatedUserId);
+
+    long deleteAllByActivity_Id(UUID activityId);
 }

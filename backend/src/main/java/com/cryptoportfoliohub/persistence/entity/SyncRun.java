@@ -84,6 +84,14 @@ public class SyncRun extends CreatedEntity {
         return finishedAt;
     }
 
+    public String getErrorCategory() {
+        return errorCategory;
+    }
+
+    public String getSafeErrorDetail() {
+        return safeErrorDetail;
+    }
+
     public void finish(SyncRunStatus status, String errorCategory, String safeErrorDetail, Instant finishedAt) {
         if (status == SyncRunStatus.RUNNING) {
             throw new IllegalArgumentException("A finished sync run must have a terminal status.");

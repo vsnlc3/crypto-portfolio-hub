@@ -11,7 +11,8 @@ public record SyncCapabilityOutcome(
         SyncResultStatus status,
         Optional<Integer> recordsFetched,
         Optional<Integer> recordsPersisted,
-        Optional<ProviderErrorCategory> errorCategory) {
+        Optional<ProviderErrorCategory> errorCategory,
+        boolean continuationAvailable) {
 
     public SyncCapabilityOutcome {
         Objects.requireNonNull(capability, "capability must not be null");
@@ -24,21 +25,30 @@ public record SyncCapabilityOutcome(
         if ((status == SyncResultStatus.FAILED) != errorCategory.isPresent()) {
             throw new IllegalArgumentException("Only failed outcomes must have an error category.");
         }
+        if (continuationAvailable && status != SyncResultStatus.SUCCESS) {
+            throw new IllegalArgumentException("Only successful outcomes can have a continuation.");
+        }
     }
 
     public static SyncCapabilityOutcome success(SyncCapability capability, int fetched, int persisted) {
         return new SyncCapabilityOutcome(capability, SyncResultStatus.SUCCESS,
-                Optional.of(fetched), Optional.of(persisted), Optional.empty());
+                Optional.of(fetched), Optional.of(persisted), Optional.empty(), false);
+    }
+
+    public static SyncCapabilityOutcome success(
+            SyncCapability capability, int fetched, int persisted, boolean continuationAvailable) {
+        return new SyncCapabilityOutcome(capability, SyncResultStatus.SUCCESS,
+                Optional.of(fetched), Optional.of(persisted), Optional.empty(), continuationAvailable);
     }
 
     public static SyncCapabilityOutcome failed(SyncCapability capability, ProviderErrorCategory category) {
         return new SyncCapabilityOutcome(capability, SyncResultStatus.FAILED,
-                Optional.empty(), Optional.empty(), Optional.of(category));
+                Optional.empty(), Optional.empty(), Optional.of(category), false);
     }
 
     public static SyncCapabilityOutcome skipped(SyncCapability capability) {
         return new SyncCapabilityOutcome(capability, SyncResultStatus.SKIPPED,
-                Optional.empty(), Optional.empty(), Optional.empty());
+                Optional.empty(), Optional.empty(), Optional.empty(), false);
     }
 
     private static void requireNonNegative(int count, String field) {

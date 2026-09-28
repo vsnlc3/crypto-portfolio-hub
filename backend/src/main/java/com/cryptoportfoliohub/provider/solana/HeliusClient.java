@@ -9,6 +9,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.time.Instant;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -32,6 +33,10 @@ public class HeliusClient {
     }
 
     public SignaturePage fetchSignaturePage(SolanaAddress address, String cursor, int limit) {
+        return fetchSignaturePage(address, cursor, limit, null);
+    }
+
+    public SignaturePage fetchSignaturePage(SolanaAddress address, String cursor, int limit, Instant fromInclusive) {
         if (limit < 1 || limit > 1_000) {
             throw new IllegalArgumentException("Helius history page limit must be between 1 and 1000.");
         }
@@ -40,7 +45,13 @@ public class HeliusClient {
         options.put("sortOrder", "desc");
         options.put("commitment", "finalized");
         options.put("limit", limit);
-        options.put("filters", Map.of("status", "any", "tokenAccounts", "balanceChanged"));
+        Map<String, Object> filters = new java.util.HashMap<>();
+        filters.put("status", "any");
+        filters.put("tokenAccounts", "balanceChanged");
+        if (fromInclusive != null) {
+            filters.put("blockTime", Map.of("gte", fromInclusive.getEpochSecond()));
+        }
+        options.put("filters", filters);
         if (cursor != null && !cursor.isBlank()) {
             options.put("paginationToken", cursor);
         }
