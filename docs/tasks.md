@@ -1494,23 +1494,25 @@ Dashboardは他機能の集約になるため後半に実装する。
 1Y
 ```
 
-- [ ] Snapshot取得
-- [ ] 時系列sort
-- [ ] `COMPLETE`
-- [ ] `STALE`
-- [ ] データなし状態
-- [ ] period validation
-- [ ] 欠損Snapshotを0として補間しない
-- [ ] 24h change計算に必要な履歴取得
+- [x] Snapshot取得
+- [x] 時系列sort
+- [x] `COMPLETE`
+- [x] `STALE`
+- [x] データなし状態
+- [x] period validation
+- [x] 欠損Snapshotを0として補間しない
+- [x] 24h change計算に必要な履歴取得
 
 API仕様を `api-design.md` に反映する。
 
 ### API Test / ownership
 
-- [ ] period validationとUser ownershipを検証する
-- [ ] COMPLETE / STALE / empty historyを検証する
-- [ ] 24h changeはPortfolio Snapshot間の比較で扱う
-- [ ] 24h changeに比較可能な履歴点がない場合はunavailableとし0にしない
+- [x] period validationとUser ownershipを検証する
+- [x] COMPLETE / STALE / empty historyを検証する
+- [x] 24h changeはPortfolio Snapshot間の比較で扱う
+- [x] 24h changeに比較可能な履歴点がない場合はunavailableとし0にしない
+
+`GET /api/v1/portfolio/history?period=7D|30D|90D|1Y`を追加した。期間内のUser所有Snapshotだけを古い順に返し、欠損点は補間しない。24h Changeは最新Snapshotと24時間前以前の直近Snapshotを直接比較し、比較点がなければUnavailableにする。PostgreSQL Testcontainers Integration Testでperiod filter / validation、User分離、COMPLETE / STALE / EMPTY、24h amount / percentage、zero / negative baseline、比較点なしを検証した。Backend `./mvnw -q verify` は172 tests実行、failures / errors 0、Live Smoke Test 1件を未指定system propertyによりskip。
 
 ---
 

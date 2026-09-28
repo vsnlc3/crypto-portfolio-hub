@@ -29,14 +29,17 @@ import com.cryptoportfoliohub.portfolio.domain.UserPortfolioValuation;
 public class PortfolioSummaryQueryService {
 
     private final PortfolioValuationService valuationService;
+    private final PortfolioHistoryQueryService historyQueryService;
     private final ConnectionRepository connectionRepository;
     private final ConnectionSyncStateRepository syncStateRepository;
 
     public PortfolioSummaryQueryService(
             PortfolioValuationService valuationService,
+            PortfolioHistoryQueryService historyQueryService,
             ConnectionRepository connectionRepository,
             ConnectionSyncStateRepository syncStateRepository) {
         this.valuationService = valuationService;
+        this.historyQueryService = historyQueryService;
         this.connectionRepository = connectionRepository;
         this.syncStateRepository = syncStateRepository;
     }
@@ -69,8 +72,7 @@ public class PortfolioSummaryQueryService {
         return new PortfolioSummaryResponse(
                 new PortfolioSummaryResponse.Summary(
                         portfolio.netWorthJpy().orElse(null),
-                        new PortfolioSummaryResponse.Change24h(
-                                null, null, PortfolioSummaryStatus.UNAVAILABLE, null),
+                        historyQueryService.getChange24h(authenticatedUserId),
                         portfolio.holdingsValueJpy().orElse(null),
                         portfolio.directionalValueJpy().orElse(null),
                         portfolio.stablecoinValueJpy().orElse(null),

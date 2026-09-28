@@ -32,7 +32,8 @@ public record PortfolioSummaryResponse(Summary summary, List<Connection> connect
             BigDecimal amountJpy,
             BigDecimal percentage,
             PortfolioSummaryStatus status,
-            Instant comparedAt) {
+            Instant baselineSnapshotAt,
+            Instant currentSnapshotAt) {
     }
 
     public record Connection(

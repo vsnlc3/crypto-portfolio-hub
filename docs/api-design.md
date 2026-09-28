@@ -181,7 +181,8 @@ Response `200`:
       "amountJpy": null,
       "percentage": null,
       "status": "UNAVAILABLE",
-      "comparedAt": null
+      "baselineSnapshotAt": null,
+      "currentSnapshotAt": null
     },
     "holdingsValueJpy": 45300,
     "directionalValueJpy": 30000,
@@ -225,9 +226,44 @@ Response `200`:
 
 `summary` reports Net Worth, Holdings, Directional assets, Stablecoins, Market Exposure, Exposure Ratio, and Unrealized PnL using the existing portfolio calculation definitions. Position Value and Margin are not added to Net Worth. The summary `status` is `COMPLETE`, `STALE`, `PARTIAL`, or `UNAVAILABLE`; each Connection's `dataStatus` uses the same values. An unavailable metric is `null`, never a synthetic zero. A failed Activity Capability is reported in `capabilitySync` and does not make otherwise current portfolio valuation stale or partial.
 
-`change24h` compares Portfolio Snapshots, not the market price change of an individual asset. Until Step 12-2 adds the authenticated user's comparable 24-hour Snapshot lookup, `amountJpy`, `percentage`, and `comparedAt` are `null` and `status` is `UNAVAILABLE`. The API never uses a mock or reports unavailable change as zero.
+`change24h` compares Portfolio Snapshots, not the market price change of an individual asset. `baselineSnapshotAt` is the newest Snapshot at or before the current Snapshot's 24-hour comparison target; `currentSnapshotAt` is the latest Snapshot at or before request time. The amount is current Net Worth minus baseline Net Worth. No value is interpolated between missing history points. If either point is missing, the amount and percentage are `null` and status is `UNAVAILABLE`. If the baseline Net Worth is zero or negative, the JPY amount remains available and percentage is `null`. The status is `STALE` if either selected Snapshot is stale, otherwise `COMPLETE`.
 
 Only active Connections owned by the authenticated User are returned. `lastSuccessfulSyncAt` is the newest successful supported Capability timestamp; each Capability has its own state and timestamps. Missing Capability state is represented as `NOT_SYNCED`. History is unaffected by this current-state summary.
+
+## Portfolio History
+
+### `GET /api/v1/portfolio/history?period=7D`
+
+Requires an authenticated Google Session. Supported rolling periods are `7D`, `30D`, `90D`, and `1Y` (365 days). The authenticated Session determines the owner; the caller cannot select a User or Connection.
+
+Response `200`:
+
+```json
+{
+  "period": "7D",
+  "status": "AVAILABLE",
+  "rangeStartAt": "2026-09-21T00:00:00Z",
+  "rangeEndAt": "2026-09-28T00:00:00Z",
+  "points": [
+    {
+      "snapshotAt": "2026-09-22T10:00:00Z",
+      "dataAsOfAt": "2026-09-22T09:59:00Z",
+      "netWorthJpy": 1250000,
+      "status": "COMPLETE"
+    },
+    {
+      "snapshotAt": "2026-09-25T10:00:00Z",
+      "dataAsOfAt": "2026-09-25T09:59:00Z",
+      "netWorthJpy": 1230000,
+      "status": "STALE"
+    }
+  ]
+}
+```
+
+`points` contains only persisted Snapshots in the requested range, sorted oldest to newest. Point status is `COMPLETE` or `STALE`. The response status is `AVAILABLE` when at least one point exists and `EMPTY` otherwise. Missing timestamps are never interpolated or represented as zero. An unsupported `period` returns `400 VALIDATION_ERROR`.
+
+The 24-hour Summary comparison selects the latest Snapshot at or before request time and the latest Snapshot at or before 24 hours before that point. It compares those stored points directly; it does not interpolate. The response exposes both timestamps so the actual source points remain clear.
 
 ## Assets
 
