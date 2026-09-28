@@ -7,7 +7,7 @@
 ## 1. 設計方針
 
 - 本書は `requirements.md` を要件の基準とし、現在のv0生成UIの構成を活かしてMVP画面を定義する。
-- 現在のフロントエンドは静的なモックデータによる読み取り専用デモである。以下の画面状態や操作のうち、実データ取得・認証・永続化を要するものはMVPの目標仕様であり、現状実装済みであることを示すものではない。
+- 通常利用はBackend APIから取得した認証済みUserのデータを表示する。Sign inの「View read-only demo」は、Frontend内の型付きサンプルFixtureだけを表示する。Demo ModeではBackendへリクエストせず、接続追加・同期・削除は利用できない。
 - ログイン後の画面は共通ナビゲーションを持ち、Dashboard、Assets、Activity、Connections間を移動できる。デスクトップではサイドバー、モバイルではアイコンナビゲーションを使う。
 - Portfolioの評価額はJPYを基本通貨とする。暗号資産の単価やPerpetualのEntry / Mark / Liquidation PriceなどはUSD表示を許容し、通貨単位を明記する。
 - 同期時刻、接続状態、価格・為替レートが古い場合や取得できない場合は、数値を最新・確定値のように見せない。1接続先の取得失敗は他接続先の表示を妨げない。
@@ -24,7 +24,7 @@
 | Activity | `/activity` |
 | Connections | `/connections` |
 
-ヘッダーのユーザー表示は認証済みGoogleアカウントに基づく。全画面でログアウト操作を提供する。現在の検索欄とヘッダーSyncボタンは操作未実装のプレースホルダーであるため、MVPで有効化する場合は対象・結果・同期範囲が明確な操作として実装する。
+ヘッダーのユーザー表示は通常利用では認証済みGoogleアカウントに基づき、Demo Modeではサンプルユーザーを表示する。全画面でログアウトまたはDemo Mode終了操作を提供する。現在の検索欄と通常利用のヘッダーSyncボタンは操作未実装のプレースホルダーであるため、MVPで有効化する場合は対象・結果・同期範囲が明確な操作として実装する。Demo ModeではヘッダーSync操作を表示しない。
 
 ### 共通データ状態
 
@@ -43,23 +43,27 @@ Googleアカウントでユーザーを認証し、本人のPortfolio画面へ�
 
 - Crypto Portfolio Hubの用途と読み取り専用であることを確認する。
 - Googleログインを開始する。
+- 個人アカウントへ接続せず、サンプルデータだけを確認する。
 
 ### 主なUI要素
 
 - Meridian / Portfolioのブランド表示。現在の共通シェルと整合するロゴ・名称を使う。
 - 「Googleでログイン」ボタン（MVPで唯一の認証手段）。
+- 「View read-only demo」ボタン。Googleログインの代替認証ではなく、個人データを使わないサンプル表示の入口とする。
 - 認証中の進行表示と、認証失敗時のメッセージ。
-- PortfolioやConnectionsの個人データはログイン前には表示しない。
+- Demo Modeではサンプルデータであることを画面上に明示し、個人データ・Credentialを取得しない。
 
 ### 表示するデータ
 
 - アプリ名と短い説明。
 - 認証処理の状態。
 - 認証済みの場合はGoogleアカウントの表示情報を必要な範囲で使用する。Portfolio情報は認証後にのみ取得する。
+- Demo Modeでは固定の合成ユーザー表示とDemo Fixtureを使う。実Google User、DB User、Connection、Credentialを作成しない。
 
 ### 主な操作
 
 - Google認証を開始する。
+- read-only demoを開始する。
 - 認証失敗後に再試行する。
 
 ### Loading / Empty / Error
@@ -73,10 +77,11 @@ Googleアカウントでユーザーを認証し、本人のPortfolio画面へ�
 - ログイン成功後は、要求された保護画面があればその画面へ戻し、なければDashboard (`/`) を表示する。
 - 未認証の状態で他の保護画面へアクセスした場合はSign inへ遷移し、認証後に元の画面へ戻す。
 - ログアウト後はSign inへ遷移し、保護画面とPortfolioデータを再表示しない。
+- Demo開始後はDashboardへ遷移し、共通ナビゲーションからAssets、Activity、Connectionsへ移動できる。Exit demoでSign inへ戻し、サンプルUserのQuery cacheとSession中のDemo Flagを削除する。
 
 ### 現行UIとの差分
 
-- **実装済み:** Google専用Sign in画面、未認証Route Guard、認証Userのヘッダー表示、CSRF付きLogoutを実装した。Portfolio画面の表示データは引き続き静的モックであり、Portfolio API接続は後続Stepで行う。
+- **実装済み:** Google専用Sign in、未認証Route Guard、認証Userのヘッダー表示、CSRF付きLogout、Fixtureだけを使うread-only Demo Modeを実装した。Demo Flag中のAPI AdapterはFrontend Fixtureだけを返し、Backend fetchを呼ばない。Demo ModeではConnection変更操作を隠し、API Adapterも書込を拒否する。
 - **確認済み:** Frontend実ブラウザーでGoogle Login後のDashboard表示、ログインユーザー表示、画面Logout後のSign in復帰を確認した。以後の実Google OAuthブラウザー確認は外部Smoke Testとして扱う。
 
 ## 4. Dashboard

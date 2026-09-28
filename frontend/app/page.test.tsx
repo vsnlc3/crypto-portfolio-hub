@@ -5,6 +5,7 @@ import DashboardPage from '@/app/page'
 import type { AssetsResponse } from '@/lib/assets-api'
 import type { PortfolioHistoryResponse, PortfolioSummaryResponse } from '@/lib/portfolio-api'
 import type { PositionsResponse } from '@/lib/positions-api'
+import { disableDemoMode, enableDemoMode } from '@/lib/demo-mode'
 
 const evaluatedAt = '2026-09-28T02:00:00Z'
 
@@ -152,6 +153,7 @@ function mockDashboardFetch(options: {
 
 afterEach(() => {
   cleanup()
+  disableDemoMode()
   vi.unstubAllGlobals()
 })
 
@@ -171,7 +173,7 @@ describe('DashboardPage', () => {
     expect(screen.getByText('Phantom Wallet')).toBeInTheDocument()
     expect(screen.getByText('Allocation by currency')).toBeInTheDocument()
     expect(screen.getByText('Holdings by currency')).toBeInTheDocument()
-    expect(screen.getByText('BTC')).toBeInTheDocument()
+    expect(screen.getAllByText('BTC').length).toBeGreaterThan(0)
     expect(screen.getByText('2 saved snapshots. Gaps have no saved snapshot.')).toBeInTheDocument()
     expect(screen.queryByText('¥0')).not.toBeInTheDocument()
     expect(screen.getByRole('img', { name: 'Net worth history for 30D' })).toBeInTheDocument()
@@ -224,7 +226,7 @@ describe('DashboardPage', () => {
     expect(await screen.findByText('Assets couldn’t be loaded.')).toBeInTheDocument()
     expect(await screen.findByText('Asset allocation couldn’t be loaded.')).toBeInTheDocument()
     expect(screen.getByText('Stablecoin breakdown couldn’t be loaded.')).toBeInTheDocument()
-    expect(screen.getByText('BTC')).toBeInTheDocument()
+    expect(screen.getAllByText('BTC').length).toBeGreaterThan(0)
   })
 
   it('shows retryable errors and unavailable values when the portfolio APIs fail', async () => {
@@ -236,5 +238,18 @@ describe('DashboardPage', () => {
     expect(screen.getByText('Sync status unavailable')).toBeInTheDocument()
     expect(screen.queryByText('¥0')).not.toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalled()
+  })
+
+  it('renders the credential-free sample portfolio through the existing Dashboard UI', async () => {
+    enableDemoMode()
+    renderPage()
+
+    expect(await screen.findByText('Total net worth')).toBeInTheDocument()
+    expect(screen.getByText('¥11,330,000')).toBeInTheDocument()
+    expect(screen.getByText('Phantom · Demo')).toBeInTheDocument()
+    expect(screen.getAllByText('BTC').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Position value · JPY').length).toBeGreaterThan(0)
+    expect(screen.getByRole('img', { name: 'Net worth history for 30D' })).toBeInTheDocument()
+    expect(screen.getByText(/Gaps have no saved snapshot/)).toBeInTheDocument()
   })
 })

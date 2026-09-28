@@ -103,10 +103,16 @@ export function AppShell({ children, user, onLogout, isLoggingOut, logoutError }
           </div>
 
           <div className="ml-auto flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-2 bg-card">
-              <RefreshCw className="size-3.5" />
-              <span className="hidden sm:inline">Sync</span>
-            </Button>
+            {user.isDemo ? (
+              <span role="status" className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-300">
+                Demo · sample data
+              </span>
+            ) : (
+              <Button variant="outline" size="sm" className="gap-2 bg-card">
+                <RefreshCw className="size-3.5" />
+                <span className="hidden sm:inline">Sync</span>
+              </Button>
+            )}
             <div className="flex min-w-0 items-center gap-2 rounded-full border border-border bg-card py-1 pl-1 pr-3">
               <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-semibold" aria-hidden="true">
                 {getInitials(user.displayName || user.email)}
@@ -116,7 +122,7 @@ export function AppShell({ children, user, onLogout, isLoggingOut, logoutError }
               </span>
             </div>
             <Button variant="outline" size="sm" onClick={onLogout} disabled={isLoggingOut}>
-              {isLoggingOut ? "Signing out…" : "Sign out"}
+              {isLoggingOut ? (user.isDemo ? "Leaving demo…" : "Signing out…") : (user.isDemo ? "Exit demo" : "Sign out")}
             </Button>
           </div>
         </header>

@@ -1,6 +1,7 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -9,6 +10,8 @@ import {
   getCurrentUser,
   getSafeReturnPath,
 } from '@/lib/auth-api'
+import { demoUser } from '@/lib/demo-fixtures'
+import { enableDemoMode } from '@/lib/demo-mode'
 
 export function SignInView({
   oauthError,
@@ -18,6 +21,8 @@ export function SignInView({
   returnPath: string | null
 }) {
   const [isStarting, setIsStarting] = useState(false)
+  const router = useRouter()
+  const queryClient = useQueryClient()
   const userQuery = useQuery({
     queryKey: authQueryKey,
     queryFn: getCurrentUser,
@@ -34,6 +39,23 @@ export function SignInView({
     else window.sessionStorage.removeItem(authReturnPathStorageKey)
     setIsStarting(true)
     window.location.assign('/auth/google')
+  }
+
+  function startDemo() {
+    if (userQuery.data) return
+    let storedReturnPath: string | null = null
+    try {
+      storedReturnPath = window.sessionStorage.getItem(authReturnPathStorageKey)
+    } catch {
+      // The demo can still open the Dashboard when browser storage is blocked.
+    }
+    const safePath = getSafeReturnPath(returnPath)
+      ?? getSafeReturnPath(storedReturnPath)
+      ?? '/'
+    enableDemoMode()
+    queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== 'auth' })
+    queryClient.setQueryData(authQueryKey, demoUser)
+    router.replace(safePath)
   }
 
   const sessionError = userQuery.isError
@@ -90,6 +112,15 @@ export function SignInView({
               : 'Continue with Google'}
         </Button>
 
+        <Button
+          variant="outline"
+          className="mt-3 h-10 w-full"
+          disabled={userQuery.isPending || Boolean(userQuery.data)}
+          onClick={startDemo}
+        >
+          View read-only demo
+        </Button>
+
         {userQuery.isPending && (
           <p role="status" className="mt-3 text-center text-xs text-muted-foreground">
             Checking your sign-in status…
@@ -97,7 +128,7 @@ export function SignInView({
         )}
 
         <p className="mt-6 text-center text-xs leading-relaxed text-muted-foreground">
-          Read-only access. Your exchange and wallet credentials are never stored in this browser.
+          Demo uses sample data only. Personal Connections require Google sign-in; the demo cannot change or sync data.
         </p>
       </section>
       <p className="relative mt-6 text-xs text-muted-foreground">Personal portfolio access · Google account required</p>

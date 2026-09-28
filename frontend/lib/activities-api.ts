@@ -1,4 +1,5 @@
 import type { DecimalString } from './decimal'
+import { apiFetch } from './api-fetch'
 
 export type ActivityDataStatus = 'COMPLETE' | 'STALE' | 'PARTIAL' | 'UNAVAILABLE'
 export type ActivityProvider = 'BITBANK' | 'SOLANA' | 'HYPERLIQUID'
@@ -81,7 +82,7 @@ export const activitiesQueryKey = ['activities'] as const
 export async function getActivities({ cursor, limit = 20 }: { cursor?: string | null; limit?: number } = {}): Promise<ActivitiesResponse> {
   const params = new URLSearchParams({ limit: String(limit) })
   if (cursor) params.set('cursor', cursor)
-  const response = await fetch(`/api/v1/activities?${params.toString()}`, {
+  const response = await apiFetch(`/api/v1/activities?${params.toString()}`, {
     cache: 'no-store',
     credentials: 'same-origin',
     headers: { Accept: 'application/json' },

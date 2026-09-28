@@ -1,4 +1,5 @@
 import type { DecimalString } from './decimal'
+import { apiFetch } from './api-fetch'
 
 export type AssetDataStatus = 'COMPLETE' | 'STALE' | 'PARTIAL' | 'UNAVAILABLE'
 export type AssetCategory = 'CRYPTO' | 'STABLECOIN' | 'FIAT'
@@ -82,7 +83,7 @@ export class AssetsApiError extends Error {
 export const assetsQueryKey = ['assets'] as const
 
 export async function getAssets(): Promise<AssetsResponse> {
-  const response = await fetch('/api/v1/assets', {
+  const response = await apiFetch('/api/v1/assets', {
     cache: 'no-store',
     credentials: 'same-origin',
     headers: { Accept: 'application/json' },

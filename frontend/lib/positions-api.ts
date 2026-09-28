@@ -1,4 +1,5 @@
 import type { DecimalString } from './decimal'
+import { apiFetch } from './api-fetch'
 
 export type PositionDataStatus = 'COMPLETE' | 'STALE' | 'PARTIAL' | 'UNAVAILABLE'
 
@@ -62,7 +63,7 @@ export class PositionsApiError extends Error {
 export const positionsQueryKey = ['positions'] as const
 
 export async function getPositions(): Promise<PositionsResponse> {
-  const response = await fetch('/api/v1/positions', {
+  const response = await apiFetch('/api/v1/positions', {
     cache: 'no-store',
     credentials: 'same-origin',
     headers: { Accept: 'application/json' },

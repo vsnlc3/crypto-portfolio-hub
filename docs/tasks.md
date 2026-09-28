@@ -1702,21 +1702,19 @@ Repository / Application / Controllerの各境界を確認する。DBのComposit
 
 # Phase 16: Demo Data
 
-実サービスを持っていない閲覧者でもPortfolioを確認できるようにする。
+実サービスを持っていない閲覧者でもPortfolioを確認できるようにする。実データ版MVP完成後に対応する。
 
-実データ版MVP完成後に対応する。
+- [x] Demo Modeの方式を設計する
+- [x] Credential不要のDemo User / fixtureを用意する
+- [x] Demo Connections
+- [x] Demo Portfolio
+- [x] Demo Activity Header / Legs
+- [x] Demo Positions
+- [x] Demo History
+- [x] COMPLETE / STALE例
+- [x] 実Userデータと完全に分離する
 
-- [ ] Demo Modeの方式を設計する
-- [ ] Credential不要のDemo User / fixtureを検討する
-- [ ] Demo Connections
-- [ ] Demo Portfolio
-- [ ] Demo Activity Header / Legs
-- [ ] Demo Positions
-- [ ] Demo History
-- [ ] COMPLETE / STALE例
-- [ ] 実Userデータと完全に分離する
-
-このPhaseまでは先行実装しない。
+**実装結果:** DemoはFrontend内の型付きFixtureとSession中のDemo Flagだけで動作する。DB User、Google Identity、Credential、Backend Demo Endpointは作成しない。全API Clientが共通Adapterを使い、Demo中の読取APIはFixtureを返し、書込APIは`DEMO_READ_ONLY`で拒否する。Sign inからDemoを開始でき、App Shellにサンプル表示を明示し、Exit demoでDemo FlagとUser所有Query cacheを消去する。Connectionsの追加・同期・削除操作を隠す。Fixtureはbitbank / Solana / Hyperliquid、JPY / USD、COMPLETE / STALE、複数FX、SwapのIN / OUT / FEE legs、Perpetual Fill detail、疎なPortfolio履歴を含む。`screen-design.md`を実装に合わせて更新した。Frontend確認: lint成功（既存警告2件）、typecheck成功、55 tests成功、webpack production build成功。
 
 ---
 

@@ -31,6 +31,7 @@ import {
   syncRunQueryKey,
 } from '@/lib/connections-api'
 import { formatDateTime, formatJpy, formatRelative } from '@/lib/format'
+import { isDemoMode } from '@/lib/demo-mode'
 import { portfolioSummaryQueryKey } from '@/lib/portfolio-api'
 import { positionsQueryKey } from '@/lib/positions-api'
 
@@ -154,6 +155,7 @@ async function invalidateSyncedPortfolio(queryClient: ReturnType<typeof useQuery
 
 export default function ConnectionsPage() {
   const queryClient = useQueryClient()
+  const readOnlyDemo = isDemoMode()
   const connectionsQuery = useQuery({
     queryKey: connectionsQueryKey,
     queryFn: getConnections,
@@ -194,16 +196,18 @@ export default function ConnectionsPage() {
         title="Connections"
         subtitle="Manage the exchanges and wallets feeding your portfolio. Connections are read-only."
         actions={
-          <Button
-            size="sm"
-            className="gap-2"
-            onClick={() => setShowCreateForm((visible) => !visible)}
-            aria-expanded={showCreateForm}
-            aria-controls="connection-create-form"
-          >
-            <Plus className="size-4" />
-            Add source
-          </Button>
+          readOnlyDemo ? null : (
+            <Button
+              size="sm"
+              className="gap-2"
+              onClick={() => setShowCreateForm((visible) => !visible)}
+              aria-expanded={showCreateForm}
+              aria-controls="connection-create-form"
+            >
+              <Plus className="size-4" />
+              Add source
+            </Button>
+          )
         }
       />
 
@@ -278,10 +282,12 @@ export default function ConnectionsPage() {
               <p className="mt-1 max-w-sm text-sm text-muted-foreground">
                 Add a read-only exchange, Solana address, or Hyperliquid account to start building your portfolio.
               </p>
-              <Button className="mt-5 gap-2" onClick={() => setShowCreateForm(true)}>
-                <Plus className="size-4" />
-                Add your first source
-              </Button>
+              {!readOnlyDemo && (
+                <Button className="mt-5 gap-2" onClick={() => setShowCreateForm(true)}>
+                  <Plus className="size-4" />
+                  Add your first source
+                </Button>
+              )}
             </Card>
           ) : (
             <div className="space-y-3">
@@ -289,6 +295,7 @@ export default function ConnectionsPage() {
                 <ConnectionCard
                   key={connection.id}
                   connection={connection}
+                  readOnlyDemo={readOnlyDemo}
                   deleting={deleteMutation.isPending}
                   onDelete={() => handleDelete(connection)}
                 />
@@ -303,10 +310,12 @@ export default function ConnectionsPage() {
 
 function ConnectionCard({
   connection,
+  readOnlyDemo,
   deleting,
   onDelete,
 }: {
   connection: Connection
+  readOnlyDemo: boolean
   deleting: boolean
   onDelete: () => void
 }) {
@@ -419,14 +428,20 @@ function ConnectionCard({
               : <p>Not synced successfully yet</p>}
             {connection.lastAttemptAt && <p title={formatDateTime(connection.lastAttemptAt)}>Last attempt {formatRelative(connection.lastAttemptAt)}</p>}
           </div>
-          <Button size="sm" className="gap-2" onClick={handleSync} disabled={deleting || isSyncing}>
-            <RefreshCw className={cn('size-3.5', isSyncing && 'animate-spin')} />
-            {syncMutation.isPending ? 'Starting…' : isSyncing ? 'Syncing…' : 'Sync'}
-          </Button>
-          <Button variant="destructive" size="sm" className="gap-2" onClick={onDelete} disabled={deleting || isSyncing}>
-            <Trash2 className="size-3.5" />
-            Disconnect
-          </Button>
+          {readOnlyDemo ? (
+            <span className="rounded-md bg-muted px-2.5 py-1.5 text-xs text-muted-foreground">Demo · actions disabled</span>
+          ) : (
+            <>
+              <Button size="sm" className="gap-2" onClick={handleSync} disabled={deleting || isSyncing}>
+                <RefreshCw className={cn('size-3.5', isSyncing && 'animate-spin')} />
+                {syncMutation.isPending ? 'Starting…' : isSyncing ? 'Syncing…' : 'Sync'}
+              </Button>
+              <Button variant="destructive" size="sm" className="gap-2" onClick={onDelete} disabled={deleting || isSyncing}>
+                <Trash2 className="size-3.5" />
+                Disconnect
+              </Button>
+            </>
+          )}
         </div>
       </div>
 

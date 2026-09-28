@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthBoundary } from '@/components/auth/auth-boundary'
 import { authQueryKey } from '@/lib/auth-api'
+import { disableDemoMode, enableDemoMode } from '@/lib/demo-mode'
 
 const navigation = vi.hoisted(() => ({
   pathname: '/assets',
@@ -61,6 +62,7 @@ describe('AuthBoundary', () => {
 
   afterEach(() => {
     cleanup()
+    disableDemoMode()
     vi.unstubAllGlobals()
   })
 
@@ -178,5 +180,14 @@ describe('AuthBoundary', () => {
       expect(queryClient.getQueryData(['assets'])).toBeUndefined()
     })
     expect(queryClient.getQueryData(authQueryKey)).toMatchObject({ id: 'user-b' })
+  })
+
+  it('shows the sample-data badge for a read-only demo session', async () => {
+    enableDemoMode()
+    renderBoundary()
+
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Demo · sample data'))
+    expect(screen.getByText('Demo User')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Exit demo' })).toBeInTheDocument()
   })
 })

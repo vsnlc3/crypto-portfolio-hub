@@ -1,4 +1,5 @@
 import type { DecimalString } from './decimal'
+import { apiFetch } from './api-fetch'
 
 export type ConnectionProvider = 'BITBANK' | 'SOLANA' | 'HYPERLIQUID'
 export type ConnectionStatus = 'CONNECTED' | 'SYNCING' | 'ERROR' | 'DISCONNECTED'
@@ -99,7 +100,7 @@ export const syncRunQueryKey = (connectionId: string, syncRunId: string) =>
   ['connection-sync-run', connectionId, syncRunId] as const
 
 export async function getConnections(): Promise<Connection[]> {
-  const response = await fetch('/api/v1/connections', {
+  const response = await apiFetch('/api/v1/connections', {
     cache: 'no-store',
     credentials: 'same-origin',
     headers: { Accept: 'application/json' },
@@ -110,7 +111,7 @@ export async function getConnections(): Promise<Connection[]> {
 
 export async function createConnection(request: ConnectionCreateRequest): Promise<Connection> {
   const csrf = await getCsrfToken()
-  const response = await fetch('/api/v1/connections', {
+  const response = await apiFetch('/api/v1/connections', {
     method: 'POST',
     cache: 'no-store',
     credentials: 'same-origin',
@@ -127,7 +128,7 @@ export async function createConnection(request: ConnectionCreateRequest): Promis
 
 export async function deleteConnection(connectionId: string): Promise<void> {
   const csrf = await getCsrfToken()
-  const response = await fetch(`/api/v1/connections/${encodeURIComponent(connectionId)}`, {
+  const response = await apiFetch(`/api/v1/connections/${encodeURIComponent(connectionId)}`, {
     method: 'DELETE',
     cache: 'no-store',
     credentials: 'same-origin',
@@ -138,7 +139,7 @@ export async function deleteConnection(connectionId: string): Promise<void> {
 
 export async function requestConnectionSync(connectionId: string): Promise<SyncAccepted> {
   const csrf = await getCsrfToken()
-  const response = await fetch(`/api/v1/connections/${encodeURIComponent(connectionId)}/sync`, {
+  const response = await apiFetch(`/api/v1/connections/${encodeURIComponent(connectionId)}/sync`, {
     method: 'POST',
     cache: 'no-store',
     credentials: 'same-origin',
@@ -153,7 +154,7 @@ export async function getConnectionSyncRun(
   syncRunId: string,
   signal?: AbortSignal,
 ): Promise<SyncRun> {
-  const response = await fetch(
+  const response = await apiFetch(
     `/api/v1/connections/${encodeURIComponent(connectionId)}/sync-runs/${encodeURIComponent(syncRunId)}`,
     {
       cache: 'no-store',
@@ -167,7 +168,7 @@ export async function getConnectionSyncRun(
 }
 
 async function getCsrfToken(): Promise<CsrfTokenResponse> {
-  const response = await fetch('/api/v1/auth/csrf', {
+  const response = await apiFetch('/api/v1/auth/csrf', {
     cache: 'no-store',
     credentials: 'same-origin',
     headers: { Accept: 'application/json' },

@@ -1,4 +1,5 @@
 import type { DecimalString } from './decimal'
+import { apiFetch } from './api-fetch'
 
 export type PortfolioDataStatus = 'COMPLETE' | 'STALE' | 'PARTIAL' | 'UNAVAILABLE'
 export type ConnectionProvider = 'BITBANK' | 'SOLANA' | 'HYPERLIQUID' | string
@@ -76,7 +77,7 @@ export const portfolioSummaryQueryKey = ['portfolio', 'summary'] as const
 export const portfolioHistoryQueryKey = (period: PortfolioHistoryPeriod) => ['portfolio', 'history', period] as const
 
 export async function getPortfolioSummary(): Promise<PortfolioSummaryResponse> {
-  const response = await fetch('/api/v1/portfolio/summary', {
+  const response = await apiFetch('/api/v1/portfolio/summary', {
     cache: 'no-store',
     credentials: 'same-origin',
     headers: { Accept: 'application/json' },
@@ -86,7 +87,7 @@ export async function getPortfolioSummary(): Promise<PortfolioSummaryResponse> {
 }
 
 export async function getPortfolioHistory(period: PortfolioHistoryPeriod): Promise<PortfolioHistoryResponse> {
-  const response = await fetch(`/api/v1/portfolio/history?period=${encodeURIComponent(period)}`, {
+  const response = await apiFetch(`/api/v1/portfolio/history?period=${encodeURIComponent(period)}`, {
     cache: 'no-store',
     credentials: 'same-origin',
     headers: { Accept: 'application/json' },

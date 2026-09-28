@@ -7,6 +7,7 @@ import ConnectionsPage from '@/app/connections/page'
 import { connectionsQueryKey, type Connection, type SyncRun } from '@/lib/connections-api'
 import { portfolioHistoryQueryKey, portfolioSummaryQueryKey } from '@/lib/portfolio-api'
 import { positionsQueryKey } from '@/lib/positions-api'
+import { disableDemoMode, enableDemoMode } from '@/lib/demo-mode'
 
 function jsonResponse(status: number, value: unknown): Response {
   return { ok: status >= 200 && status < 300, status, json: async () => value } as Response
@@ -77,6 +78,7 @@ function syncRun(status: SyncRun['status'] = 'SUCCESS'): SyncRun {
 describe('ConnectionsPage', () => {
   afterEach(() => {
     cleanup()
+    disableDemoMode()
     vi.unstubAllGlobals()
   })
 
@@ -395,5 +397,19 @@ describe('ConnectionsPage', () => {
     expect(await screen.findByText('Connection removed.')).toBeInTheDocument()
     expect(await screen.findByText('No connections yet')).toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledTimes(4)
+  })
+
+  it('shows demo Connections without any Add, Sync, or Disconnect actions', async () => {
+    enableDemoMode()
+    const backendFetch = vi.fn()
+    vi.stubGlobal('fetch', backendFetch)
+    renderPage()
+
+    expect(await screen.findByText('Phantom · Demo')).toBeInTheDocument()
+    expect(screen.getAllByText('Demo · actions disabled')).toHaveLength(3)
+    expect(screen.queryByRole('button', { name: 'Add source' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Sync' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Disconnect' })).not.toBeInTheDocument()
+    expect(backendFetch).not.toHaveBeenCalled()
   })
 })

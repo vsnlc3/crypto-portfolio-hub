@@ -1,8 +1,11 @@
+import { apiFetch } from './api-fetch'
+
 export type AuthenticatedUser = {
   id: string
   email: string
   displayName: string | null
   avatarUrl: string | null
+  isDemo?: boolean
 }
 
 type CsrfTokenResponse = {
@@ -20,7 +23,7 @@ export class AuthApiError extends Error {
 export const authQueryKey = ['auth', 'me'] as const
 
 export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
-  const response = await fetch('/api/v1/auth/me', {
+  const response = await apiFetch('/api/v1/auth/me', {
     cache: 'no-store',
     credentials: 'same-origin',
     headers: { Accept: 'application/json' },
@@ -33,7 +36,7 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
 }
 
 export async function logout(): Promise<void> {
-  const csrfResponse = await fetch('/api/v1/auth/csrf', {
+  const csrfResponse = await apiFetch('/api/v1/auth/csrf', {
     cache: 'no-store',
     credentials: 'same-origin',
     headers: { Accept: 'application/json' },
@@ -44,7 +47,7 @@ export async function logout(): Promise<void> {
   const csrf = (await csrfResponse.json()) as CsrfTokenResponse
   if (!csrf.headerName || !csrf.token) throw new AuthApiError(500)
 
-  const response = await fetch('/api/v1/auth/logout', {
+  const response = await apiFetch('/api/v1/auth/logout', {
     method: 'POST',
     cache: 'no-store',
     credentials: 'same-origin',
