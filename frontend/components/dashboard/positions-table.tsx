@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { ServiceBadge } from '@/components/service-badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { fmtAmount, fmtDateTime } from '@/lib/mock-data'
+import { formatAmount, formatDateTime } from '@/lib/format'
 import { getPositions, positionsQueryKey, type Position, type PositionDataStatus } from '@/lib/positions-api'
 import { cn } from '@/lib/utils'
 
@@ -20,7 +20,7 @@ function formatMoney(value: number | null, currency: string | null, signed = fal
         maximumFractionDigits: Math.abs(value) >= 1000 ? 2 : 4,
         signDisplay: signed ? 'always' : 'auto',
       }).format(value)
-    : `${signed && value > 0 ? '+' : ''}${fmtAmount(value)} ${currency}`
+    : `${signed && value > 0 ? '+' : ''}${formatAmount(value)} ${currency}`
   return formatted
 }
 
@@ -38,7 +38,7 @@ function sourceName(source: string | null) {
 function FxHint({ source, evaluatedAt, status }: Position['priceFx']) {
   return (
     <span className="mt-0.5 block text-[10px] text-muted-foreground">
-      {sourceName(source)}{evaluatedAt ? ` · ${fmtDateTime(evaluatedAt)}` : ''}{status === 'STALE' ? ' · stale' : ''}
+      {sourceName(source)}{evaluatedAt ? ` · ${formatDateTime(evaluatedAt)}` : ''}{status === 'STALE' ? ' · stale' : ''}
     </span>
   )
 }
@@ -93,15 +93,12 @@ function StateNotice({ status, connectionCount, syncedConnectionCount }: {
 
 function PositionRow({ position }: { position: Position }) {
   const isLong = position.side === 'LONG'
-  const serviceId = position.provider === 'HYPERLIQUID'
-    ? 'hyperliquid'
-    : position.provider === 'BITBANK' ? 'bitbank' : position.provider === 'SOLANA' ? 'phantom' : null
   const rawPnl = formatMoney(position.unrealizedPnl, position.pnlCurrency, true)
   return (
     <tr className="border-t border-border/70 hover:bg-accent/30">
       <td className="px-6 py-3.5">
         <div className="flex items-center gap-2">
-          {serviceId && <ServiceBadge id={serviceId} size={22} />}
+          <ServiceBadge provider={position.provider} size={22} />
           <div>
             <span className="font-medium">{position.instrumentCode}</span>
             <span className="ml-2"><StatusBadge status={position.status} /></span>
@@ -112,9 +109,9 @@ function PositionRow({ position }: { position: Position }) {
       <td className="px-3 py-3.5">
         <span className={cn('inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium', isLong ? 'bg-positive/12 text-positive' : 'bg-negative/12 text-negative')}>
           {isLong ? 'Long' : 'Short'}
-          {position.leverage !== null && <span className="font-mono tabular opacity-80">{fmtAmount(position.leverage)}×</span>}
+          {position.leverage !== null && <span className="font-mono tabular opacity-80">{formatAmount(position.leverage)}×</span>}
         </span>
-        <span className="mt-1 block text-[10px] text-muted-foreground">{fmtAmount(position.quantity)} contracts</span>
+        <span className="mt-1 block text-[10px] text-muted-foreground">{formatAmount(position.quantity)} contracts</span>
       </td>
       <td className="px-3 py-3.5 text-right">
         <span className="font-mono tabular">{formatJpy(position.positionValueJpy)}</span>

@@ -1,62 +1,110 @@
-import { Card } from "@/components/ui/card"
-import { ServiceBadge } from "@/components/service-badge"
-import { Delta } from "@/components/delta"
-import {
-  fmtPct,
-  fmtUsd,
-  netWorth,
-  serviceChange24h,
-  serviceList,
-  servicePnl,
-  serviceTotalValue,
-} from "@/lib/mock-data"
+'use client'
 
-const kindLabel: Record<string, string> = {
-  exchange: "Exchange",
-  wallet: "Wallet",
-  defi: "DeFi",
+import Link from 'next/link'
+import { useQuery } from '@tanstack/react-query'
+import { DataStatusBadge, EmptyCard, InlineError, LoadingCard } from '@/components/dashboard/data-state'
+import { ServiceBadge } from '@/components/service-badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { formatJpy, formatPercent, formatRelative, formatSignedJpy } from '@/lib/format'
+import {
+  getPortfolioSummary,
+  portfolioSummaryQueryKey,
+  type PortfolioConnection,
+} from '@/lib/portfolio-api'
+import { getPositions, positionsQueryKey, type PositionsResponse } from '@/lib/positions-api'
+
+function connectionPnl(connection: PortfolioConnection, positions: PositionsResponse | undefined) {
+  if (connection.provider !== 'HYPERLIQUID') return null
+  if (!positions) return null
+  const connectionPositions = positions.positions.filter((position) => position.connectionId === connection.id)
+  if (connectionPositions.length > 0) {
+    if (connectionPositions.some((position) => position.unrealizedPnlJpy === null)) return null
+    return connectionPositions.reduce((sum, position) => sum + position.unrealizedPnlJpy!, 0)
+  }
+  const positionCapability = connection.capabilitySync.find((capability) => capability.capability === 'POSITION')
+  return positionCapability?.lastSuccessAt ? 0 : null
+}
+
+function capabilityLabel(value: string) {
+  return value === 'BALANCE' ? 'Spot' : value === 'POSITION' ? 'Perpetual' : value.toLowerCase()
 }
 
 export function ServiceCards() {
+  const summaryQuery = useQuery({ queryKey: portfolioSummaryQueryKey, queryFn: getPortfolioSummary })
+  const positionsQuery = useQuery({ queryKey: positionsQueryKey, queryFn: getPositions })
+
+  if (summaryQuery.isPending && !summaryQuery.data) return <LoadingCard label="connections" />
+  if (summaryQuery.isError && !summaryQuery.data) {
+    return <Card className="p-5"><InlineError message="Connection portfolio data couldn’t be loaded." onRetry={() => void summaryQuery.refetch()} /></Card>
+  }
+  const connections = summaryQuery.data?.connections ?? []
+  if (connections.length === 0) {
+    return (
+      <EmptyCard
+        title="No connected services"
+        detail="Connect bitbank, a Solana wallet, or Hyperliquid to see service values here."
+        action={<Button variant="outline" nativeButton={false} render={<Link href="/connections" />}>View connections</Button>}
+      />
+    )
+  }
+
+  const netWorth = summaryQuery.data?.summary.netWorthJpy ?? null
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {serviceList.map((s) => {
-        const total = serviceTotalValue(s.id)
-        const pnl = servicePnl(s.id)
-        const share = (total / netWorth) * 100
-        return (
-          <Card key={s.id} className="gap-0 p-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <ServiceBadge id={s.id} size={38} />
-                <div>
-                  <p className="text-sm font-semibold">{s.name}</p>
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    {kindLabel[s.kind]}
-                  </p>
+    <div className="space-y-3">
+      {summaryQuery.isRefetchError && <InlineError message="Connection values couldn’t be refreshed. Showing the last loaded data." onRetry={() => void summaryQuery.refetch()} />}
+      {positionsQuery.isError && !positionsQuery.data && <InlineError message="Perpetual PnL could not be loaded." onRetry={() => void positionsQuery.refetch()} />}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {connections.map((connection) => {
+          const share = connection.netWorthJpy !== null && netWorth !== null && netWorth > 0
+            ? connection.netWorthJpy / netWorth * 100
+            : null
+          const pnl = connectionPnl(connection, positionsQuery.data)
+          return (
+            <Card key={connection.id} className="gap-0 p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <ServiceBadge provider={connection.provider} size={38} />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">{connection.displayName || connection.provider}</p>
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{connection.provider}</p>
+                  </div>
+                </div>
+                <DataStatusBadge status={connection.dataStatus} />
+              </div>
+
+              <p className="mt-4 font-mono text-2xl font-semibold tabular">{formatJpy(connection.netWorthJpy, true)}</p>
+
+              <div className="mt-3 space-y-2">
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-accent">
+                  {share !== null && <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, Math.max(0, share))}%` }} />}
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                  <span>{share === null ? 'Share unavailable' : `${formatPercent(share)} of portfolio`}</span>
+                  <span title={connection.lastSuccessfulSyncAt ?? undefined}>{formatRelative(connection.lastSuccessfulSyncAt)}</span>
                 </div>
               </div>
-              <Delta value={serviceChange24h[s.id]} className="text-xs">
-                {fmtPct(serviceChange24h[s.id])}
-              </Delta>
-            </div>
 
-            <p className="mt-4 font-mono text-2xl font-semibold tabular">{fmtUsd(total, { compact: true })}</p>
-
-            <div className="mt-3 space-y-1.5">
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-accent">
-                <div className="h-full rounded-full bg-primary" style={{ width: `${share}%` }} />
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {connection.capabilitySync.map((capability) => (
+                  <span key={capability.capability} title={`${capability.capability}: ${capability.status}`} className="rounded-md bg-accent/60 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                    {capabilityLabel(capability.capability)} · {capability.status === 'READY' ? 'ready' : capability.status.toLowerCase()}
+                  </span>
+                ))}
               </div>
-              <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                <span>{share.toFixed(1)}% of portfolio</span>
-                {s.capabilities.includes("perp") && (
-                  <span className="font-mono tabular">PnL {fmtUsd(pnl, { compact: true })}</span>
+
+              <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-3 text-[11px]">
+                <span className="text-muted-foreground">24h change unavailable</span>
+                {connection.provider === 'HYPERLIQUID' && (
+                  <span className="font-mono tabular">
+                    PnL {pnl === null ? 'Unavailable' : formatSignedJpy(pnl, true)}
+                  </span>
                 )}
               </div>
-            </div>
-          </Card>
-        )
-      })}
+            </Card>
+          )
+        })}
+      </div>
     </div>
   )
 }

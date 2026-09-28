@@ -1520,22 +1520,22 @@ API仕様を `api-design.md` に反映する。
 
 既存DashboardをAPIへ接続する。
 
-- [ ] Net Worth
-- [ ] 24h Change
-- [ ] History Chart
-- [ ] Exposure
-- [ ] Service Cards
-- [ ] Allocation
-- [ ] Asset一覧
-- [ ] Positions
-- [ ] 7D / 30D / 90D / 1Y切替
-- [ ] COMPLETE / STALE表示
-- [ ] 欠損期間の適切な表示
-- [ ] Loading
-- [ ] Empty
-- [ ] Error
-- [ ] Partial Error
-- [ ] stale表示
+- [x] Net Worth
+- [x] 24h Change
+- [x] History Chart
+- [x] Exposure
+- [x] Service Cards
+- [x] Allocation
+- [x] Asset一覧
+- [x] Positions
+- [x] 7D / 30D / 90D / 1Y切替
+- [x] COMPLETE / STALE表示
+- [x] 欠損期間の適切な表示
+- [x] Loading
+- [x] Empty
+- [x] Error
+- [x] Partial Error
+- [x] stale表示
 
 存在しない履歴点を0円として描画しない。
 
@@ -1543,10 +1543,12 @@ API仕様を `api-design.md` に反映する。
 
 ### Frontend Test
 
-- [ ] Net Worth / Exposure / Positionの表示とLoading / Empty / Errorを検証する
-- [ ] COMPLETE / STALEを区別して表示する
-- [ ] Snapshot欠損点を0円として描画しない
-- [ ] User切替 / Logoutで前Userのcacheを表示しない
+- [x] Net Worth / Exposure / Positionの表示とLoading / Empty / Errorを検証する
+- [x] COMPLETE / STALEを区別して表示する
+- [x] Snapshot欠損点を0円として描画しない
+- [x] User切替 / Logoutで前Userのcacheを表示しない
+
+**実装結果:** DashboardをPortfolio Summary / History、Assets、Positionsの独立したTanStack Queryへ接続した。Net Worth、Snapshot比較の24h変化、JPY Exposure、Connection cards、Allocation、Asset一覧、Position表をAPIデータで表示する。履歴点は補間・0埋めせず、COMPLETE / STALE、Loading / Empty / Error / Partial Errorを表示する。認証User ID変更とLogout時にユーザー所有Query cacheを消去する。Dashboard画面Testで表示・期間切替・状態と未取得値、AuthBoundary TestでUser切替 / Logout時のcache消去を確認した。Frontend `pnpm test` は40 tests、失敗0。`pnpm typecheck` 成功。`pnpm exec next build --webpack` 成功。通常の`pnpm build`はTurbopackのsandbox内port bind制限で失敗したためwebpack buildで確認した。
 
 ---
 

@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { usePathname, useRouter } from 'next/navigation'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppShell } from '@/components/app-shell'
 import { Button } from '@/components/ui/button'
 import {
@@ -29,6 +29,7 @@ export function AuthBoundary({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient()
   const [logoutError, setLogoutError] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const previousUserId = useRef<string | null>(null)
   const isSignIn = pathname === '/signin'
   const userQuery = useQuery({
     queryKey: authQueryKey,
@@ -37,6 +38,15 @@ export function AuthBoundary({ children }: { children: React.ReactNode }) {
     staleTime: 30_000,
   })
   const user = userQuery.data
+
+  useEffect(() => {
+    const previousId = previousUserId.current
+    const nextId = user?.id ?? null
+    if (previousId !== null && previousId !== nextId) {
+      queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== 'auth' })
+    }
+    previousUserId.current = nextId
+  }, [queryClient, user?.id])
 
   useEffect(() => {
     if (!user) return
@@ -71,6 +81,7 @@ export function AuthBoundary({ children }: { children: React.ReactNode }) {
     setIsLoggingOut(true)
     try {
       await logout()
+      queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== 'auth' })
       queryClient.clear()
       window.sessionStorage.removeItem(authReturnPathStorageKey)
       router.replace('/signin?reason=logged-out')

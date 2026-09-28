@@ -1,7 +1,9 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthBoundary } from '@/components/auth/auth-boundary'
+import { authQueryKey } from '@/lib/auth-api'
 
 const navigation = vi.hoisted(() => ({
   pathname: '/assets',
@@ -25,7 +27,15 @@ function emptyResponse(status: number): Response {
   return { ok: status >= 200 && status < 300, status } as Response
 }
 
-function renderBoundary() {
+function CacheSeeder() {
+  const queryClient = useQueryClient()
+  useEffect(() => {
+    queryClient.setQueryData(['portfolio', 'summary'], { summary: { netWorthJpy: 123 } })
+  }, [queryClient])
+  return null
+}
+
+function renderBoundary(children: React.ReactNode = <div>Private portfolio page</div>) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
@@ -34,7 +44,7 @@ function renderBoundary() {
     ...render(
       <QueryClientProvider client={queryClient}>
         <AuthBoundary>
-          <div>Private portfolio page</div>
+          {children}
         </AuthBoundary>
       </QueryClientProvider>,
     ),
@@ -49,6 +59,7 @@ describe('AuthBoundary', () => {
   })
 
   afterEach(() => {
+    cleanup()
     vi.unstubAllGlobals()
   })
 
@@ -118,13 +129,15 @@ describe('AuthBoundary', () => {
       .mockResolvedValue(jsonResponse(401, {}))
     vi.stubGlobal('fetch', fetchMock)
 
-    renderBoundary()
+    const { queryClient } = renderBoundary(<><div>Private portfolio page</div><CacheSeeder /></>)
 
     expect(await screen.findByText('Portfolio User')).toBeInTheDocument()
     expect(screen.getByText('Private portfolio page')).toBeInTheDocument()
+    await waitFor(() => expect(queryClient.getQueryData(['portfolio', 'summary'])).toMatchObject({ summary: { netWorthJpy: 123 } }))
     fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
 
     await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith('/signin?reason=logged-out'))
+    expect(queryClient.getQueryData(['portfolio', 'summary'])).toBeUndefined()
     expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/auth/me', expect.any(Object))
     expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/auth/csrf', expect.any(Object))
     expect(fetchMock).toHaveBeenNthCalledWith(
@@ -135,5 +148,32 @@ describe('AuthBoundary', () => {
         headers: { 'X-CSRF-TOKEN': 'test-csrf' },
       }),
     )
+  })
+
+  it('clears user-owned query data when the authenticated user changes', async () => {
+    const firstUser = {
+      id: 'user-a',
+      email: 'a@example.test',
+      displayName: 'User A',
+      avatarUrl: null,
+    }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, firstUser)))
+    const { queryClient } = renderBoundary()
+
+    expect(await screen.findByText('User A')).toBeInTheDocument()
+    queryClient.setQueryData(['portfolio', 'summary'], { summary: { netWorthJpy: 123 } })
+    queryClient.setQueryData(['assets'], { assets: [{ assetId: 'user-a-asset' }] })
+    queryClient.setQueryData(authQueryKey, {
+      id: 'user-b',
+      email: 'b@example.test',
+      displayName: 'User B',
+      avatarUrl: null,
+    })
+
+    await waitFor(() => {
+      expect(queryClient.getQueryData(['portfolio', 'summary'])).toBeUndefined()
+      expect(queryClient.getQueryData(['assets'])).toBeUndefined()
+    })
+    expect(queryClient.getQueryData(authQueryKey)).toMatchObject({ id: 'user-b' })
   })
 })

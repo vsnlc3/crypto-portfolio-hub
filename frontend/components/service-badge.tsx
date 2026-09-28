@@ -1,16 +1,27 @@
-import { services, type ServiceId } from "@/lib/mock-data"
 import { cn } from "@/lib/utils"
 
+const providers: Record<string, { mark: string; color: string }> = {
+  BITBANK: { mark: "bb", color: "oklch(0.72 0.14 250)" },
+  SOLANA: { mark: "Ph", color: "oklch(0.72 0.16 300)" },
+  HYPERLIQUID: { mark: "HL", color: "oklch(0.8 0.15 164)" },
+  bitbank: { mark: "bb", color: "oklch(0.72 0.14 250)" },
+  phantom: { mark: "Ph", color: "oklch(0.72 0.16 300)" },
+  hyperliquid: { mark: "HL", color: "oklch(0.8 0.15 164)" },
+}
+
 export function ServiceBadge({
+  provider,
   id,
   size = 32,
   className,
 }: {
-  id: ServiceId
+  provider?: string
+  id?: string
   size?: number
   className?: string
 }) {
-  const s = services[id]
+  const service = provider ?? id ?? ""
+  const s = providers[service] ?? { mark: service.slice(0, 2).toUpperCase(), color: "var(--muted-foreground)" }
   return (
     <span
       className={cn(
