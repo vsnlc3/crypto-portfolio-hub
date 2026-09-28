@@ -6,6 +6,7 @@ import { DataStatusBadge, InlineError, LoadingCard } from '@/components/dashboar
 import { Delta } from '@/components/delta'
 import { Card } from '@/components/ui/card'
 import { formatDateTime, formatJpy, formatPercent, formatSignedJpy } from '@/lib/format'
+import { decimalToNumber } from '@/lib/decimal'
 import {
   getPortfolioHistory,
   getPortfolioSummary,
@@ -50,7 +51,11 @@ export function NetWorthCard() {
 
   const summary = summaryQuery.data?.summary
   const points = historyQuery.data?.points ?? []
-  const chartPoints = points.map((point) => ({ ...point, timestamp: Date.parse(point.snapshotAt) }))
+  const chartPoints = points.map((point) => ({
+    ...point,
+    chartNetWorthJpy: decimalToNumber(point.netWorthJpy),
+    timestamp: Date.parse(point.snapshotAt),
+  }))
   const singlePointDomain = chartPoints.length === 1
     ? [chartPoints[0].timestamp - 43_200_000, chartPoints[0].timestamp + 43_200_000]
     : ['dataMin', 'dataMax'] as [string, string]
@@ -156,7 +161,7 @@ export function NetWorthCard() {
                   <Tooltip content={<HistoryTooltip />} cursor={{ stroke: 'var(--border)', strokeWidth: 1 }} />
                   <Area
                     type="linear"
-                    dataKey="netWorthJpy"
+                    dataKey="chartNetWorthJpy"
                     stroke="var(--primary)"
                     strokeWidth={2}
                     fill="url(#netWorthFill)"

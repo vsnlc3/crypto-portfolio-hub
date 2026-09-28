@@ -1,8 +1,10 @@
+import type { DecimalString } from './decimal'
+
 export type PositionDataStatus = 'COMPLETE' | 'STALE' | 'PARTIAL' | 'UNAVAILABLE'
 
 export type PositionFx = {
   currency: string | null
-  rateToJpy: number | null
+  rateToJpy: DecimalString | null
   source: string | null
   evaluatedAt: string | null
   status: PositionDataStatus
@@ -12,19 +14,19 @@ export type Position = {
   positionKey: string
   instrumentCode: string
   side: 'LONG' | 'SHORT'
-  leverage: number | null
-  quantity: number
-  entryPrice: number | null
-  markPrice: number | null
-  liquidationPrice: number | null
+  leverage: DecimalString | null
+  quantity: DecimalString
+  entryPrice: DecimalString | null
+  markPrice: DecimalString | null
+  liquidationPrice: DecimalString | null
   priceCurrency: string | null
-  positionValueJpy: number | null
-  marginAmount: number | null
+  positionValueJpy: DecimalString | null
+  marginAmount: DecimalString | null
   marginCurrency: string | null
-  marginJpy: number | null
-  unrealizedPnl: number | null
+  marginJpy: DecimalString | null
+  unrealizedPnl: DecimalString | null
   pnlCurrency: string | null
-  unrealizedPnlJpy: number | null
+  unrealizedPnlJpy: DecimalString | null
   priceFx: PositionFx
   marginFx: PositionFx
   pnlFx: PositionFx
@@ -38,9 +40,9 @@ export type Position = {
 
 export type PositionsResponse = {
   summary: {
-    positionValueJpy: number | null
-    marginJpy: number | null
-    unrealizedPnlJpy: number | null
+    positionValueJpy: DecimalString | null
+    marginJpy: DecimalString | null
+    unrealizedPnlJpy: DecimalString | null
     status: PositionDataStatus
     connectionCount: number
     syncedConnectionCount: number

@@ -6,27 +6,10 @@ import Link from 'next/link'
 import { ServiceBadge } from '@/components/service-badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { formatAmount, formatDateTime } from '@/lib/format'
+import { decimalCompare, type DecimalString } from '@/lib/decimal'
+import { formatAmount, formatDateTime, formatJpy, formatMoney } from '@/lib/format'
 import { getPositions, positionsQueryKey, type Position, type PositionDataStatus } from '@/lib/positions-api'
 import { cn } from '@/lib/utils'
-
-const jpyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'JPY', maximumFractionDigits: 0 })
-
-function formatMoney(value: number | null, currency: string | null, signed = false) {
-  if (value === null || !currency) return 'Unavailable'
-  const formatted = /^[A-Z]{3}$/.test(currency)
-    ? new Intl.NumberFormat('en-US', {
-        style: 'currency', currency,
-        maximumFractionDigits: Math.abs(value) >= 1000 ? 2 : 4,
-        signDisplay: signed ? 'always' : 'auto',
-      }).format(value)
-    : `${signed && value > 0 ? '+' : ''}${formatAmount(value)} ${currency}`
-  return formatted
-}
-
-function formatJpy(value: number | null) {
-  return value === null ? 'Unavailable' : jpyFormatter.format(value)
-}
 
 function sourceName(source: string | null) {
   if (source === 'EXCHANGERATE_API') return 'ExchangeRate API'
@@ -54,11 +37,11 @@ function StatusBadge({ status }: { status: PositionDataStatus }) {
   return <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-medium', styles[status])}>{label}</span>
 }
 
-function SummaryValue({ label, value, pnl = false }: { label: string; value: number | null; pnl?: boolean }) {
+function SummaryValue({ label, value, pnl = false }: { label: string; value: DecimalString | null; pnl?: boolean }) {
   return (
     <div className="text-right">
       <p className="text-[11px] text-muted-foreground">{label}</p>
-      <p className={cn('font-mono font-semibold tabular', pnl && value !== null && (value >= 0 ? 'text-positive' : 'text-negative'))}>
+      <p className={cn('font-mono font-semibold tabular', pnl && value !== null && (decimalCompare(value, '0') >= 0 ? 'text-positive' : 'text-negative'))}>
         {formatJpy(value)}
       </p>
     </div>
@@ -123,8 +106,8 @@ function PositionRow({ position }: { position: Position }) {
         <FxHint {...position.marginFx} />
       </td>
       <td className="px-3 py-3.5 text-right">
-        <span className={cn('font-mono tabular', position.unrealizedPnl !== null && (position.unrealizedPnl >= 0 ? 'text-positive' : 'text-negative'))}>{rawPnl}</span>
-        <span className={cn('mt-0.5 block font-mono text-[11px] tabular', position.unrealizedPnlJpy !== null && (position.unrealizedPnlJpy >= 0 ? 'text-positive' : 'text-negative'))}>{formatJpy(position.unrealizedPnlJpy)}</span>
+        <span className={cn('font-mono tabular', position.unrealizedPnl !== null && (decimalCompare(position.unrealizedPnl, '0') >= 0 ? 'text-positive' : 'text-negative'))}>{rawPnl}</span>
+        <span className={cn('mt-0.5 block font-mono text-[11px] tabular', position.unrealizedPnlJpy !== null && (decimalCompare(position.unrealizedPnlJpy, '0') >= 0 ? 'text-positive' : 'text-negative'))}>{formatJpy(position.unrealizedPnlJpy)}</span>
         <FxHint {...position.pnlFx} />
       </td>
       <td className="px-3 py-3.5 text-right font-mono tabular">{formatMoney(position.entryPrice, position.priceCurrency)}</td>

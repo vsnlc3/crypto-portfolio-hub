@@ -10,14 +10,10 @@ import { ServiceBadge } from '@/components/service-badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { assetsQueryKey, getAssets, type Asset, type AssetDataStatus, type ConnectionProvider } from '@/lib/assets-api'
-import { fmtAmount, fmtDateTime, fmtPct } from '@/lib/mock-data'
+import { decimalCompare, decimalRatioPercent, decimalSum, decimalToNumber, formatDecimal, type DecimalString } from '@/lib/decimal'
+import { formatAmount, formatJpy, formatMoney, formatPercent } from '@/lib/format'
+import { fmtDateTime } from '@/lib/mock-data'
 import { cn } from '@/lib/utils'
-
-const currencyFormatter = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'JPY',
-  maximumFractionDigits: 0,
-})
 
 const tokenColors: Record<string, string> = {
   BTC: 'oklch(0.78 0.14 60)',
@@ -39,26 +35,6 @@ const providerName: Record<ConnectionProvider, string> = {
   BITBANK: 'bitbank',
   SOLANA: 'Phantom',
   HYPERLIQUID: 'Hyperliquid',
-}
-
-function formatJpy(value: number | null) {
-  return value === null ? 'Unavailable' : currencyFormatter.format(value)
-}
-
-function formatPrice(amount: number | null, currency: string | null) {
-  if (amount === null || !currency) return 'Unavailable'
-  if (/^[A-Z]{3}$/.test(currency)) {
-    try {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency,
-        maximumFractionDigits: amount >= 1000 ? 0 : 4,
-      }).format(amount)
-    } catch {
-      // Display provider-defined codes as a value and an explicit currency label.
-    }
-  }
-  return `${fmtAmount(amount)} ${currency}`
 }
 
 function formatSource(source: string | null) {
@@ -141,14 +117,16 @@ function StateNotice({ status, connectionCount, syncedConnectionCount }: {
   )
 }
 
-function AllocationCard({ assets, totalValue }: { assets: Asset[]; totalValue: number | null }) {
-  const valuedAssets = assets.filter((asset) => asset.valueJpy !== null && asset.valueJpy > 0)
-  const valuedTotal = valuedAssets.reduce((total, asset) => total + (asset.valueJpy ?? 0), 0)
+function AllocationCard({ assets, totalValue }: { assets: Asset[]; totalValue: DecimalString | null }) {
+  const valuedAssets = assets.filter((asset) => asset.valueJpy !== null && decimalCompare(asset.valueJpy, '0') > 0)
+  const valuedTotal = decimalSum(valuedAssets.map((asset) => asset.valueJpy!))
   const data = valuedAssets.map((asset, index) => ({
     id: asset.assetId,
     name: asset.symbol,
-    value: asset.valueJpy ?? 0,
+    value: decimalToNumber(asset.valueJpy) ?? 0,
+    amount: asset.valueJpy!,
     color: tokenColors[asset.symbol] ?? `oklch(0.68 0.08 ${index * 61})`,
+    percentage: decimalRatioPercent(asset.valueJpy!, valuedTotal),
   }))
 
   return (
@@ -179,9 +157,9 @@ function AllocationCard({ assets, totalValue }: { assets: Asset[]; totalValue: n
                 <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
                 <span className="font-medium">{item.name}</span>
                 <span className="ml-auto font-mono text-xs tabular text-muted-foreground">
-                  {valuedTotal === 0 ? '—' : `${((item.value / valuedTotal) * 100).toFixed(1)}%`}
+                  {item.percentage === null ? '—' : `${formatDecimal(item.percentage, 1, 1)}%`}
                 </span>
-                <span className="w-24 text-right font-mono text-xs tabular">{formatJpy(item.value)}</span>
+                <span className="w-24 text-right font-mono text-xs tabular">{formatJpy(item.amount)}</span>
               </li>
             ))}
             {totalValue === null && (
@@ -217,12 +195,12 @@ function AssetRow({ asset }: { asset: Asset }) {
   const change = asset.change24h.value
   const knownQuantity = availableConnections
     .map((connection) => connection.quantity)
-    .filter((quantity): quantity is number => quantity !== null)
-    .reduce((total, quantity) => total + quantity, 0)
+    .filter((quantity): quantity is DecimalString => quantity !== null)
+  const knownQuantityTotal = decimalSum(knownQuantity)
   const knownValueJpy = availableConnections
     .map((connection) => connection.valueJpy)
-    .filter((value): value is number => value !== null)
-    .reduce((total, value) => total + value, 0)
+    .filter((value): value is DecimalString => value !== null)
+  const knownValueJpyTotal = decimalSum(knownValueJpy)
   const hasKnownValue = availableConnections.some((connection) => connection.valueJpy !== null)
   return (
     <li className="grid gap-3 py-3 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
@@ -255,11 +233,11 @@ function AssetRow({ asset }: { asset: Asset }) {
         <div>
           <p className="font-mono text-sm tabular">
             {asset.totalQuantity === null
-              ? hasKnownValue ? `Known: ${fmtAmount(knownQuantity, asset.symbol)}` : 'Partial quantity unavailable'
-              : fmtAmount(asset.totalQuantity, asset.symbol)}
+              ? hasKnownValue ? `Known: ${formatAmount(knownQuantityTotal, asset.symbol)}` : 'Partial quantity unavailable'
+              : formatAmount(asset.totalQuantity, asset.symbol)}
           </p>
           <p className="text-[11px] text-muted-foreground">
-            @ {formatPrice(asset.price.amount, asset.price.currency)}
+            @ {formatMoney(asset.price.amount, asset.price.currency)}
           </p>
         </div>
         <div className="sm:mt-0.5">
@@ -268,8 +246,8 @@ function AssetRow({ asset }: { asset: Asset }) {
               {asset.change24h.status === 'STALE' ? '24h stale' : '24h unavailable'}
             </span>
           ) : (
-            <span className={cn('font-mono text-[11px] tabular', change >= 0 ? 'text-positive' : 'text-negative')}>
-              {fmtPct(change)} <span className="text-muted-foreground">24h</span>
+            <span className={cn('font-mono text-[11px] tabular', decimalCompare(change, '0') >= 0 ? 'text-positive' : 'text-negative')}>
+              {formatPercent(change, 2)} <span className="text-muted-foreground">24h</span>
             </span>
           )}
           <p className="text-[10px] text-muted-foreground">
@@ -282,7 +260,7 @@ function AssetRow({ asset }: { asset: Asset }) {
         <p className="font-mono text-sm font-semibold tabular">
           {asset.valueJpy !== null
             ? formatJpy(asset.valueJpy)
-            : hasKnownValue ? `Known: ${formatJpy(knownValueJpy)}` : 'Unavailable'}
+            : hasKnownValue ? `Known: ${formatJpy(knownValueJpyTotal)}` : 'Unavailable'}
         </p>
         <p className="mt-0.5 text-[10px] text-muted-foreground">Valuation in JPY</p>
       </div>

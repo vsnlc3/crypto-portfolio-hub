@@ -9,6 +9,7 @@ import { getAssets, assetsQueryKey } from '@/lib/assets-api'
 import { formatJpy, formatPercent, formatSignedJpy } from '@/lib/format'
 import { getPortfolioSummary, portfolioSummaryQueryKey } from '@/lib/portfolio-api'
 import { getPositions, positionsQueryKey } from '@/lib/positions-api'
+import { decimalCompare, decimalRatioToNumber, decimalShift, decimalSum } from '@/lib/decimal'
 
 const colors = {
   directional: 'var(--chart-2)',
@@ -27,9 +28,12 @@ export function ExposureCard() {
     { label: 'Stablecoins', value: assetsQuery.data?.summary.stablecoinsValueJpy ?? null, color: colors.stablecoin },
   ]
   const total = segments.every((segment) => segment.value !== null)
-    ? segments.reduce((sum, segment) => sum + (segment.value ?? 0), 0)
+    ? decimalSum(segments.map((segment) => segment.value!))
     : null
-  const canDrawBar = total !== null && total > 0
+  const canDrawBar = total !== null && decimalCompare(total, '0') > 0
+  const exposurePercent = summary?.exposureRatio === null || summary?.exposureRatio === undefined
+    ? null
+    : decimalShift(summary.exposureRatio, 2)
 
   if (summaryQuery.isPending && !summaryQuery.data) return <LoadingCard label="exposure" />
 
@@ -41,9 +45,9 @@ export function ExposureCard() {
           {summary && <DataStatusBadge status={summary.status} />}
           <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-accent/50 px-2 py-0.5 text-xs font-medium">
             <Gauge className="size-3.5 text-primary" />
-            {summary?.exposureRatio === null || summary?.exposureRatio === undefined
+            {exposurePercent === null
               ? 'Ratio unavailable'
-              : `Exposure ${formatPercent(summary.exposureRatio * 100)}`}
+              : `Exposure ${formatPercent(exposurePercent)}`}
           </span>
         </div>
       </div>
@@ -74,7 +78,7 @@ export function ExposureCard() {
         {canDrawBar ? (
           <div aria-label="Exposure composition" className="flex h-2.5 w-full overflow-hidden rounded-full">
             {segments.map((segment) => (
-              <div key={segment.label} style={{ width: `${Math.max(0, (segment.value! / total!) * 100)}%`, backgroundColor: segment.color }} />
+              <div key={segment.label} style={{ width: `${Math.max(0, (decimalRatioToNumber(segment.value!, total!) ?? 0) * 100)}%`, backgroundColor: segment.color }} />
             ))}
           </div>
         ) : (

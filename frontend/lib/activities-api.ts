@@ -1,3 +1,5 @@
+import type { DecimalString } from './decimal'
+
 export type ActivityDataStatus = 'COMPLETE' | 'STALE' | 'PARTIAL' | 'UNAVAILABLE'
 export type ActivityProvider = 'BITBANK' | 'SOLANA' | 'HYPERLIQUID'
 export type ActivityEventType = 'BUY' | 'SELL' | 'DEPOSIT' | 'WITHDRAW' | 'TRANSFER' | 'SWAP' | 'PERP' | 'FUNDING' | 'OTHER'
@@ -8,17 +10,17 @@ export type ActivityLeg = {
   direction: ActivityDirection
   assetKey: string
   symbol: string | null
-  quantity: number | null
-  originalAmount: number | null
+  quantity: DecimalString | null
+  originalAmount: DecimalString | null
   originalCurrency: string | null
-  jpyValue: number | null
+  jpyValue: DecimalString | null
   valuationStatus: 'VALUED' | 'UNAVAILABLE'
   valuationBasis: 'PROVIDER_REPORTED' | 'EVENT_TIME_MARKET' | 'IMPORT_TIME_MARKET' | 'UNAVAILABLE' | null
-  priceUsed: number | null
+  priceUsed: DecimalString | null
   priceCurrency: string | null
   priceSource: string | null
   priceEvaluatedAt: string | null
-  fxRateToJpy: number | null
+  fxRateToJpy: DecimalString | null
   fxSource: string | null
   fxEvaluatedAt: string | null
 }
@@ -28,11 +30,11 @@ export type PerpetualFill = {
   side: 'BUY' | 'SELL'
   direction: 'OPEN_LONG' | 'CLOSE_LONG' | 'OPEN_SHORT' | 'CLOSE_SHORT' | 'UNKNOWN'
   providerDirection: string | null
-  quantity: number
-  price: number
+  quantity: DecimalString
+  price: DecimalString
   priceCurrency: string | null
-  startPosition: number | null
-  closedPnl: number | null
+  startPosition: DecimalString | null
+  closedPnl: DecimalString | null
   closedPnlCurrency: string | null
 }
 

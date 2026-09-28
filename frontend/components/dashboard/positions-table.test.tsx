@@ -6,9 +6,9 @@ import type { PositionsResponse } from '@/lib/positions-api'
 
 const positionResponse: PositionsResponse = {
   summary: {
-    positionValueJpy: 30000,
-    marginJpy: 420,
-    unrealizedPnlJpy: -520,
+    positionValueJpy: '30000',
+    marginJpy: '420',
+    unrealizedPnlJpy: '-520',
     status: 'COMPLETE',
     connectionCount: 1,
     syncedConnectionCount: 1,
@@ -17,22 +17,22 @@ const positionResponse: PositionsResponse = {
     positionKey: 'DEFAULT:BTC',
     instrumentCode: 'BTC',
     side: 'LONG',
-    leverage: 2,
-    quantity: 2,
-    entryPrice: 90,
-    markPrice: 100,
-    liquidationPrice: 50,
+    leverage: '2',
+    quantity: '2',
+    entryPrice: '90',
+    markPrice: '100',
+    liquidationPrice: '50',
     priceCurrency: 'USD',
-    positionValueJpy: 30000,
-    marginAmount: 3,
+    positionValueJpy: '30000',
+    marginAmount: '3',
     marginCurrency: 'USDC',
-    marginJpy: 420,
-    unrealizedPnl: -4,
+    marginJpy: '420',
+    unrealizedPnl: '-4',
     pnlCurrency: 'USDT',
-    unrealizedPnlJpy: -520,
-    priceFx: { currency: 'USD', rateToJpy: 150, source: 'EXCHANGERATE_API', evaluatedAt: '2026-09-28T03:00:00Z', status: 'COMPLETE' },
-    marginFx: { currency: 'USDC', rateToJpy: 140, source: 'COINGECKO_AND_EXCHANGERATE_API', evaluatedAt: '2026-09-28T03:00:00Z', status: 'COMPLETE' },
-    pnlFx: { currency: 'USDT', rateToJpy: 130, source: 'COINGECKO_AND_EXCHANGERATE_API', evaluatedAt: '2026-09-28T03:00:00Z', status: 'COMPLETE' },
+    unrealizedPnlJpy: '-520',
+    priceFx: { currency: 'USD', rateToJpy: '150', source: 'EXCHANGERATE_API', evaluatedAt: '2026-09-28T03:00:00Z', status: 'COMPLETE' },
+    marginFx: { currency: 'USDC', rateToJpy: '140', source: 'COINGECKO_AND_EXCHANGERATE_API', evaluatedAt: '2026-09-28T03:00:00Z', status: 'COMPLETE' },
+    pnlFx: { currency: 'USDT', rateToJpy: '130', source: 'COINGECKO_AND_EXCHANGERATE_API', evaluatedAt: '2026-09-28T03:00:00Z', status: 'COMPLETE' },
     status: 'COMPLETE',
     connectionId: 'connection-1',
     provider: 'HYPERLIQUID',
@@ -109,7 +109,7 @@ describe('PositionsTable', () => {
   })
 
   it('distinguishes no connections from a successful empty position sync', async () => {
-    const empty: PositionsResponse = { summary: { ...positionResponse.summary, positionValueJpy: 0, marginJpy: 0, unrealizedPnlJpy: 0 }, positions: [] }
+    const empty: PositionsResponse = { summary: { ...positionResponse.summary, positionValueJpy: '0', marginJpy: '0', unrealizedPnlJpy: '0' }, positions: [] }
     respond(empty)
     const { unmount } = renderPositions()
     expect(await screen.findByText('No open perpetual positions')).toBeInTheDocument()

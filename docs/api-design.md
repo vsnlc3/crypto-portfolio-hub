@@ -4,6 +4,8 @@ Status: Vertical-slice contract; update this document alongside each API impleme
 
 This document records APIs implemented so far and evolves alongside each vertical slice. JSON responses use camelCase. Errors use the common RFC 9457 Problem Details response with the application's stable `code` and `requestId` fields.
 
+Financial values and other Java `BigDecimal` response fields are JSON strings in plain base-10 notation, without exponent notation (for example, `"netWorthJpy": "9007199254740993.25"`). Unknown or unavailable values remain `null`. Counts, indexes, booleans, and other integral non-decimal values retain their JSON number / boolean types. Frontend API DTOs model these fields as `DecimalString`; conversion to JavaScript `number` is limited to visual chart geometry and proportional widths.
+
 ## Authentication
 
 The Backend uses Spring Security Google OpenID Connect Login and a server-side HTTP Session. The browser sends the HttpOnly session cookie automatically. Google access / ID tokens and the Google subject are not returned by the application API. The authenticated OIDC `sub` resolves to the internal `users.id`; request parameters supplied by a client are never used to choose the owner.

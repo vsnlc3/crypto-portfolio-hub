@@ -1,4 +1,5 @@
 import { TrendingDown, TrendingUp } from "lucide-react"
+import { decimalCompare, type DecimalValue } from "@/lib/decimal"
 import { cn } from "@/lib/utils"
 
 export function Delta({
@@ -8,12 +9,12 @@ export function Delta({
   className,
 }: {
   /** sign of this number decides color/arrow */
-  value: number
+  value: DecimalValue
   children: React.ReactNode
   showIcon?: boolean
   className?: string
 }) {
-  const positive = value >= 0
+  const positive = decimalCompare(value, '0') >= 0
   const Icon = positive ? TrendingUp : TrendingDown
   return (
     <span

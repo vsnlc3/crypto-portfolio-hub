@@ -1,3 +1,5 @@
+import type { DecimalString } from './decimal'
+
 export type AssetDataStatus = 'COMPLETE' | 'STALE' | 'PARTIAL' | 'UNAVAILABLE'
 export type AssetCategory = 'CRYPTO' | 'STABLECOIN' | 'FIAT'
 export type ConnectionProvider = 'BITBANK' | 'SOLANA' | 'HYPERLIQUID'
@@ -6,15 +8,15 @@ export type AssetConnectionHolding = {
   connectionId: string
   provider: ConnectionProvider
   displayName: string | null
-  quantity: number | null
-  valueJpy: number | null
+  quantity: DecimalString | null
+  valueJpy: DecimalString | null
   status: AssetDataStatus
   balanceFetchedAt: string | null
   lastSuccessAt: string | null
 }
 
 export type AssetPrice = {
-  amount: number | null
+  amount: DecimalString | null
   currency: string | null
   source: string | null
   evaluatedAt: string | null
@@ -23,7 +25,7 @@ export type AssetPrice = {
 }
 
 export type AssetPriceChange = {
-  value: number | null
+  value: DecimalString | null
   unit: 'PERCENTAGE' | string
   comparisonPeriod: 'H24' | string
   source: string | null
@@ -39,8 +41,8 @@ export type Asset = {
   name: string
   category: AssetCategory
   network: string | null
-  totalQuantity: number | null
-  valueJpy: number | null
+  totalQuantity: DecimalString | null
+  valueJpy: DecimalString | null
   status: AssetDataStatus
   price: AssetPrice
   change24h: AssetPriceChange
@@ -54,9 +56,9 @@ export type Asset = {
 
 export type AssetsResponse = {
   summary: {
-    spotHoldingsValueJpy: number | null
-    directionalAssetsValueJpy: number | null
-    stablecoinsValueJpy: number | null
+    spotHoldingsValueJpy: DecimalString | null
+    directionalAssetsValueJpy: DecimalString | null
+    stablecoinsValueJpy: DecimalString | null
     status: AssetDataStatus
     connectionCount: number
     syncedConnectionCount: number

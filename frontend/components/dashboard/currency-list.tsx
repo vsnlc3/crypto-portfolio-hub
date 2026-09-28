@@ -9,12 +9,13 @@ import { TokenBadge } from '@/components/token-badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { assetsQueryKey, getAssets, type Asset } from '@/lib/assets-api'
+import { decimalRatioPercent } from '@/lib/decimal'
 import { formatAmount, formatDateTime, formatJpy, formatMoney, formatPercent } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
-function AssetRow({ asset, totalValueJpy }: { asset: Asset; totalValueJpy: number | null }) {
-  const share = asset.valueJpy !== null && totalValueJpy !== null && totalValueJpy > 0
-    ? asset.valueJpy / totalValueJpy * 100
+function AssetRow({ asset, totalValueJpy }: { asset: Asset; totalValueJpy: string | null }) {
+  const share = asset.valueJpy !== null && totalValueJpy !== null
+    ? decimalRatioPercent(asset.valueJpy, totalValueJpy)
     : null
   const change = asset.change24h.value
 
@@ -53,7 +54,7 @@ function AssetRow({ asset, totalValueJpy }: { asset: Asset; totalValueJpy: numbe
               {asset.change24h.status === 'STALE' ? '24h stale' : '24h unavailable'}
             </span>
           )}
-          <span className="text-[11px] text-muted-foreground">{share === null ? 'share unavailable' : formatPercent(share)}</span>
+          <span className="text-[11px] text-muted-foreground">{share === null ? 'share unavailable' : formatPercent(share, 1)}</span>
         </div>
       </div>
     </li>

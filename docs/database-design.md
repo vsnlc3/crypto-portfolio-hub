@@ -1954,7 +1954,7 @@ Portfolio Snapshotは `COMPLETE` / `STALE` を返し、算出不能な期間に�
 
 ## Decimal
 
-BigDecimalをJSON stringとして返すFieldの具体的形式。
+API Responseの`BigDecimal` Fieldは、指数表記を使わないplain base-10 JSON stringとして返す。例えば `9007199254740993.25` は`"9007199254740993.25"`とし、未取得・算出不能値は`null`のまま返す。Frontendは`DecimalString`として受け取り、表示では文字列精度を保持する。Chart座標や比率幅など視覚化のための一時的なJS number変換だけを許容する。
 
 ---
 

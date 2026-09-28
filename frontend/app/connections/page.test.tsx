@@ -244,7 +244,7 @@ describe('ConnectionsPage', () => {
     const connection: Connection = {
       ...solanaConnection(),
       status: 'ERROR',
-      portfolioValue: { amountJpy: 234567, status: 'STALE' },
+      portfolioValue: { amountJpy: '234567', status: 'STALE' },
       capabilitySync: [
         { capability: 'BALANCE', status: 'ERROR', lastAttemptAt: '2026-09-28T02:00:00Z', lastSuccessAt: '2026-09-28T01:00:00Z', lastErrorCategory: 'TIMEOUT' },
         { capability: 'ACTIVITY', status: 'READY', lastAttemptAt: '2026-09-28T02:00:00Z', lastSuccessAt: '2026-09-28T02:00:00Z', lastErrorCategory: null },
@@ -272,7 +272,7 @@ describe('ConnectionsPage', () => {
   })
 
   it('requests a manual sync, polls its run, and invalidates all dependent portfolio queries', async () => {
-    const connection = { ...solanaConnection(), portfolioValue: { amountJpy: 125000, status: 'COMPLETE' as const } }
+    const connection = { ...solanaConnection(), portfolioValue: { amountJpy: '125000', status: 'COMPLETE' as const } }
     const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input)
       if (url === '/api/v1/connections' && !init?.method) return jsonResponse(200, [connection])

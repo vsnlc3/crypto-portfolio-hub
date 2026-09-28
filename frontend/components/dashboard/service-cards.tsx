@@ -6,6 +6,7 @@ import { DataStatusBadge, EmptyCard, InlineError, LoadingCard } from '@/componen
 import { ServiceBadge } from '@/components/service-badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { decimalRatioPercent, decimalSum, decimalToNumber } from '@/lib/decimal'
 import { formatJpy, formatPercent, formatRelative, formatSignedJpy } from '@/lib/format'
 import {
   getPortfolioSummary,
@@ -20,7 +21,7 @@ function connectionPnl(connection: PortfolioConnection, positions: PositionsResp
   const connectionPositions = positions.positions.filter((position) => position.connectionId === connection.id)
   if (connectionPositions.length > 0) {
     if (connectionPositions.some((position) => position.unrealizedPnlJpy === null)) return null
-    return connectionPositions.reduce((sum, position) => sum + position.unrealizedPnlJpy!, 0)
+    return decimalSum(connectionPositions.map((position) => position.unrealizedPnlJpy!))
   }
   const positionCapability = connection.capabilitySync.find((capability) => capability.capability === 'POSITION')
   return positionCapability?.lastSuccessAt ? 0 : null
@@ -56,9 +57,10 @@ export function ServiceCards() {
       {positionsQuery.isError && !positionsQuery.data && <InlineError message="Perpetual PnL could not be loaded." onRetry={() => void positionsQuery.refetch()} />}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {connections.map((connection) => {
-          const share = connection.netWorthJpy !== null && netWorth !== null && netWorth > 0
-            ? connection.netWorthJpy / netWorth * 100
+          const sharePercent = connection.netWorthJpy !== null && netWorth !== null
+            ? decimalRatioPercent(connection.netWorthJpy, netWorth)
             : null
+          const shareWidth = sharePercent === null ? null : decimalToNumber(sharePercent)
           const pnl = connectionPnl(connection, positionsQuery.data)
           return (
             <Card key={connection.id} className="gap-0 p-5">
@@ -77,10 +79,10 @@ export function ServiceCards() {
 
               <div className="mt-3 space-y-2">
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-accent">
-                  {share !== null && <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, Math.max(0, share))}%` }} />}
+                  {shareWidth !== null && <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, Math.max(0, shareWidth))}%` }} />}
                 </div>
                 <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                  <span>{share === null ? 'Share unavailable' : `${formatPercent(share)} of portfolio`}</span>
+                  <span>{sharePercent === null ? 'Share unavailable' : `${formatPercent(sharePercent, 1)} of portfolio`}</span>
                   <span title={connection.lastSuccessfulSyncAt ?? undefined}>{formatRelative(connection.lastSuccessfulSyncAt)}</span>
                 </div>
               </div>

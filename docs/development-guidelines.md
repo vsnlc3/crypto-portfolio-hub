@@ -290,7 +290,7 @@ Net Worth、Market Exposure、Position Value、Unrealized PnLの意味と二重�
 - Error ResponseはRFC 9457 Problem Detailsを基礎とし、UIが扱う安定したerror codeを拡張情報に含める。実装詳細は返さない。[Spring Framework Error Responses](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-ann-rest-exceptions.html) を参照する。
 - Activity等の増加する一覧はcursor paginationを基本とし、時刻順・重複境界を安定させる。小さいConnections一覧やDashboard集計に不要なPaginationを付けない。
 - 日時はUTCのISO 8601形式で送受信する。表示TimezoneはFrontendでユーザー設定または定めた既定値に従う。
-- 暗号資産数量・価格・評価額は小数精度を失わないDecimal表現とする。JSONでは数値を文字列として返す方針とし、JavaScript `number` の暗黙変換・計算誤差を避ける。API設計時にField名、通貨コード、scale/rounding、nullと未取得の表現を定める。
+- 暗号資産数量・価格・評価額は小数精度を失わないDecimal表現とする。JSONではplain base-10 stringとして返し、JavaScript `number` の暗黙変換・計算誤差を避ける。Frontendは`DecimalString`を表示・加算する際もstring / `BigInt`演算を使う。Chart座標や比率幅だけは描画境界でJS numberへ一時変換できる。未取得・算出不能値は`null`を維持する。
 - API Versioningは初期にはURL prefix等の規則だけを決め、互換性を壊す変更が必要になった時点で詳細を定義する。具体的Endpoint一覧・DTO・認可表は [api-design.md](./api-design.md) で設計する。
 
 ## 12. 数値・通貨・日時

@@ -5,6 +5,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import { DataStatusBadge, EmptyCard, InlineError, LoadingCard } from '@/components/dashboard/data-state'
 import { Card } from '@/components/ui/card'
 import { getAssets, assetsQueryKey } from '@/lib/assets-api'
+import { decimalCompare, decimalRatioPercent, decimalSum, decimalToNumber, formatDecimal } from '@/lib/decimal'
 import { formatJpy } from '@/lib/format'
 
 const colors = ['var(--chart-2)', 'var(--primary)', 'var(--chart-5)', 'var(--chart-3)', 'var(--chart-4)']
@@ -20,8 +21,8 @@ export function AllocationCard() {
   if (response.summary.connectionCount === 0) {
     return <EmptyCard title="Allocation unavailable" detail="Connect a service to see your asset allocation." />
   }
-  const knownAssets = response.assets.filter((asset) => asset.valueJpy !== null && asset.valueJpy > 0)
-  const knownTotal = knownAssets.reduce((sum, asset) => sum + asset.valueJpy!, 0)
+  const knownAssets = response.assets.filter((asset) => asset.valueJpy !== null && decimalCompare(asset.valueJpy, '0') > 0)
+  const knownTotal = decimalSum(knownAssets.map((asset) => asset.valueJpy!))
   const completeTotal = response.summary.spotHoldingsValueJpy
   const isPartial = completeTotal === null
   if (knownAssets.length === 0) {
@@ -39,9 +40,9 @@ export function AllocationCard() {
 
   const data = knownAssets.map((asset, index) => ({
     name: asset.symbol,
-    value: asset.valueJpy!,
+    value: decimalToNumber(asset.valueJpy) ?? 0,
     color: colors[index % colors.length],
-    percent: knownTotal > 0 ? asset.valueJpy! / knownTotal * 100 : null,
+    percent: decimalRatioPercent(asset.valueJpy!, knownTotal),
   }))
 
   return (
@@ -81,7 +82,7 @@ export function AllocationCard() {
               <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
               <span className="min-w-0 truncate font-medium">{item.name}</span>
               <span className="ml-auto font-mono tabular text-muted-foreground">
-                {item.percent === null ? 'Unavailable' : `${item.percent.toFixed(1)}%`}
+              {item.percent === null ? 'Unavailable' : `${formatDecimal(item.percent, 1, 1)}%`}
               </span>
               <span className="w-24 text-right font-mono tabular">{formatJpy(item.value, true)}</span>
             </li>

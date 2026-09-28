@@ -18,6 +18,7 @@ import { PageHeader } from '@/components/page-header'
 import { ServiceBadge } from '@/components/service-badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { decimalNegate } from '@/lib/decimal'
 import {
   activitiesQueryKey,
   getActivities,
@@ -28,11 +29,8 @@ import {
   type ActivityLeg,
   type ActivityProvider,
 } from '@/lib/activities-api'
-import { formatAmount, formatDateTime } from '@/lib/format'
+import { formatAmount, formatDateTime, formatJpy as formatJpyExact, formatMoney, formatSignedJpy } from '@/lib/format'
 import { cn } from '@/lib/utils'
-
-const jpyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'JPY', maximumFractionDigits: 0 })
-const signedJpyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'JPY', maximumFractionDigits: 0, signDisplay: 'always' })
 
 const eventMeta: Record<ActivityEventType, { icon: LucideIcon; label: string }> = {
   BUY: { icon: ArrowDownLeft, label: 'Buy' },
@@ -89,24 +87,11 @@ function StatusBadge({ status }: { status: ActivityDataStatus }) {
   return <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-medium', styles[status])}>{statusLabel(status)}</span>
 }
 
-function formatJpy(value: number | null, direction?: ActivityDirection) {
+function formatJpy(value: string | null, direction?: ActivityDirection) {
   if (value === null) return 'Unavailable'
-  if (!direction) return jpyFormatter.format(value)
-  return signedJpyFormatter.format(direction === 'IN' ? value : -value)
-}
-
-function formatCurrency(value: number, currency: string | null) {
-  if (!currency) return `${formatAmount(value)} (currency unavailable)`
-  if (/^[A-Z]{3}$/.test(currency)) {
-    try {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency', currency, maximumFractionDigits: Math.abs(value) >= 1000 ? 2 : 6,
-      }).format(value)
-    } catch {
-      // Display provider-defined currency codes as text below.
-    }
-  }
-  return `${formatAmount(value)} ${currency}`
+  if (!direction) return formatJpyExact(value)
+  const signedValue = direction === 'IN' ? value : decimalNegate(value)
+  return signedValue === null ? 'Unavailable' : formatSignedJpy(signedValue)
 }
 
 function formatFxSource(source: string | null) {
@@ -130,7 +115,7 @@ function ActivityLegRow({ leg }: { leg: ActivityLeg }) {
         <p className="text-[11px] text-muted-foreground">
           Quantity: {leg.quantity === null ? 'Unavailable' : formatAmount(leg.quantity, asset)}
           {leg.originalAmount !== null && (
-            <> · Original amount: {formatCurrency(leg.originalAmount, leg.originalCurrency)}</>
+            <> · Original amount: {formatMoney(leg.originalAmount, leg.originalCurrency)}</>
           )}
         </p>
       </div>
@@ -160,9 +145,9 @@ function PerpetualFillDetails({ activity }: { activity: ActivityItem }) {
       <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
         <span>Side: {fill.side}</span>
         <span>Quantity: {formatAmount(fill.quantity, fill.instrumentCode)}</span>
-        <span>Price: {formatCurrency(fill.price, fill.priceCurrency)}</span>
+        <span>Price: {formatMoney(fill.price, fill.priceCurrency)}</span>
         {fill.startPosition !== null && <span>Start position: {formatAmount(fill.startPosition, fill.instrumentCode)}</span>}
-        {fill.closedPnl !== null && <span>Closed PnL: {formatCurrency(fill.closedPnl, fill.closedPnlCurrency)}</span>}
+        {fill.closedPnl !== null && <span>Closed PnL: {formatMoney(fill.closedPnl, fill.closedPnlCurrency)}</span>}
       </div>
     </div>
   )

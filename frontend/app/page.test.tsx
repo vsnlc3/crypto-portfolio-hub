@@ -15,20 +15,20 @@ function jsonResponse(status: number, value: unknown): Response {
 function summaryResponse(status: PortfolioSummaryResponse['summary']['status'] = 'COMPLETE'): PortfolioSummaryResponse {
   return {
     summary: {
-      netWorthJpy: status === 'UNAVAILABLE' ? null : 46800,
+      netWorthJpy: status === 'UNAVAILABLE' ? null : '46800',
       change24h: {
-        amountJpy: 5000,
-        percentage: 12,
+        amountJpy: '5000',
+        percentage: '12',
         status: status === 'STALE' ? 'STALE' : 'COMPLETE',
         baselineSnapshotAt: '2026-09-27T02:00:00Z',
         currentSnapshotAt: evaluatedAt,
       },
-      holdingsValueJpy: 45300,
-      directionalValueJpy: 30000,
-      stablecoinValueJpy: 15300,
-      marketExposureJpy: 55300,
-      exposureRatio: 1.1845,
-      unrealizedPnlJpy: -150,
+      holdingsValueJpy: '45300',
+      directionalValueJpy: '30000',
+      stablecoinValueJpy: '15300',
+      marketExposureJpy: '55300',
+      exposureRatio: '1.1845',
+      unrealizedPnlJpy: '-150',
       status,
       dataAsOfAt: evaluatedAt,
       lastSuccessfulSyncAt: evaluatedAt,
@@ -37,7 +37,7 @@ function summaryResponse(status: PortfolioSummaryResponse['summary']['status'] =
       id: 'connection-solana',
       provider: 'SOLANA',
       displayName: 'Phantom Wallet',
-      netWorthJpy: 30000,
+      netWorthJpy: '30000',
       dataStatus: status === 'STALE' ? 'STALE' : 'COMPLETE',
       lastAttemptAt: evaluatedAt,
       lastSuccessfulSyncAt: evaluatedAt,
@@ -56,8 +56,8 @@ function historyResponse(period: PortfolioHistoryResponse['period'] = '30D', sta
     rangeStartAt: '2026-08-29T02:00:00Z',
     rangeEndAt: evaluatedAt,
     points: [
-      { snapshotAt: '2026-09-27T02:00:00Z', dataAsOfAt: '2026-09-27T02:00:00Z', netWorthJpy: 41800, status: stale ? 'STALE' : 'COMPLETE' },
-      { snapshotAt: evaluatedAt, dataAsOfAt: evaluatedAt, netWorthJpy: 46800, status: stale ? 'STALE' : 'COMPLETE' },
+      { snapshotAt: '2026-09-27T02:00:00Z', dataAsOfAt: '2026-09-27T02:00:00Z', netWorthJpy: '41800', status: stale ? 'STALE' : 'COMPLETE' },
+      { snapshotAt: evaluatedAt, dataAsOfAt: evaluatedAt, netWorthJpy: '46800', status: stale ? 'STALE' : 'COMPLETE' },
     ],
   }
 }
@@ -65,9 +65,9 @@ function historyResponse(period: PortfolioHistoryResponse['period'] = '30D', sta
 function assetsResponse(): AssetsResponse {
   return {
     summary: {
-      spotHoldingsValueJpy: 45300,
-      directionalAssetsValueJpy: 30000,
-      stablecoinsValueJpy: 15300,
+      spotHoldingsValueJpy: '45300',
+      directionalAssetsValueJpy: '30000',
+      stablecoinsValueJpy: '15300',
       status: 'COMPLETE',
       connectionCount: 1,
       syncedConnectionCount: 1,
@@ -80,15 +80,15 @@ function assetsResponse(): AssetsResponse {
       name: 'Solana',
       category: 'CRYPTO',
       network: 'SOLANA',
-      totalQuantity: 2,
-      valueJpy: 30000,
+      totalQuantity: '2',
+      valueJpy: '30000',
       status: 'COMPLETE',
-      price: { amount: 100, currency: 'USD', source: 'COINGECKO', evaluatedAt, status: 'COMPLETE', failureCategory: null },
-      change24h: { value: 2.75, unit: 'PERCENTAGE', comparisonPeriod: 'H24', source: 'COINGECKO', evaluatedAt, status: 'COMPLETE', failureCategory: null },
+      price: { amount: '100', currency: 'USD', source: 'COINGECKO', evaluatedAt, status: 'COMPLETE', failureCategory: null },
+      change24h: { value: '2.75', unit: 'PERCENTAGE', comparisonPeriod: 'H24', source: 'COINGECKO', evaluatedAt, status: 'COMPLETE', failureCategory: null },
       valuation: { currency: 'JPY', fxSource: 'EXCHANGERATE_API', fxEvaluatedAt: evaluatedAt },
       connections: [{
-        connectionId: 'connection-solana', provider: 'SOLANA', displayName: 'Phantom Wallet', quantity: 2,
-        valueJpy: 30000, status: 'COMPLETE', balanceFetchedAt: evaluatedAt, lastSuccessAt: evaluatedAt,
+        connectionId: 'connection-solana', provider: 'SOLANA', displayName: 'Phantom Wallet', quantity: '2',
+        valueJpy: '30000', status: 'COMPLETE', balanceFetchedAt: evaluatedAt, lastSuccessAt: evaluatedAt,
       }],
     }],
   }
@@ -96,15 +96,15 @@ function assetsResponse(): AssetsResponse {
 
 function positionsResponse(): PositionsResponse {
   return {
-    summary: { positionValueJpy: 25000, marginJpy: 4000, unrealizedPnlJpy: -150, status: 'COMPLETE', connectionCount: 1, syncedConnectionCount: 1 },
+    summary: { positionValueJpy: '25000', marginJpy: '4000', unrealizedPnlJpy: '-150', status: 'COMPLETE', connectionCount: 1, syncedConnectionCount: 1 },
     positions: [{
-      positionKey: 'DEFAULT:BTC', instrumentCode: 'BTC', side: 'LONG', leverage: 2, quantity: 0.01,
-      entryPrice: 90000, markPrice: 91000, liquidationPrice: 45000, priceCurrency: 'USD',
-      positionValueJpy: 25000, marginAmount: 30, marginCurrency: 'USDC', marginJpy: 4000,
-      unrealizedPnl: -1, pnlCurrency: 'USDC', unrealizedPnlJpy: -150,
-      priceFx: { currency: 'USD', rateToJpy: 150, source: 'EXCHANGERATE_API', evaluatedAt, status: 'COMPLETE' },
-      marginFx: { currency: 'USDC', rateToJpy: 133.33, source: 'COINGECKO_AND_EXCHANGERATE_API', evaluatedAt, status: 'COMPLETE' },
-      pnlFx: { currency: 'USDC', rateToJpy: 150, source: 'COINGECKO_AND_EXCHANGERATE_API', evaluatedAt, status: 'COMPLETE' },
+      positionKey: 'DEFAULT:BTC', instrumentCode: 'BTC', side: 'LONG', leverage: '2', quantity: '0.01',
+      entryPrice: '90000', markPrice: '91000', liquidationPrice: '45000', priceCurrency: 'USD',
+      positionValueJpy: '25000', marginAmount: '30', marginCurrency: 'USDC', marginJpy: '4000',
+      unrealizedPnl: '-1', pnlCurrency: 'USDC', unrealizedPnlJpy: '-150',
+      priceFx: { currency: 'USD', rateToJpy: '150', source: 'EXCHANGERATE_API', evaluatedAt, status: 'COMPLETE' },
+      marginFx: { currency: 'USDC', rateToJpy: '133.33', source: 'COINGECKO_AND_EXCHANGERATE_API', evaluatedAt, status: 'COMPLETE' },
+      pnlFx: { currency: 'USDC', rateToJpy: '150', source: 'COINGECKO_AND_EXCHANGERATE_API', evaluatedAt, status: 'COMPLETE' },
       status: 'COMPLETE', connectionId: 'connection-hl', provider: 'HYPERLIQUID',
       connectionDisplayName: 'Hyperliquid', fetchedAt: evaluatedAt, lastSuccessAt: evaluatedAt,
     }],

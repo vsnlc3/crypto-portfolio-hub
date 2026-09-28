@@ -13,9 +13,9 @@ function jsonResponse(status: number, value: unknown): Response {
 function assetsResponse(overrides: Partial<AssetsResponse> = {}): AssetsResponse {
   return {
     summary: {
-      spotHoldingsValueJpy: 30000,
-      directionalAssetsValueJpy: 30000,
-      stablecoinsValueJpy: 0,
+      spotHoldingsValueJpy: '30000',
+      directionalAssetsValueJpy: '30000',
+      stablecoinsValueJpy: '0',
       status: 'COMPLETE',
       connectionCount: 1,
       syncedConnectionCount: 1,
@@ -29,11 +29,11 @@ function assetsResponse(overrides: Partial<AssetsResponse> = {}): AssetsResponse
         name: 'Solana',
         category: 'CRYPTO',
         network: 'SOLANA',
-        totalQuantity: 2,
-        valueJpy: 30000,
+        totalQuantity: '2',
+        valueJpy: '30000',
         status: 'COMPLETE',
         price: {
-          amount: 100,
+          amount: '100',
           currency: 'USD',
           source: 'COINGECKO',
           evaluatedAt,
@@ -41,7 +41,7 @@ function assetsResponse(overrides: Partial<AssetsResponse> = {}): AssetsResponse
           failureCategory: null,
         },
         change24h: {
-          value: 2.75,
+          value: '2.75',
           unit: 'PERCENTAGE',
           comparisonPeriod: 'H24',
           source: 'COINGECKO',
@@ -59,8 +59,8 @@ function assetsResponse(overrides: Partial<AssetsResponse> = {}): AssetsResponse
             connectionId: 'wallet-connection',
             provider: 'SOLANA',
             displayName: 'Phantom',
-            quantity: 2,
-            valueJpy: 30000,
+            quantity: '2',
+            valueJpy: '30000',
             status: 'COMPLETE',
             balanceFetchedAt: evaluatedAt,
             lastSuccessAt: evaluatedAt,

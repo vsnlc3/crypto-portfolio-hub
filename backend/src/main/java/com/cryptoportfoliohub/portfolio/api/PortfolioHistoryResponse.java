@@ -3,7 +3,9 @@ package com.cryptoportfoliohub.portfolio.api;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import com.cryptoportfoliohub.api.DecimalStringSerializer;
 import com.cryptoportfoliohub.persistence.entity.PortfolioSnapshotStatus;
+import tools.jackson.databind.annotation.JsonSerialize;
 
 public record PortfolioHistoryResponse(
         String period,
@@ -24,6 +26,7 @@ public record PortfolioHistoryResponse(
     public record Point(
             Instant snapshotAt,
             Instant dataAsOfAt,
+            @JsonSerialize(using = DecimalStringSerializer.class)
             BigDecimal netWorthJpy,
             PortfolioSnapshotStatus status) {
     }

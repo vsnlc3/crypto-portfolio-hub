@@ -3,3 +3,6 @@ pmOnFail: download
 minimumReleaseAgeExclude:
   - '@next/*'
   - next
+
+allowBuilds:
+  unrs-resolver: true

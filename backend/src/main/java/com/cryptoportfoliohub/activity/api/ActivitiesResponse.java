@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import com.cryptoportfoliohub.api.DecimalStringSerializer;
 import com.cryptoportfoliohub.persistence.entity.ActivityDirection;
 import com.cryptoportfoliohub.persistence.entity.ActivityType;
 import com.cryptoportfoliohub.persistence.entity.ConnectionProvider;
@@ -11,6 +12,7 @@ import com.cryptoportfoliohub.persistence.entity.PerpetualFillDirection;
 import com.cryptoportfoliohub.persistence.entity.PerpetualFillSide;
 import com.cryptoportfoliohub.persistence.entity.ValuationBasis;
 import com.cryptoportfoliohub.persistence.entity.ValuationStatus;
+import tools.jackson.databind.annotation.JsonSerialize;
 
 public record ActivitiesResponse(
         Summary summary,
@@ -55,16 +57,21 @@ public record ActivitiesResponse(
             ActivityDirection direction,
             String assetKey,
             String symbol,
+            @JsonSerialize(using = DecimalStringSerializer.class)
             BigDecimal quantity,
+            @JsonSerialize(using = DecimalStringSerializer.class)
             BigDecimal originalAmount,
             String originalCurrency,
+            @JsonSerialize(using = DecimalStringSerializer.class)
             BigDecimal jpyValue,
             ValuationStatus valuationStatus,
             ValuationBasis valuationBasis,
+            @JsonSerialize(using = DecimalStringSerializer.class)
             BigDecimal priceUsed,
             String priceCurrency,
             String priceSource,
             Instant priceEvaluatedAt,
+            @JsonSerialize(using = DecimalStringSerializer.class)
             BigDecimal fxRateToJpy,
             String fxSource,
             Instant fxEvaluatedAt) {
@@ -75,10 +82,14 @@ public record ActivitiesResponse(
             PerpetualFillSide side,
             PerpetualFillDirection direction,
             String providerDirection,
+            @JsonSerialize(using = DecimalStringSerializer.class)
             BigDecimal quantity,
+            @JsonSerialize(using = DecimalStringSerializer.class)
             BigDecimal price,
             String priceCurrency,
+            @JsonSerialize(using = DecimalStringSerializer.class)
             BigDecimal startPosition,
+            @JsonSerialize(using = DecimalStringSerializer.class)
             BigDecimal closedPnl,
             String closedPnlCurrency) {
     }

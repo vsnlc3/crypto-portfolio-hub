@@ -1,3 +1,5 @@
+import type { DecimalString } from './decimal'
+
 export type PortfolioDataStatus = 'COMPLETE' | 'STALE' | 'PARTIAL' | 'UNAVAILABLE'
 export type ConnectionProvider = 'BITBANK' | 'SOLANA' | 'HYPERLIQUID' | string
 export type SyncCapability = 'BALANCE' | 'POSITION' | 'ACTIVITY' | 'ACCOUNT' | string
@@ -14,7 +16,7 @@ export type PortfolioConnection = {
   id: string
   provider: ConnectionProvider
   displayName: string | null
-  netWorthJpy: number | null
+  netWorthJpy: DecimalString | null
   dataStatus: PortfolioDataStatus
   lastAttemptAt: string | null
   lastSuccessfulSyncAt: string | null
@@ -22,20 +24,20 @@ export type PortfolioConnection = {
 }
 
 export type PortfolioSummary = {
-  netWorthJpy: number | null
+  netWorthJpy: DecimalString | null
   change24h: {
-    amountJpy: number | null
-    percentage: number | null
+    amountJpy: DecimalString | null
+    percentage: DecimalString | null
     status: PortfolioDataStatus
     baselineSnapshotAt: string | null
     currentSnapshotAt: string | null
   }
-  holdingsValueJpy: number | null
-  directionalValueJpy: number | null
-  stablecoinValueJpy: number | null
-  marketExposureJpy: number | null
-  exposureRatio: number | null
-  unrealizedPnlJpy: number | null
+  holdingsValueJpy: DecimalString | null
+  directionalValueJpy: DecimalString | null
+  stablecoinValueJpy: DecimalString | null
+  marketExposureJpy: DecimalString | null
+  exposureRatio: DecimalString | null
+  unrealizedPnlJpy: DecimalString | null
   status: PortfolioDataStatus
   dataAsOfAt: string | null
   lastSuccessfulSyncAt: string | null
@@ -56,7 +58,7 @@ export type PortfolioHistoryResponse = {
   points: {
     snapshotAt: string
     dataAsOfAt: string
-    netWorthJpy: number
+    netWorthJpy: DecimalString
     status: 'COMPLETE' | 'STALE'
   }[]
 }

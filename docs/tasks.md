@@ -1612,11 +1612,13 @@ Retryはbitbank、Solana RPC / Helius、Hyperliquid Info、Market Dataのread-on
 ## Step 14-1: TypeScript
 
 - [x] `typescript.ignoreBuildErrors` を解除する
-- [ ] typecheck scriptを追加する
-- [ ] Production buildが型エラーなしで成功する
-- [ ] API Response DTOの型をFrontendで定義する
-- [ ] Decimal stringを不用意にJavaScript numberへ変換しない
-- [ ] lint / typecheck / production buildを実行し成功させる
+- [x] typecheck scriptを追加する（既存scriptを確認）
+- [x] Production buildが型エラーなしで成功する
+- [x] API Response DTOの型をFrontendで定義する
+- [x] Decimal stringを不用意にJavaScript numberへ変換しない
+- [x] lint / typecheck / production buildを実行し成功させる
+
+**実装結果:** APIの`BigDecimal`をplain base-10 JSON stringで返すSerializerを追加し、API DTOのDecimal値をFrontendの`DecimalString`として定義した。表示・合算・通貨のcompact表記・比率は文字列 / `BigInt`演算で行い、Chart座標・比例幅だけ描画境界でJavaScript `number`へ変換する。不正なDecimalの合算は0に置き換えず失敗させる。`pnpm lint`（warning 5件、error 0件）、`pnpm typecheck`、`pnpm test`（48 tests成功）、`pnpm exec next build --webpack`が成功した。通常のTurbopack buildは実行環境のport bind制限で失敗したため、Webpack buildでProduction compileを確認した。Java 25 / Docker TestcontainersのBackend `./mvnw -q clean verify` は179 tests、failures 0 / errors 0 / skipped 1（system property未指定のLive Smoke Test）で成功した。
 
 ---
 

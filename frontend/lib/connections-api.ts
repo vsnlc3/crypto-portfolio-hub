@@ -1,3 +1,5 @@
+import type { DecimalString } from './decimal'
+
 export type ConnectionProvider = 'BITBANK' | 'SOLANA' | 'HYPERLIQUID'
 export type ConnectionStatus = 'CONNECTED' | 'SYNCING' | 'ERROR' | 'DISCONNECTED'
 export type SyncCapability = 'BALANCE' | 'POSITION' | 'ACTIVITY' | 'ACCOUNT'
@@ -15,7 +17,7 @@ export type CapabilitySync = {
 }
 
 export type ConnectionPortfolioValue = {
-  amountJpy: number | null
+  amountJpy: DecimalString | null
   status: ConnectionDataStatus
 }
 
