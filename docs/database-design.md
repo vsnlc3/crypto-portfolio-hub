@@ -1072,6 +1072,8 @@ Portfolio関連Capabilityの同期結果を反映した時点で条件を満た�
 
 `data_as_of_at` は、Snapshotの集計に使用したPortfolio関連データのうち最も古い評価・取得時刻を記録し、混在するデータの鮮度を保守的に示す。
 
+実装ではPortfolio関連CapabilityのSyncトランザクション完了後にSnapshot生成を判定する。必要なCurrent State / Price / FXから6集計値を完全に計算できる場合だけ保存し、同じUserの最新Snapshotと`data_as_of_at`、Status、6集計値が一致すれば重複作成を省略する。Snapshotの鮮度は保存対象の集計に必要な入力だけから判定し、Margin FXなどSnapshotの6集計値に使用しない値の取得失敗だけでは生成を妨げない。
+
 ---
 
 # 18. Market Price / FX

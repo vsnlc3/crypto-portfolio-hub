@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,18 +39,21 @@ public class SyncLifecycleService {
     private final SyncRunRepository syncRunRepository;
     private final SyncRunResultRepository syncRunResultRepository;
     private final Clock clock;
+    private final ApplicationEventPublisher eventPublisher;
 
     public SyncLifecycleService(
             ConnectionRepository connectionRepository,
             ConnectionSyncStateRepository syncStateRepository,
             SyncRunRepository syncRunRepository,
             SyncRunResultRepository syncRunResultRepository,
-            Clock clock) {
+            Clock clock,
+            ApplicationEventPublisher eventPublisher) {
         this.connectionRepository = connectionRepository;
         this.syncStateRepository = syncStateRepository;
         this.syncRunRepository = syncRunRepository;
         this.syncRunResultRepository = syncRunResultRepository;
         this.clock = clock;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -161,6 +165,15 @@ public class SyncLifecycleService {
         boolean hadSuccess = succeeded > 0;
         connectionRepository.findByIdAndUser_Id(ticket.connectionId(), ticket.userId())
                 .ifPresent(connection -> connection.recordSyncFinished(hadSuccess, finishedAt));
+        if (ticket.capabilities().stream().anyMatch(SyncLifecycleService::isPortfolioCapability)) {
+            eventPublisher.publishEvent(new PortfolioRelevantSyncCompleted(ticket.userId()));
+        }
+    }
+
+    private static boolean isPortfolioCapability(SyncCapability capability) {
+        return capability == SyncCapability.BALANCE
+                || capability == SyncCapability.POSITION
+                || capability == SyncCapability.ACCOUNT;
     }
 
     private Map<SyncCapability, SyncCapabilityOutcome> normalizeOutcomes(

@@ -1089,13 +1089,13 @@ Unrealized PnL
 
 ## Step 8-2: Portfolio Snapshot
 
-- [ ] Current PortfolioからSnapshot候補を計算する
-- [ ] Snapshot生成条件を判定する
-- [ ] `portfolio_snapshots` へ保存する
-- [ ] `COMPLETE` を保存する
-- [ ] `STALE` を保存する
-- [ ] `data_as_of_at` を計算する
-- [ ] 同一タイミングの過剰なSnapshot作成を防ぐ
+- [x] Current PortfolioからSnapshot候補を計算する
+- [x] Snapshot生成条件を判定する
+- [x] `portfolio_snapshots` へ保存する
+- [x] `COMPLETE` を保存する
+- [x] `STALE` を保存する
+- [x] `data_as_of_at` を計算する
+- [x] 同一タイミングの過剰なSnapshot作成を防ぐ
 
 ### Snapshotを作成できる条件
 
@@ -1118,12 +1118,12 @@ Portfolio評価に必要なCurrent State、Price、FXがすべて鮮度基準を
 
 ### Snapshotを作成しないケース
 
-- [ ] Portfolio評価対象Connectionがなく、未接続を0円と誤認させる場合
-- [ ] 必要なPortfolio Capabilityが未同期
-- [ ] 前回成功Current Stateも存在しない
-- [ ] 必要なPriceが取得不能
-- [ ] 必要なFXが取得不能
-- [ ] 主要集計値の一部しか計算できない
+- [x] Portfolio評価対象Connectionがなく、未接続を0円と誤認させる場合
+- [x] 必要なPortfolio Capabilityが未同期
+- [x] 前回成功Current Stateも存在しない
+- [x] 必要なPriceが取得不能
+- [x] 必要なFXが取得不能
+- [x] 主要集計値の一部しか計算できない
 
 不明値を0として補わない。
 
@@ -1144,15 +1144,23 @@ Snapshot生成頻度・最小間隔はProvider制限・運用方針を確認し�
 
 ### Snapshot Test
 
-- [ ] COMPLETE作成
-- [ ] 前回成功状態によるSTALE作成
-- [ ] 未同期 / 前回成功状態なしでは作成しない
-- [ ] 必要なPrice / FX不足では作成しない
-- [ ] Activity失敗だけなら生成可能
-- [ ] 0 Balanceは取得済みの0として扱う
-- [ ] 未取得を0扱いしない
+- [x] COMPLETE作成
+- [x] 前回成功状態によるSTALE作成
+- [x] 未同期 / 前回成功状態なしでは作成しない
+- [x] 必要なPrice / FX不足では作成しない
+- [x] Activity失敗だけなら生成可能
+- [x] 0 Balanceは取得済みの0として扱う
+- [x] 未取得を0扱いしない
 - [ ] 欠損履歴点を生成・0補間しない
-- [ ] User AがUser BのSnapshotを生成・取得できない
+- [x] User AがUser BのSnapshotを生成・取得できない
+
+### 実装結果
+
+- Portfolio Valuation結果へSnapshot専用の鮮度と`data_as_of_at`を追加し、保存対象6集計値だけで生成可否を判定する。画面用Valuationの追加指標やMargin FXの不足がSnapshotに必要な集計を妨げない場合は生成を妨げない。
+- `data_as_of_at`は必要なPortfolio Capabilityの前回成功時刻、使用したCurrent Stateの取得時刻、必要なPrice / FX評価時刻の最古を使用する。
+- Portfolio関連Capabilityを含むSync完了後にトランザクションコミット後のイベントでSnapshot生成を試みる。ACTIVITYだけのSyncでは新しいSnapshot判定を起動しない。
+- 同一Userについて最新Snapshotと`data_as_of_at`、Status、保存する6値が一致する場合は作成を省略する。User行をロックして同時作成を直列化する。
+- PostgreSQL TestcontainersでCOMPLETE / STALE、Activity失敗、未接続、Price不足、Margin FXのみ不足、重複抑制、時刻、User分離を検証した。
 
 ## Step 8-3: Connection別Portfolio評価 API
 

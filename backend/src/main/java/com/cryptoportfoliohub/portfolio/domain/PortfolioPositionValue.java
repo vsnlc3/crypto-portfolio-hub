@@ -8,7 +8,16 @@ public record PortfolioPositionValue(
         Optional<BigDecimal> positionValueJpy,
         Optional<BigDecimal> marginJpy,
         Optional<BigDecimal> unrealizedPnlJpy,
-        boolean stale) {
+        boolean stale,
+        boolean snapshotStale) {
+
+    public PortfolioPositionValue(
+            Optional<BigDecimal> positionValueJpy,
+            Optional<BigDecimal> marginJpy,
+            Optional<BigDecimal> unrealizedPnlJpy,
+            boolean stale) {
+        this(positionValueJpy, marginJpy, unrealizedPnlJpy, stale, stale);
+    }
 
     public PortfolioPositionValue {
         Objects.requireNonNull(positionValueJpy, "positionValueJpy must not be null");

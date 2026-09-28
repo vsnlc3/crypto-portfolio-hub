@@ -121,6 +121,7 @@ public class PortfolioValuationService {
                 .collect(Collectors.groupingBy(value -> value.entity().getConnection().getId()));
         boolean netWorthAdjustmentKnown = syncAssessment.available();
         boolean netWorthAdjustmentStale = false;
+        boolean netWorthSnapshotAdjustmentStale = false;
         BigDecimal netWorthAdjustment = BigDecimal.ZERO;
         if (netWorthAdjustmentKnown) {
             for (ConnectionEntity connection : connections) {
@@ -138,16 +139,21 @@ public class PortfolioValuationService {
                 }
                 netWorthAdjustment = netWorthAdjustment.add(adjustment.orElseThrow().amountJpy());
                 netWorthAdjustmentStale |= adjustment.orElseThrow().stale();
+                netWorthSnapshotAdjustmentStale |= adjustment.orElseThrow().snapshotStale();
             }
         }
 
+        Optional<Instant> dataAsOfAt = dataAsOfAt(
+                connections, syncByConnection, balances, positions, accountStates);
         return calculator.calculate(
                 balanceValues,
                 positionValues,
                 netWorthAdjustmentKnown ? Optional.of(roundJpy(netWorthAdjustment)) : Optional.empty(),
                 !connections.isEmpty(),
                 syncAssessment.available(),
-                syncAssessment.stale() || netWorthAdjustmentStale);
+                syncAssessment.stale() || netWorthAdjustmentStale,
+                dataAsOfAt,
+                syncAssessment.stale() || netWorthSnapshotAdjustmentStale);
     }
 
     private Map<String, MarketPriceQuote> resolvePrices(List<AssetBalance> balances) {
@@ -256,9 +262,10 @@ public class PortfolioValuationService {
                 .flatMap(amount -> toJpy(amount, position.getMarginCurrency(), marginFx));
         Optional<BigDecimal> pnlAmount = unrealizedPnl(position);
         Optional<BigDecimal> pnlJpy = pnlAmount.flatMap(amount -> toJpy(amount, effectivePnlCurrency, pnlFx));
-        boolean stale = isStale(priceFx) || isStale(marginFx) || isStale(pnlFx);
+        boolean snapshotStale = isStale(priceFx) || isStale(pnlFx);
+        boolean stale = snapshotStale || isStale(marginFx);
         return new ComputedPosition(position,
-                new PortfolioPositionValue(positionJpy, marginJpy, pnlJpy, stale),
+                new PortfolioPositionValue(positionJpy, marginJpy, pnlJpy, stale, snapshotStale),
                 pnlJpy,
                 positionScope(position));
     }
@@ -324,7 +331,7 @@ public class PortfolioValuationService {
                     }
                 }
             }
-            return Optional.of(new NetWorthAdjustment(roundJpy(total), stale));
+            return Optional.of(new NetWorthAdjustment(roundJpy(total), stale, stale));
         }
         BigDecimal totalPnl = BigDecimal.ZERO;
         for (ComputedPosition position : positions) {
@@ -334,7 +341,116 @@ public class PortfolioValuationService {
             totalPnl = totalPnl.add(position.unrealizedPnlJpy().orElseThrow());
         }
         return Optional.of(new NetWorthAdjustment(roundJpy(totalPnl),
-                positions.stream().anyMatch(position -> position.portfolioValue().stale())));
+                positions.stream().anyMatch(position -> position.portfolioValue().stale()),
+                positions.stream().anyMatch(position -> position.portfolioValue().snapshotStale())));
+    }
+
+    private Optional<Instant> dataAsOfAt(
+            List<ConnectionEntity> connections,
+            Map<UUID, EnumMap<SyncCapability, ConnectionSyncState>> syncByConnection,
+            List<AssetBalance> balances,
+            List<PerpetualPosition> positions,
+            List<ProviderAccountState> accountStates) {
+        List<Instant> times = new ArrayList<>();
+        for (ConnectionEntity connection : connections) {
+            Set<SyncCapability> required = connection.getProvider() == ConnectionProvider.HYPERLIQUID
+                    ? Set.of(SyncCapability.BALANCE, SyncCapability.POSITION, SyncCapability.ACCOUNT)
+                    : Set.of(SyncCapability.BALANCE);
+            for (SyncCapability capability : required) {
+                ConnectionSyncState state = syncByConnection.getOrDefault(
+                        connection.getId(), new EnumMap<>(SyncCapability.class)).get(capability);
+                if (state == null || state.getLastSuccessAt() == null) {
+                    return Optional.empty();
+                }
+                times.add(state.getLastSuccessAt());
+            }
+        }
+
+        for (AssetBalance balance : balances) {
+            if (balance.getFetchedAt() == null) {
+                return Optional.empty();
+            }
+            times.add(balance.getFetchedAt());
+            if (balance.getTotalQuantity().signum() == 0
+                    || ("BITBANK".equals(balance.getNetwork()) && "JPY".equals(balance.getAssetKey()))) {
+                continue;
+            }
+            if (balance.getJpyValue() == null || balance.getPriceEvaluatedAt() == null
+                    || balance.getFxRateToJpy() == null) {
+                return Optional.empty();
+            }
+            times.add(balance.getPriceEvaluatedAt());
+            if (!"IDENTITY".equals(balance.getFxSource())) {
+                if (balance.getFxEvaluatedAt() == null) {
+                    return Optional.empty();
+                }
+                times.add(balance.getFxEvaluatedAt());
+            } else if (balance.getFxEvaluatedAt() != null) {
+                times.add(balance.getFxEvaluatedAt());
+            }
+        }
+
+        for (PerpetualPosition position : positions) {
+            if (position.getFetchedAt() == null) {
+                return Optional.empty();
+            }
+            times.add(position.getFetchedAt());
+            if (position.getQuantity().signum() != 0) {
+                if (position.getMarkPrice() == null || position.getPriceFxRateToJpy() == null) {
+                    return Optional.empty();
+                }
+                if (!"IDENTITY".equals(position.getPriceFxSource())) {
+                    if (position.getPriceFxEvaluatedAt() == null) {
+                        return Optional.empty();
+                    }
+                    times.add(position.getPriceFxEvaluatedAt());
+                } else if (position.getPriceFxEvaluatedAt() != null) {
+                    times.add(position.getPriceFxEvaluatedAt());
+                }
+            }
+            Optional<BigDecimal> pnl = unrealizedPnl(position);
+            if (pnl.isEmpty()) {
+                return Optional.empty();
+            }
+            if (pnl.orElseThrow().signum() != 0) {
+                String currency = effectivePnlCurrency(position);
+                if (currency == null || position.getPnlFxRateToJpy() == null) {
+                    return Optional.empty();
+                }
+                if (!"IDENTITY".equals(position.getPnlFxSource())) {
+                    if (position.getPnlFxEvaluatedAt() == null) {
+                        return Optional.empty();
+                    }
+                    times.add(position.getPnlFxEvaluatedAt());
+                } else if (position.getPnlFxEvaluatedAt() != null) {
+                    times.add(position.getPnlFxEvaluatedAt());
+                }
+            }
+        }
+
+        for (ProviderAccountState state : accountStates) {
+            if (state.getFetchedAt() == null) {
+                return Optional.empty();
+            }
+            times.add(state.getFetchedAt());
+            if ("STANDARD".equals(state.getAccountMode())
+                    && state.getAccountScope().startsWith("PERP_DEX:")
+                    && state.getAccountEquity() != null
+                    && state.getAccountEquity().signum() != 0) {
+                if (state.getAccountEquityJpy() == null || state.getFxRateToJpy() == null) {
+                    return Optional.empty();
+                }
+                if (!"IDENTITY".equals(state.getFxSource())) {
+                    if (state.getFxEvaluatedAt() == null) {
+                        return Optional.empty();
+                    }
+                    times.add(state.getFxEvaluatedAt());
+                } else if (state.getFxEvaluatedAt() != null) {
+                    times.add(state.getFxEvaluatedAt());
+                }
+            }
+        }
+        return times.stream().min(Instant::compareTo);
     }
 
     private SyncAssessment assessRequiredSync(
@@ -480,7 +596,7 @@ public class PortfolioValuationService {
             String scope) {
     }
 
-    private record NetWorthAdjustment(BigDecimal amountJpy, boolean stale) {
+    private record NetWorthAdjustment(BigDecimal amountJpy, boolean stale, boolean snapshotStale) {
     }
 
     private record SyncAssessment(boolean available, boolean stale) {

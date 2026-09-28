@@ -10,5 +10,7 @@ public interface PortfolioSnapshotRepository extends JpaRepository<PortfolioSnap
 
     List<PortfolioSnapshot> findAllByUser_IdOrderBySnapshotAtDescIdDesc(UUID authenticatedUserId);
 
+    Optional<PortfolioSnapshot> findFirstByUser_IdOrderBySnapshotAtDescIdDesc(UUID authenticatedUserId);
+
     Optional<PortfolioSnapshot> findByIdAndUser_Id(UUID id, UUID authenticatedUserId);
 }

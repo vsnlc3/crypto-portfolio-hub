@@ -2,6 +2,7 @@ package com.cryptoportfoliohub.portfolio.domain;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
@@ -17,6 +18,19 @@ public final class PortfolioCalculator {
             boolean hasConnections,
             boolean requiredCurrentStateAvailable,
             boolean stale) {
+        return calculate(balances, positions, otherNetWorthJpy, hasConnections,
+                requiredCurrentStateAvailable, stale, Optional.empty(), stale);
+    }
+
+    public PortfolioValuation calculate(
+            List<PortfolioBalanceValue> balances,
+            List<PortfolioPositionValue> positions,
+            Optional<BigDecimal> otherNetWorthJpy,
+            boolean hasConnections,
+            boolean requiredCurrentStateAvailable,
+            boolean stale,
+            Optional<Instant> dataAsOfAt,
+            boolean snapshotInputsStale) {
         if (!hasConnections || !requiredCurrentStateAvailable) {
             return unavailable();
         }
@@ -49,8 +63,20 @@ public final class PortfolioCalculator {
                 : stale || balances.stream().anyMatch(PortfolioBalanceValue::stale)
                         || positions.stream().anyMatch(PortfolioPositionValue::stale)
                         ? DataFreshness.STALE : DataFreshness.FRESH;
+        boolean snapshotValuesComplete = netWorth.isPresent()
+                && allHoldings.isPresent()
+                && directional.isPresent()
+                && stablecoin.isPresent()
+                && exposure.isPresent()
+                && unrealizedPnl.isPresent();
+        DataFreshness snapshotFreshness = !snapshotValuesComplete || dataAsOfAt.isEmpty()
+                ? DataFreshness.UNAVAILABLE
+                : snapshotInputsStale
+                        || balances.stream().anyMatch(PortfolioBalanceValue::stale)
+                        || positions.stream().anyMatch(PortfolioPositionValue::snapshotStale)
+                        ? DataFreshness.STALE : DataFreshness.FRESH;
         return new PortfolioValuation(netWorth, allHoldings, directional, stablecoin, exposure,
-                positionValue, margin, unrealizedPnl, exposureRatio, freshness);
+                positionValue, margin, unrealizedPnl, exposureRatio, freshness, snapshotFreshness, dataAsOfAt);
     }
 
     private static Optional<BigDecimal> sumBalances(
@@ -78,6 +104,6 @@ public final class PortfolioCalculator {
     private static PortfolioValuation unavailable() {
         Optional<BigDecimal> none = Optional.empty();
         return new PortfolioValuation(none, none, none, none, none, none, none, none, none,
-                DataFreshness.UNAVAILABLE);
+                DataFreshness.UNAVAILABLE, DataFreshness.UNAVAILABLE, Optional.empty());
     }
 }

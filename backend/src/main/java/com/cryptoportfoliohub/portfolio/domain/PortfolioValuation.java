@@ -1,6 +1,7 @@
 package com.cryptoportfoliohub.portfolio.domain;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 import com.cryptoportfoliohub.marketdata.domain.DataFreshness;
@@ -15,7 +16,9 @@ public record PortfolioValuation(
         Optional<BigDecimal> marginJpy,
         Optional<BigDecimal> unrealizedPnlJpy,
         Optional<BigDecimal> exposureRatio,
-        DataFreshness freshness) {
+        DataFreshness freshness,
+        DataFreshness snapshotFreshness,
+        Optional<Instant> dataAsOfAt) {
 
     public PortfolioValuation {
         Objects.requireNonNull(netWorthJpy, "netWorthJpy must not be null");
@@ -28,5 +31,16 @@ public record PortfolioValuation(
         Objects.requireNonNull(unrealizedPnlJpy, "unrealizedPnlJpy must not be null");
         Objects.requireNonNull(exposureRatio, "exposureRatio must not be null");
         Objects.requireNonNull(freshness, "freshness must not be null");
+        Objects.requireNonNull(snapshotFreshness, "snapshotFreshness must not be null");
+        Objects.requireNonNull(dataAsOfAt, "dataAsOfAt must not be null");
+    }
+
+    public boolean hasSnapshotValues() {
+        return netWorthJpy.isPresent()
+                && holdingsValueJpy.isPresent()
+                && directionalValueJpy.isPresent()
+                && stablecoinValueJpy.isPresent()
+                && marketExposureJpy.isPresent()
+                && unrealizedPnlJpy.isPresent();
     }
 }

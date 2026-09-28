@@ -215,6 +215,10 @@ public class AssetBalance extends UpdatedEntity {
         return lastSuccessSyncRunId;
     }
 
+    public Instant getFetchedAt() {
+        return fetchedAt;
+    }
+
     public void recordValuation(
             AssetCategory category,
             BigDecimal unitPrice,

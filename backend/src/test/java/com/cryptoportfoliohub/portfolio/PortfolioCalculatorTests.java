@@ -1,6 +1,7 @@
 package com.cryptoportfoliohub.portfolio;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -87,6 +88,29 @@ class PortfolioCalculatorTests {
         assertThat(stale.freshness()).isEqualTo(DataFreshness.STALE);
         assertThat(empty.netWorthJpy()).isEmpty();
         assertThat(empty.freshness()).isEqualTo(DataFreshness.UNAVAILABLE);
+    }
+
+    @Test
+    void snapshotFreshnessOnlyIncludesTheSixPersistedMetricsAndTheirInputs() {
+        var marginUnavailable = new PortfolioPositionValue(
+                Optional.of(new BigDecimal("9000")),
+                Optional.empty(),
+                Optional.of(new BigDecimal("-500")),
+                true,
+                false);
+        var result = calculator.calculate(
+                List.of(balance(AssetCategory.CRYPTO, "15000", false)),
+                List.of(marginUnavailable),
+                Optional.of(new BigDecimal("10000")),
+                true,
+                true,
+                false,
+                Optional.of(Instant.parse("2026-09-28T01:00:00Z")),
+                false);
+
+        assertThat(result.freshness()).isEqualTo(DataFreshness.UNAVAILABLE);
+        assertThat(result.snapshotFreshness()).isEqualTo(DataFreshness.FRESH);
+        assertThat(result.hasSnapshotValues()).isTrue();
     }
 
     private PortfolioBalanceValue balance(AssetCategory category, String value, boolean stale) {

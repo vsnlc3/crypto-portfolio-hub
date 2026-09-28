@@ -26,6 +26,7 @@ import com.cryptoportfoliohub.marketdata.domain.MarketPriceQuote;
 import com.cryptoportfoliohub.marketdata.domain.MarketPriceChange;
 import com.cryptoportfoliohub.persistence.entity.ConnectionProvider;
 import com.cryptoportfoliohub.portfolio.application.PortfolioValuationService;
+import com.cryptoportfoliohub.portfolio.application.PortfolioSnapshotService;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.eq;
@@ -42,6 +43,9 @@ class PortfolioValuationIntegrationTests {
 
     @Autowired
     private PortfolioValuationService valuationService;
+
+    @Autowired
+    private PortfolioSnapshotService snapshotService;
 
     @MockitoBean
     private MarketDataService marketDataService;
@@ -218,6 +222,118 @@ class PortfolioValuationIntegrationTests {
                 "SELECT fx_rate_to_jpy, jpy_value FROM asset_balances WHERE id = ?", fixture.balanceId());
         assertThat(valuation.get("fx_rate_to_jpy")).isEqualTo(new BigDecimal("150.123456789012"));
         assertThat(valuation.get("jpy_value")).isEqualTo(new BigDecimal("30024.69135780"));
+    }
+
+    @Test
+    void savesCompleteSnapshotOnceAndIgnoresActivityCapabilityFailure() {
+        UUID user = createUser("snapshot-complete");
+        Fixture fixture = createBitbankFixture(user, new BigDecimal("2"));
+        jdbcTemplate.update("""
+                INSERT INTO connection_sync_states (
+                    connection_id, user_id, capability, status, last_attempt_at,
+                    last_success_at, last_success_sync_run_id, last_error_category, updated_at
+                ) VALUES (?, ?, 'ACTIVITY', 'ERROR', ?, NULL, NULL, 'UNAVAILABLE', ?)
+                """, fixture.connectionId(), user, timestamp(), timestamp());
+
+        assertThat(snapshotService.createSnapshotIfEligible(user)).isTrue();
+        assertThat(snapshotService.createSnapshotIfEligible(user)).isFalse();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM portfolio_snapshots WHERE user_id = ?", Integer.class, user)).isEqualTo(1);
+        Map<String, Object> snapshot = jdbcTemplate.queryForMap(
+                "SELECT net_worth_jpy, holdings_value_jpy, directional_value_jpy, stablecoin_value_jpy, "
+                        + "market_exposure_jpy, unrealized_pnl_jpy, status, data_as_of_at "
+                        + "FROM portfolio_snapshots WHERE user_id = ?", user);
+        assertThat(snapshot.get("net_worth_jpy")).isEqualTo(new BigDecimal("30000.00000000"));
+        assertThat(snapshot.get("holdings_value_jpy")).isEqualTo(new BigDecimal("30000.00000000"));
+        assertThat(snapshot.get("directional_value_jpy")).isEqualTo(new BigDecimal("30000.00000000"));
+        assertThat(snapshot.get("stablecoin_value_jpy")).isEqualTo(BigDecimal.ZERO.setScale(8));
+        assertThat(snapshot.get("market_exposure_jpy")).isEqualTo(new BigDecimal("30000.00000000"));
+        assertThat(snapshot.get("unrealized_pnl_jpy")).isEqualTo(BigDecimal.ZERO.setScale(8));
+        assertThat(snapshot.get("status")).isEqualTo("COMPLETE");
+        assertThat(snapshot.get("data_as_of_at")).isEqualTo(timestamp());
+    }
+
+    @Test
+    void createsStaleSnapshotFromPriorSuccessfulCurrentState() {
+        UUID user = createUser("snapshot-stale");
+        Fixture fixture = createBitbankFixture(user, new BigDecimal("2"));
+        jdbcTemplate.update("""
+                UPDATE connection_sync_states SET status = 'ERROR', last_error_category = 'UNAVAILABLE'
+                WHERE connection_id = ? AND user_id = ? AND capability = 'BALANCE'
+                """, fixture.connectionId(), user);
+
+        assertThat(snapshotService.createSnapshotIfEligible(user)).isTrue();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM portfolio_snapshots WHERE user_id = ?", String.class, user)).isEqualTo("STALE");
+    }
+
+    @Test
+    void doesNotCreateSnapshotsWithoutACompletePortfolioOrForAnotherUsersPortfolio() {
+        UUID user = createUser("snapshot-no-connections");
+        UUID unsyncedUser = createUser("snapshot-not-synced");
+        UUID otherUser = createUser("snapshot-other-user");
+        assertThat(snapshotService.createSnapshotIfEligible(user)).isFalse();
+
+        Fixture unsynced = createBitbankFixture(unsyncedUser, new BigDecimal("2"));
+        jdbcTemplate.update("DELETE FROM connection_sync_states WHERE connection_id = ? AND capability = 'BALANCE'",
+                unsynced.connectionId());
+        assertThat(snapshotService.createSnapshotIfEligible(unsyncedUser)).isFalse();
+
+        Fixture fixture = createBitbankFixture(otherUser, new BigDecimal("2"));
+        when(marketDataService.currentPrices(anyCollection())).thenReturn(Map.of());
+        assertThat(snapshotService.createSnapshotIfEligible(user)).isFalse();
+        assertThat(snapshotService.createSnapshotIfEligible(unsyncedUser)).isFalse();
+        assertThat(snapshotService.createSnapshotIfEligible(otherUser)).isFalse();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM portfolio_snapshots WHERE user_id IN (?, ?, ?)", Integer.class,
+                user, unsyncedUser, otherUser)).isZero();
+        assertThat(fixture.balanceId()).isNotNull();
+    }
+
+    @Test
+    void doesNotCreateSnapshotWhenARequiredFxRateIsUnavailable() {
+        UUID user = createUser("snapshot-fx-unavailable");
+        createBitbankFixture(user, new BigDecimal("2"));
+        when(marketDataService.fxRate(eq(CurrencyCode.USD), eq(CurrencyCode.JPY))).thenReturn(
+                new MarketFxQuote(CurrencyCode.USD, CurrencyCode.JPY, Optional.empty(),
+                        Optional.of(MarketDataSource.EXCHANGERATE_API), Optional.empty(),
+                        DataFreshness.UNAVAILABLE, Optional.empty()));
+
+        assertThat(snapshotService.createSnapshotIfEligible(user)).isFalse();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM portfolio_snapshots WHERE user_id = ?", Integer.class, user)).isZero();
+    }
+
+    @Test
+    void treatsAConfirmedZeroBalanceAsACompleteZeroWithoutAQuote() {
+        UUID user = createUser("snapshot-known-zero");
+        createBitbankFixture(user, BigDecimal.ZERO);
+        when(marketDataService.currentPrices(anyCollection())).thenReturn(Map.of());
+
+        assertThat(snapshotService.createSnapshotIfEligible(user)).isTrue();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT net_worth_jpy FROM portfolio_snapshots WHERE user_id = ?", BigDecimal.class, user))
+                .isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    void marginFxUnavailabilityDoesNotBlockSnapshotMetricsThatDoNotUseMargin() {
+        UUID user = createUser("snapshot-margin-fx-unavailable");
+        Fixture fixture = createHyperliquidFixture(user, true);
+        CurrencyCode eur = new CurrencyCode("EUR");
+        when(marketDataService.fxRate(eq(eur), eq(CurrencyCode.JPY))).thenReturn(
+                new MarketFxQuote(eur, CurrencyCode.JPY, Optional.empty(),
+                        Optional.of(MarketDataSource.EXCHANGERATE_API), Optional.empty(),
+                        DataFreshness.UNAVAILABLE, Optional.empty()));
+        jdbcTemplate.update(
+                "UPDATE perpetual_positions SET margin_currency = 'EUR' WHERE id = ?", fixture.positionId());
+
+        var valuation = valuationService.valueUser(user);
+        assertThat(valuation.freshness()).isEqualTo(DataFreshness.UNAVAILABLE);
+        assertThat(valuation.snapshotFreshness()).isEqualTo(DataFreshness.FRESH);
+        assertThat(snapshotService.createSnapshotIfEligible(user)).isTrue();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM portfolio_snapshots WHERE user_id = ?", String.class, user)).isEqualTo("COMPLETE");
     }
 
     private Fixture createBitbankFixture(UUID user, BigDecimal quantity) {

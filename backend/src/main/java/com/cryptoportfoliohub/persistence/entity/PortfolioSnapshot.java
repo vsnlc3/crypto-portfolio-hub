@@ -2,6 +2,7 @@ package com.cryptoportfoliohub.persistence.entity;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Objects;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -50,6 +51,29 @@ public class PortfolioSnapshot extends CreatedEntity {
     protected PortfolioSnapshot() {
     }
 
+    public PortfolioSnapshot(
+            User user,
+            Instant snapshotAt,
+            Instant dataAsOfAt,
+            BigDecimal netWorthJpy,
+            BigDecimal holdingsValueJpy,
+            BigDecimal directionalValueJpy,
+            BigDecimal stablecoinValueJpy,
+            BigDecimal marketExposureJpy,
+            BigDecimal unrealizedPnlJpy,
+            PortfolioSnapshotStatus status) {
+        this.user = Objects.requireNonNull(user, "user must not be null");
+        this.snapshotAt = Objects.requireNonNull(snapshotAt, "snapshotAt must not be null");
+        this.dataAsOfAt = Objects.requireNonNull(dataAsOfAt, "dataAsOfAt must not be null");
+        this.netWorthJpy = Objects.requireNonNull(netWorthJpy, "netWorthJpy must not be null");
+        this.holdingsValueJpy = Objects.requireNonNull(holdingsValueJpy, "holdingsValueJpy must not be null");
+        this.directionalValueJpy = Objects.requireNonNull(directionalValueJpy, "directionalValueJpy must not be null");
+        this.stablecoinValueJpy = Objects.requireNonNull(stablecoinValueJpy, "stablecoinValueJpy must not be null");
+        this.marketExposureJpy = Objects.requireNonNull(marketExposureJpy, "marketExposureJpy must not be null");
+        this.unrealizedPnlJpy = Objects.requireNonNull(unrealizedPnlJpy, "unrealizedPnlJpy must not be null");
+        this.status = Objects.requireNonNull(status, "status must not be null");
+    }
+
     public User getUser() {
         return user;
     }
@@ -64,6 +88,26 @@ public class PortfolioSnapshot extends CreatedEntity {
 
     public BigDecimal getNetWorthJpy() {
         return netWorthJpy;
+    }
+
+    public BigDecimal getHoldingsValueJpy() {
+        return holdingsValueJpy;
+    }
+
+    public BigDecimal getDirectionalValueJpy() {
+        return directionalValueJpy;
+    }
+
+    public BigDecimal getStablecoinValueJpy() {
+        return stablecoinValueJpy;
+    }
+
+    public BigDecimal getMarketExposureJpy() {
+        return marketExposureJpy;
+    }
+
+    public BigDecimal getUnrealizedPnlJpy() {
+        return unrealizedPnlJpy;
     }
 
     public PortfolioSnapshotStatus getStatus() {
