@@ -77,5 +77,14 @@ jobs:
       - name: Validate Docker Compose configuration
         run: POSTGRES_PASSWORD=ci-placeholder docker compose --env-file /dev/null config --quiet
 
-      - name: Build application images
+      - name: Build development application images
         run: POSTGRES_PASSWORD=ci-placeholder docker compose --env-file /dev/null build
+
+      - name: Validate production Compose configuration
+        run: docker compose --env-file deployment/production.env.example -f docker-compose.production.yml config --quiet
+
+      - name: Validate Caddy configuration
+        run: docker compose --env-file deployment/production.env.example -f docker-compose.production.yml run --rm --no-deps caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
+      - name: Build production application images
+        run: docker compose --env-file deployment/production.env.example -f docker-compose.production.yml build

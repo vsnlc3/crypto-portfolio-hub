@@ -1739,11 +1739,12 @@ GitHub Actionsを`.github/workflows/ci.yml`へ追加し、Pull RequestとPushで
 ## Container
 
 - [x] Docker build
-- [x] Docker Compose configuration validation
+- [x] Development and production Docker Compose configuration validation
+- [x] Caddyfile validation
 
 CIでは実Provider CredentialやGoogle Client Secretを使わない。
 
-**実装結果:** Frontendはpnpm 12.3.4 / Node.js 22でfrozen install、lint、typecheck、Vitest、webpack production buildを実行する。BackendはJava 25 / Maven Wrapperで`verify`し、PostgreSQL Testcontainersを含むJUnitを実行する。Container JobはダミーDB Passwordと空の環境ファイルを使ってCompose構成を検証し、Frontend / Backend imageをbuildする。Provider Key、OAuth Secret、Encryption KeyをCIへ渡さない。ローカル検証: Frontend lint / typecheck / 55 tests / production build、Compose構成検証、Frontend / Backend image buildが成功した。Backend `verify`はPhase 15でJava 25 / Testcontainers上の179 tests成功を確認済み。GitHub-hosted runner上のWorkflow実行結果はPush後に確認する。
+**実装結果:** Frontendはpnpm 12.3.4 / Node.js 22でfrozen install、lint、typecheck、Vitest、webpack production buildを実行する。BackendはJava 25 / Maven Wrapperで`verify`し、PostgreSQL Testcontainersを含むJUnitを実行する。Container JobはダミーDB Passwordと空の環境ファイルを使って開発 / 本番Compose構成を検証し、Caddyfile validation、開発 / 本番Frontend・Backend image buildを行う。Provider Key、OAuth Secret、Encryption KeyをCIへ渡さない。ローカル検証: Frontend lint / typecheck / 55 tests / production build、開発Compose validation / image build、Production Compose / Caddy / image検証が成功した。Backend `verify`はPhase 15でJava 25 / Testcontainers上の179 tests成功を確認済み。GitHub-hosted runner上のWorkflow実行結果はPush後に確認する。
 
 ---
 
@@ -1751,22 +1752,24 @@ CIでは実Provider CredentialやGoogle Client Secretを使わない。
 
 ## Step 18-1: Production Compose
 
-以下を本番用に構成する。
+以下を本番用に構成する。手順は`deployment/README.md`に記載する。
 
-- [ ] Frontend
-- [ ] Backend
-- [ ] PostgreSQL
-- [ ] Caddy
+- [x] Frontend
+- [x] Backend
+- [x] PostgreSQL
+- [x] Caddy
 
 確認する。
 
-- [ ] Production SecretをImageへ含めない
-- [ ] PostgreSQLを外部公開しない
-- [ ] Backend内部Portを不要に外部公開しない
-- [ ] Named Volume
-- [ ] restart policy
-- [ ] health check
-- [ ] log rotation
+- [x] Production SecretをImageへ含めない
+- [x] PostgreSQLを外部公開しない
+- [x] Backend内部Portを不要に外部公開しない
+- [x] Named Volume
+- [x] restart policy
+- [x] health check
+- [x] log rotation
+
+**実装結果:** `docker-compose.production.yml`は専用Project名を使い、開発用PostgreSQL Volumeを共有しない。CaddyだけがHostの80 / 443を公開し、Backend / PostgreSQLはHostへPortを公開しない。API、OAuth開始、OAuth callbackはCaddyからBackendへ、他のpathはFrontendへproxyする。BackendはForwarded Headerを信頼し、Secure Session Cookieを使う。PostgreSQL、Caddy証明書 / configにNamed Volume、全サービスに`unless-stopped`、health check、Docker json-file log rotationを設定した。FrontendはNext.js standaloneを非rootで実行する。Production secretはruntime environmentだけから受け取り、imageへコピー・build argument化しない。`deployment/production.env.example`は全てプレースホルダーで、Root `.env.production`は`.gitignore`対象。ローカルでProduction Compose config、Caddyfile、Frontend standalone起動 / `/signin` 200 / OAuth redirect 307、Frontend / Backend production image buildを確認した。公開Domain、DNS、Firewall、実OAuth登録、実Production Secret、DB backup / restoreはStep18-2に残す。
 
 ---
 

@@ -29,7 +29,7 @@
 
 - **Existing:** `frontend/` にNext.js、React、TypeScript、Tailwind CSS、shadcn/uiを使ったDashboard、Assets、Activity、Connections画面がある。
 - **Existing:** Dashboard、Assets、Activity、ConnectionsはBackend APIに接続済み。DashboardはPortfolio Summary / History、Assets、Positions、Connectionsは一覧 / 作成 / 削除 / Manual Sync、ActivityはActivity APIを使用する。Google Sign in、Frontend route guard、Session user表示、CSRF付きLogoutも実装済み。`frontend/lib/mock-data.ts`には旧UI用データと書式関数が残るが、現行のPortfolio値の取得元にはしない。
-- **Existing:** ルートのDocker ComposeでFrontend、Backend、PostgreSQLを同一Networkへ接続する。Frontendは3000番、ローカルOAuth callback用にBackendは8080番をHostへ公開し、PostgreSQLは公開せずNamed Volumeへ保存する。ProductionではBackendを直接公開せずreverse proxy経由にする。`frontend/Dockerfile` はNode.js 22とpnpmを使う開発起動設定、`backend/Dockerfile` はMaven buildとJava 25 runtimeのmulti-stage buildである。
+- **Existing:** 開発用ルートComposeはFrontend、Backend、PostgreSQLを起動する。`docker-compose.production.yml`はCaddy、Next.js standalone、Backend、PostgreSQLを本番用に起動し、Public PortをCaddyの80 / 443だけにする。Backend / PostgreSQLはHostへPortを公開せず、BackendはPostgreSQL、Caddy ingress、Provider egressを分けたNetworkへ接続する。`frontend/Dockerfile`はNode.js 22 / pnpmの開発起動設定、`frontend/Dockerfile.production`は非rootのNext.js standalone runtime、`backend/Dockerfile`はMaven buildとJava 25 runtimeのmulti-stage buildである。
 - **Existing:** `frontend/package.json` は `pnpm@12.3.4` を指定し、lockfileもpnpm 12.3.4である。
 - **Existing:** `frontend/tsconfig.json` は `strict: true` で、Next.js build時のTypeScriptエラーを隠さない。Vitest / React Testing Library、`test`、`typecheck`、`lint` scriptがある。TanStack QueryでDashboard / Assets / Positions / Activity / ConnectionsのServer StateとManual Sync後の再取得を扱う。ConnectionsはReact Hook Form、Zodを使い、Provider別Form、Loading / Empty / Error、追加・削除・同期をテストする。`.github/workflows/ci.yml` でFrontend検査を自動実行する。
 - **Existing:** `backend/` にJava 25 / Spring Boot 4.1.1のMavenプロジェクトがあり、Spring MVC、Jackson 3、JPA、PostgreSQL Driver、Flyway、Security、OAuth2 Client、Validation、Actuator、JUnit、Testcontainersを設定している。`/actuator/health` のHTTP応答、10本のFlyway Migration、主要FK / CHECK制約、Problem DetailsとRequest IDをPostgreSQL Testcontainers付きで検証する。
@@ -65,10 +65,10 @@
 | External integrations | Provider / Adapter | Adopted | bitbank、Solana、Hyperliquid固有形式をアプリの共通モデルから隔離する |
 | Local runtime | Docker Compose | Existing | Frontend、Backend、PostgreSQLを内部Networkで起動する。Frontendは3000番、ローカルOAuth callback用Backendは8080番をHostへ公開し、PostgreSQLは内部のみ |
 | First deployment target | AWS Lightsail + Docker Compose | Planned | 個人開発の単一環境から始め、運用負荷と費用を抑える候補とする |
-| Public reverse proxy | Caddy | Planned | HTTPS終端とFrontend / APIの経路振り分けを単純化する |
+| Public reverse proxy | Caddy | Existing | Production ComposeとCaddyfileでTLS終端、API / OAuth / Frontendの経路振り分けを構成済み。実Domain上の稼働は未確認 |
 | Backend tests | JUnit 5 / Spring Boot Test / Testcontainers PostgreSQL | Existing | 起動health check、初期Migration / 制約、Error Response、Entity Schema mapping、User ownershipのIntegration TestとMoney / FXのUnit Testを実装済み |
 | Frontend tests | Vitest / React Testing Library | Existing | 認証画面・Route Guardの状態テストを導入済み。Portfolio/API機能のカバレッジは各Vertical Sliceで追加する |
-| CI | GitHub Actions | Existing | Frontend、Backend、Compose build / validationをPull RequestとPushで実行する |
+| CI | GitHub Actions | Existing | Frontend、Backend、開発 / 本番Compose、Caddy validation / buildをPull RequestとPushで実行する |
 | Queue / cache / orchestration | Kafka、Redis、Kubernetes等 | Future / MVPでは不採用 | 現在の規模・要件では運用対象を増やす明確な必要がない |
 
 バージョン表記のあるFrontend値は現在のmanifestやDockerfileから確認したもの。BackendはJava 25 / Spring Boot 4.1.1で初期プロジェクトを構成し、Maven WrapperでMaven 3.9.12を使う。Spring Bootの管理依存によりSecurity、JPA、Flyway、PostgreSQL Driver等のバージョンを揃える。Java 25はOracleのLTSロードマップに記載され、Spring Boot 4.1.1はJava 17以上を必要としJava 26まで互換性がある。詳細は[Java SE roadmap](https://www.oracle.com/java/technologies/java-se-support-roadmap.html)と[Spring Boot system requirements](https://docs.spring.io/spring-boot/system-requirements.html)を参照する。
@@ -345,7 +345,7 @@ FrontendにはVitest / React Testing Libraryによるtest scriptがある。Back
 
 ### 品質ゲート
 
-- CIではFrontend lint / typecheck / test / production build、Backend Maven verifyとPostgreSQL Testcontainers、Docker Compose validation / image buildを実行する。`.github/workflows/ci.yml`をPull RequestとPushで動かす。
+- CIではFrontend lint / typecheck / test / production build、Backend Maven verifyとPostgreSQL Testcontainers、開発・本番Compose validation / image build、Caddyfile validationを実行する。`.github/workflows/ci.yml`をPull RequestとPushで動かす。
 - Backendではformat / compile / unit test / integration testを段階的に加える。
 - Test用CredentialやOAuth Client SecretをCIへ登録しない。外部APIテストfixtureは公開可能な匿名データのみを使う。
 
@@ -353,11 +353,11 @@ FrontendにはVitest / React Testing Libraryによるtest scriptがある。Back
 
 ### 15.1 現状と採用目標
 
-- **Existing:** Docker ComposeでFrontend、Backend、PostgreSQLを起動する開発構成がある。Reverse Proxy、本番用Compose、Lightsail環境はない。
+- **Existing:** Docker ComposeでFrontend、Backend、PostgreSQLを起動する開発構成と、Caddyを入口にした本番用Compose / Dockerfileがある。Lightsail環境はない。
 - **Planned:** 初回の公開環境はAWS Lightsail上の単一VMとDocker Composeを候補・目標とする。Region、OS、RAM、CPU、公開設定は本プロジェクトでは未確定であり、契約前に必要リソース・費用・バックアップを決める。
 - **Existing:** Root ComposeではPostgreSQL health check後にBackendを起動し、Frontend / Backend / PostgreSQLを共通Networkへ接続する。PostgreSQLの開発用PasswordはGit管理外の`.env`から注入し、DBはNamed Volumeへ保存する。
-- **Planned:** 本番設定は開発用Composeと分け、必要に応じてoverride fileまたはproduction用Compose fileを使う。
-- **Planned:** 公開入口にCaddyを配置し、`/api/*` と認証EndpointをBackend、その他をNext.jsへ転送する。自動HTTPSを利用し、ドメイン・DNS・Firewall条件は公開前に確認する。
+- **Existing:** 本番設定は`docker-compose.production.yml`へ分ける。Production secretsはCompose interpolationでruntime Environmentから注入し、Docker buildへ渡さない。実値はGit管理外の保護された環境設定から渡す。`deployment/README.md`とplaceholder-onlyの`deployment/production.env.example`に手順を記載する。
+- **Existing:** 公開入口のCaddyは`/api/*`、`/oauth2/*`、`/login/oauth2/*`をBackend、その他をNext.jsへ転送する。Domainが設定されるとCaddy Automatic HTTPSを使う。実際のDomain・DNS・Firewall条件は公開前に設定する。
 
 ### 15.2 Networkとデータ保持
 
@@ -407,7 +407,7 @@ Google Client Secret、Provider Credential、Encryption KeyをGitHub Actions log
 5. **ProviderごとのAdapterとSync:** bitbank / Solana / Hyperliquidを一つずつ接続し、fixtureによる正規化テスト、Connection単位のSync、状態とstale保持を加える。
 6. **Portfolio集約とREST API:** JPY評価、Dashboard / Assets / Activity用Query、cursor pagination、統一Error Responseを作る。金額計算を先にテストする。
 7. **Frontendの実データ化:** 既存UIへTanStack Query、フォーム検証、Loading / Empty / Errorを追加し、JPY表示へ移行する。固定プロフィールと操作未実装プレースホルダーを要件に沿って置き換える。
-8. **CIとDeployment:** GitHub Actions、production Compose、Caddy、HTTPS、バックアップ・復旧を段階的に整える。
+8. **CIとDeployment:** GitHub Actionsと本番Compose / Caddy設定を整えた。実DomainでのHTTPS、DB backup / restore、Lightsail運用を外部設定後に確認する。
 
 依存する外部サービスの仕様が未確認の段階では、UIや共通モデルが取得できる値を仮定しない。取得可能な項目・精度・更新制限が確認できてから、該当Providerの機能範囲を決める。
 
