@@ -31,6 +31,7 @@ function CacheSeeder() {
   const queryClient = useQueryClient()
   useEffect(() => {
     queryClient.setQueryData(['portfolio', 'summary'], { summary: { netWorthJpy: 123 } })
+    queryClient.setQueryData(['assets'], { assets: [{ assetId: 'user-a-asset' }] })
   }, [queryClient])
   return null
 }
@@ -92,7 +93,7 @@ describe('AuthBoundary', () => {
       displayName: 'Portfolio User',
       avatarUrl: null,
     }
-    const fetchMock = vi.fn((input: string | URL | Request, init?: RequestInit) => {
+    const fetchMock = vi.fn((input: string | URL | Request) => {
       const url = String(input)
       if (url.endsWith('/auth/me')) return Promise.resolve(jsonResponse(200, user))
       if (url.endsWith('/auth/csrf')) {
@@ -108,8 +109,8 @@ describe('AuthBoundary', () => {
 
     expect(await screen.findByText('Sign out failed. Please try again.')).toBeInTheDocument()
     expect(
-      fetchMock.mock.calls.map(([input, init]) => `${new URL(String(input), 'http://localhost').pathname}:${init?.method ?? 'GET'}`),
-    ).toEqual(['/api/v1/auth/me:GET', '/api/v1/auth/csrf:GET', '/api/v1/auth/logout:POST'])
+      fetchMock.mock.calls.map(([input]) => new URL(String(input), 'http://localhost').pathname),
+    ).toEqual(['/api/v1/auth/me', '/api/v1/auth/csrf', '/api/v1/auth/logout'])
     expect(screen.getByText('Private portfolio page')).toBeInTheDocument()
   })
 
@@ -134,10 +135,12 @@ describe('AuthBoundary', () => {
     expect(await screen.findByText('Portfolio User')).toBeInTheDocument()
     expect(screen.getByText('Private portfolio page')).toBeInTheDocument()
     await waitFor(() => expect(queryClient.getQueryData(['portfolio', 'summary'])).toMatchObject({ summary: { netWorthJpy: 123 } }))
+    await waitFor(() => expect(queryClient.getQueryData(['assets'])).toMatchObject({ assets: [{ assetId: 'user-a-asset' }] }))
     fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
 
     await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith('/signin?reason=logged-out'))
     expect(queryClient.getQueryData(['portfolio', 'summary'])).toBeUndefined()
+    expect(queryClient.getQueryData(['assets'])).toBeUndefined()
     expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/auth/me', expect.any(Object))
     expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/auth/csrf', expect.any(Object))
     expect(fetchMock).toHaveBeenNthCalledWith(

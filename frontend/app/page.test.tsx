@@ -172,6 +172,8 @@ describe('DashboardPage', () => {
     expect(screen.getByText('Allocation by currency')).toBeInTheDocument()
     expect(screen.getByText('Holdings by currency')).toBeInTheDocument()
     expect(screen.getByText('BTC')).toBeInTheDocument()
+    expect(screen.getByText('2 saved snapshots. Gaps have no saved snapshot.')).toBeInTheDocument()
+    expect(screen.queryByText('¥0')).not.toBeInTheDocument()
     expect(screen.getByRole('img', { name: 'Net worth history for 30D' })).toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/portfolio/summary', expect.any(Object))
 
@@ -195,6 +197,15 @@ describe('DashboardPage', () => {
     expect(screen.getAllByText('Stale').length).toBeGreaterThan(0)
     expect(await screen.findByText('No history in this period')).toBeInTheDocument()
     expect(screen.queryByRole('img', { name: 'Net worth history for 30D' })).not.toBeInTheDocument()
+    expect(screen.queryByText('¥0')).not.toBeInTheDocument()
+  })
+
+  it('keeps sparse stale history points without creating zero-valued gaps', async () => {
+    mockDashboardFetch({ history: (period) => historyResponse(period as PortfolioHistoryResponse['period'], true) })
+    renderPage()
+
+    expect(await screen.findByText('2 of 2 snapshots use stale data. Gaps have no saved snapshot.')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Net worth history for 30D' })).toBeInTheDocument()
     expect(screen.queryByText('¥0')).not.toBeInTheDocument()
   })
 

@@ -1,10 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { activitiesQueryKey } from '@/lib/activities-api'
 import { assetsQueryKey } from '@/lib/assets-api'
 import ConnectionsPage from '@/app/connections/page'
-import { connectionsQueryKey, syncRunQueryKey, type Connection, type SyncRun } from '@/lib/connections-api'
+import { connectionsQueryKey, type Connection, type SyncRun } from '@/lib/connections-api'
 import { portfolioHistoryQueryKey, portfolioSummaryQueryKey } from '@/lib/portfolio-api'
 import { positionsQueryKey } from '@/lib/positions-api'
 
@@ -158,6 +158,7 @@ describe('ConnectionsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add your first source' }))
     fireEvent.click(screen.getByRole('button', { name: 'Add connection' }))
     expect(await screen.findByText('API Key is required.')).toBeInTheDocument()
+    expect(screen.getByText('API Secret is required.')).toBeInTheDocument()
     expect(screen.getByLabelText('Read-only API Key')).toHaveAttribute('type', 'password')
     expect(screen.getByLabelText('API Secret')).toHaveAttribute('type', 'password')
     expect(fetchMock).toHaveBeenCalledTimes(1)

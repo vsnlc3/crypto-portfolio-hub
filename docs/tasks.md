@@ -1626,15 +1626,17 @@ Retryはbitbank、Solana RPC / Helius、Hyperliquid Info、Market Dataのread-on
 
 Vitest / React Testing Libraryの基盤はPhase 3で導入し、各画面・操作の機能Testは対応するFrontend Stepで作成・実行する。本Stepでは全画面のRegressionを行い、初めて各機能のTestを作成する計画にしない。
 
-- [ ] Sign in / Route Guard / Logout
-- [ ] Connections Add / Delete / Manual Sync
-- [ ] 金額・Currency・JPY / USD表示
-- [ ] Loading / Empty / Error / Partial Error
-- [ ] stale / unavailable
-- [ ] Provider別Form validation
-- [ ] Activity Header / Legs / Swap / Fee
-- [ ] History欠損表示
-- [ ] Auth User変更・Logout時に前UserのQuery cacheが残らない
+- [x] Sign in / Route Guard / Logout
+- [x] Connections Add / Delete / Manual Sync
+- [x] 金額・Currency・JPY / USD表示
+- [x] Loading / Empty / Error / Partial Error
+- [x] stale / unavailable
+- [x] Provider別Form validation
+- [x] Activity Header / Legs / Swap / Fee
+- [x] History欠損表示
+- [x] Auth User変更・Logout時に前UserのQuery cacheが残らない
+
+**実装結果:** 画面別に作成済みのRegression Testを横断実行し、Logout時にPortfolioとAssetsのUser Query cacheが破棄されること、Provider別の必須入力Validation、疎なSTALE履歴点が0補間されず欠損として表示されることを明示的に確認した。Sign in / Route Guard / Logout、Connection CRUD / Sync、JPY / USD、各種Data State、Activity Swap / Fee / Perpetual Fill、History空状態も回帰確認した。Frontend `pnpm test` は49 tests、失敗0。`pnpm typecheck` 成功。`pnpm lint` はerror 0、warning 2（React Hook Form `watch()` とOAuth navigation）だった。
 
 ---
 
