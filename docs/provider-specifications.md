@@ -142,6 +142,8 @@ Deposit historyはdestination tag、memo、bank accountを返さない。Withdra
 
 ## Solana (Step 4-2)
 
+公式資料のAdapter契約は2026-09-28に再確認した。Step 7-2ではFixture / Mock HTTPで契約を実装検証し、HeliusへのLive requestは行っていない。
+
 ### 参照した公式資料
 
 - [Solana Account / Address](https://solana.com/docs/core/accounts) — Address形式、Account、PDA
@@ -182,9 +184,10 @@ Deposit historyはdestination tag、memo、bank accountを返さない。Withdra
 
 - Solana標準RPCの`getSignaturesForAddress`は指定Addressをaccount keysに含むTransaction Signatureを新しい順に返し、`before` / `until` / `limit`を受け取る。ただしWallet Addressだけを指定した標準RPC queryでは、Wallet配下のToken Accountだけに関係するTransactionを漏らす可能性がある。
 - MVPのSolana履歴ProviderはHeliusを採用する。履歴取得はHelius `getTransactionsForAddress`を使い、`filters.tokenAccounts: "balanceChanged"` を基本候補とする（`all`も選択可能）。HeliusはWalletが所有するToken Accountに関係する履歴を含められると説明している。Mainnetの共有Public RPCはrate limitとSLAがないため、本番用履歴基盤には使わない。
-- HeliusのgTFAからSignatureをcursorで収集し、署名をHelius Parsed Eventsの`POST /v1/parsed-events/transactions`へ最大100件ずつ渡して分類・Transfer情報を取得する方式を採用候補とする。Parsed Events APIはOpen Betaであり、対応プログラム外の命令はraw fallbackとなる。`summary.type`等のProvider分類は根拠として使える場合に限り利用し、未対応・解析失敗は元のイベント種別を保持してunknown/unavailableとして扱う。全DeFi命令の分類を保証しない。
+- HeliusのgTFAからSignatureをcursorで収集し、署名をHelius Parsed Eventsの`POST /v1/parsed-events/transactions`へ最大100件ずつ渡して分類・Transfer情報を取得する。gTFAはstatusを`any`、`tokenAccounts`を`balanceChanged`とし、1ページ最大1,000件の範囲でcursorを返す。Parsed Events APIはOpen Betaであり、対応プログラム外の命令はraw fallbackとなる。`summary.type`等のProvider分類は根拠として使える場合に限り利用し、未対応・解析失敗は元のイベント種別を保持してunknown/unavailableとして扱う。全DeFi命令の分類を保証しない。
 - 1 Transaction Signatureにつき1 Activity Headerを基本とし、Transaction内の複数のWallet移動をLegsへまとめる。Token TransferのMint、Wallet方向、amountとNative SOL TransferをActivity Legsへ写像する。双方の`fromUserAccount` / `toUserAccount`が接続Walletなら内部移動として外部IN / OUTにしない。SWAPとして明示的に解析できた場合、Wallet視点の入力Mintを`OUT`、出力Mintを`IN`として保存する。ルート途中の`inner_swaps`を個々のLegとして足し合わせると、実際のWallet入出金と二重計上するため使用しない。複数Swapや別イベントが同一Transactionに含まれる場合のHeader / Legs集約は、公式fixtureで正規化ルールを確認する。
 - ProviderのToken amountはraw integer amountとdecimalsを基に任意精度で換算し、JavaScript floating pointへ変換しない。Parsed Eventsのamount表現も含めて、実装時に大きな整数（2^53超）を使ったfixtureを追加する。正確な数量を復元できないイベントを丸めて保存しない。
+- 現行DBのBalance / Activity quantityは`NUMERIC(38,18)`である。Mintの小数桁に従ってDecimal変換し、末尾ゼロを除いても小数桁が18を超える値は丸めて保存せずCapabilityを失敗させる。DB精度を広げる必要性は実データと運用量を確認して別途判断する。
 - Solana TransactionのFeeはlamports建て。Providerが返す`fee` / `feePayer`を確認し、接続WalletがFee payerである場合だけ、SOL数量に換算した`FEE` Legを作る。別WalletがFeeを払ったTransactionのFeeを接続Walletへ帰属させない。
 - Failed TransactionもActivity状態として識別する。失敗Transactionは状態・Signatureを保持できるが、revertされたIN / OUTを成功移動としてLeg化しない。接続WalletがFee payerで実際にFeeを負担した場合は`FEE`のみ記録する。
 - HeaderのProvider Event IDはSolana Transaction Signature、dedup keyはConnection IDとSignatureを含める（例: `transaction:<signature>`）。異なるWallet Connection間で同一Signatureが観測されても、Connectionごとに履歴を分離する。
@@ -205,6 +208,17 @@ Deposit historyはdestination tag、memo、bank accountを返さない。Withdra
 - Helius Parserが認識しないProgram、Token-2022 extension、複合Transactionの分類・Legの境界をfixtureで検証する。未解析のイベントをSWAPや送金として推測分類しない。
 - Helius Parsed Events料金の公式表示が複数ページで不一致のため、Step 7実装で実APIキーを使う前に最新Plan / credits / rate limitを再確認する。外部Keyが未設定でもMock / fixtureによるAdapter実装・テストを先に進める。
 - Token Metadata URIの安全な取得・更新頻度、未知Mintの価格Provider mappingはこの仕様確認の範囲外とし、MetadataをPortfolio valuationの必須条件にしない。
+
+### Step 7-2 Adapter実装
+
+- Native SOLはSolana Mainnet `getBalance` のlamportsを整数として取得し、`BigDecimal`でSOLへ換算する。共通`asset_key`は価格Mapping済みCanonical IDの`SOL`、networkは`SOLANA`、asset referenceは`NATIVE`とする。SPL / Token-2022はProgramごとに`getTokenAccountsByOwner`を呼び、同じMintをraw整数・decimalsで加算する。Token Accountのlamportsは加算しない。
+- 標準RPCの`jsonParsed` responseにはtoken amountのraw amountとdecimalsはあるが、一般的なsymbol / nameは保証されない。共通Balance modelではsymbol / nameをNULLに保ち、Mintを識別子とする。DBの`asset_balances.symbol`はNOT NULLのため、Step 7-3で保存する際にProvider symbolがないAssetには汎用表示値`TOKEN`を使い、asset identityや価格Mappingには使わない。
+- Helius履歴は`getTransactionsForAddress`のSignature page単位で取得し、同じpageのSignatureを最大100件ずつParsed Eventsへ送る。1ページ内のActivityを正規化して返し、next cursorを保持する。Adapter自身は初回Backfill範囲を決めず、全履歴を自動走査しない。
+- 取引transferはWallet視点でtoken / native transferをIN / OUTへ変換する。Providerが`summary.type=swap`と示し、実TransferにWalletからのOUTとWalletへのINの両方がある場合だけ`SWAP`にする。route内swap詳細は加えない。transferのどちらか一方向だけ、または他の明示分類のない移動は`TRANSFER`とする。Connection Wallet間の内部transferはActivity Legを作らない。
+- Failed Transactionには成功扱いの移動Legを作らず、Walletが実際のFee payerなら正のFeeだけSOL `FEE` Legとして加える。Parser失敗時も正確なblockTimeがSignature pageまたはParsed Eventにある場合は分類不能の`OTHER` Headerを返せる。両方に時間がなければ架空の時刻を作らずActivity pageを失敗させる。
+- Helius API keyは`HELIUS_API_KEY`からBackendだけへ注入する。キー未設定時はActivity取得を`UNAVAILABLE`にし、BalanceのSolana RPC取得やBackend起動は妨げない。API keyはHelius URLのquery parameterなので、request URL、例外cause、生responseをログへ出さない。3秒接続 / 5秒読取timeoutを使い、HTTP 429は`RATE_LIMIT`、timeoutは`TIMEOUT`として即時retryせずSync層へ返す。Mainnet RPC URLは`SOLANA_RPC_URL`で運用設定できるが、別clusterへ切り替えない。
+- Addressのbase58 decode後32 bytes検証は既存Connection入力とAdapterで共通化した。curve判定や署名は要求しない。
+- Fixture TestではMainnet RPCとHelius形式のMock responseを使い、u64 lamports、2^53超raw token amount、Program横断Mint合算、Swap、failed Transaction、Fee payer、pagination cursor、Helius rate limitを確認した。実Helius API CredentialによるLive Smoke Testは行っていない。
 
 ## Hyperliquid (Step 4-3)
 

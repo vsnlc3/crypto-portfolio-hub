@@ -826,23 +826,25 @@ Provider DTOをApplication / Domainへ漏らさない。
 
 ## Step 7-2: Solana Adapter
 
-- [ ] Wallet Address validation
-- [ ] Native SOL Balance取得
-- [ ] SPL Token Balance取得
-- [ ] asset_key正規化
-- [ ] 共通Balanceモデルへの変換
-- [ ] Transaction取得
-- [ ] Transfer正規化
-- [ ] Swap正規化
-- [ ] Activity Header生成
-- [ ] IN / OUT / FEE Activity Legs生成
-- [ ] Event dedup key
-- [ ] Error分類
-- [ ] Timeout
-- [ ] Rate Limit考慮
-- [ ] fixture / Mock HTTPテスト
+- [x] Wallet Address validation
+- [x] Native SOL Balance取得
+- [x] SPL Token Balance取得
+- [x] asset_key正規化
+- [x] 共通Balanceモデルへの変換
+- [x] Transaction取得
+- [x] Transfer正規化
+- [x] Swap正規化
+- [x] Activity Header生成
+- [x] IN / OUT / FEE Activity Legs生成
+- [x] Event dedup key
+- [x] Error分類
+- [x] Timeout
+- [x] Rate Limit考慮
+- [x] fixture / Mock HTTPテスト
 
 取得できない情報を推測して埋めない。
+
+2026-09-28、公式Solana / Helius資料で確認したrequest / response contractをProvider Adapterに実装し、Fixture / Mock HTTP Testを実行した。HeliusへのLive requestは行っていない。Token symbol / nameは推測せずNULLにし、Current DB schemaの小数scaleを超えて正確に保存できないquantityは丸めずProvider failureとして返す。
 
 ---
 

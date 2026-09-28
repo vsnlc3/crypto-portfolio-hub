@@ -1,6 +1,5 @@
 package com.cryptoportfoliohub.connection.application;
 
-import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Arrays;
@@ -33,12 +32,12 @@ import com.cryptoportfoliohub.persistence.repository.ConnectionRepository;
 import com.cryptoportfoliohub.persistence.repository.ConnectionSyncStateRepository;
 import com.cryptoportfoliohub.persistence.repository.PerpetualPositionRepository;
 import com.cryptoportfoliohub.persistence.repository.ProviderAccountStateRepository;
+import com.cryptoportfoliohub.domain.solana.SolanaAddress;
 
 @Service
 public class ConnectionService {
 
     private static final Pattern HYPERLIQUID_ADDRESS = Pattern.compile("(?i)^0x[0-9a-f]{40}$");
-    private static final String BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
     private final ConnectionRepository connectionRepository;
     private final ConnectionCredentialRepository credentialRepository;
@@ -147,7 +146,7 @@ public class ConnectionService {
                 unexpected(errors, "accountAddress", request.accountAddress());
             }
             case SOLANA -> {
-                if (isBlank(request.walletAddress()) || !isValidSolanaAddress(request.walletAddress())) {
+                if (isBlank(request.walletAddress()) || !SolanaAddress.isValid(request.walletAddress().trim())) {
                     errors.put("walletAddress", "Invalid value.");
                 }
                 unexpected(errors, "apiKey", request.apiKey());
@@ -179,27 +178,6 @@ public class ConnectionService {
         if (!isBlank(value)) {
             errors.put(field, "This field is not accepted for the selected provider.");
         }
-    }
-
-    private boolean isValidSolanaAddress(String address) {
-        String value = address.trim();
-        if (value.length() < 32 || value.length() > 44) {
-            return false;
-        }
-        BigInteger decoded = BigInteger.ZERO;
-        for (int index = 0; index < value.length(); index++) {
-            int digit = BASE58_ALPHABET.indexOf(value.charAt(index));
-            if (digit < 0) {
-                return false;
-            }
-            decoded = decoded.multiply(BigInteger.valueOf(58)).add(BigInteger.valueOf(digit));
-        }
-        int leadingZeroBytes = 0;
-        while (leadingZeroBytes < value.length() && value.charAt(leadingZeroBytes) == '1') {
-            leadingZeroBytes++;
-        }
-        int significantBytes = decoded.signum() == 0 ? 0 : (decoded.bitLength() + 7) / 8;
-        return leadingZeroBytes + significantBytes == 32;
     }
 
     private String accountRef(ConnectionProvider provider, ConnectionCreateRequest request) {

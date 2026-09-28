@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -26,7 +27,8 @@ public class CoinGeckoClient {
     private final MarketDataProperties properties;
     private final Clock clock;
 
-    public CoinGeckoClient(RestClient marketDataRestClient, MarketDataProperties properties, Clock clock) {
+    public CoinGeckoClient(@Qualifier("marketDataRestClient") RestClient marketDataRestClient,
+            MarketDataProperties properties, Clock clock) {
         this.restClient = marketDataRestClient;
         this.properties = properties;
         this.clock = clock;

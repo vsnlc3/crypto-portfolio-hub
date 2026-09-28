@@ -1,7 +1,7 @@
 # Crypto Portfolio Hub 開発ガイドライン
 
 文書ステータス: Draft  
-最終確認日: 2026-09-26  
+最終確認日: 2026-09-28
 対象: MVPの設計・実装方針
 
 関連文書:
@@ -38,7 +38,8 @@
 - **Existing:** BackendにGoogle OIDC Login、SubjectによるUser作成・再紐付け、Session Cookie、CSRF対応のLogout、認証User確認API、Connection一覧・追加・削除APIを実装し、`.env`から注入したCredentialでローカル実Google OAuth E2Eを確認した。Secret値はGit管理外である。公開環境のHost / Schemeに対応したRedirect URI登録はDeployment設計時に行う。
 - **Existing:** BackendにProvider Sync Portと共通非同期Sync lifecycleを追加した。Connection行のPessimistic Lockで重複Syncを防ぎ、Capability別状態とSync Run結果、User所有権、失敗後の再実行をTestcontainersで検証する。Provider AdapterとSync API Controllerは未実装。
 - **Existing:** BackendにCoinGecko DemoのCurrent Price / 24h quote / USDJPY FX Provider Adapter、Canonical Asset ID mapping、共有Cache、鮮度判定、Provider error分類を実装した。両API keyはBackend環境変数で任意注入し、未設定時はUnavailableを返す。2026-09-28に実API Smoke Testで両Providerのresponseと評価時刻の読み取りを確認した。
-- **未実装:** Provider Account / Balance / Position / Activity取得、Providerごとの同期Adapter/API、Portfolio評価、Portfolio業務API、デプロイ環境。Provider API keyを`.env`へ注入する設定は任意である。
+- **Existing:** Solana Wallet Addressのbase58 / 32-byte validation、Mainnet Native SOL / Classic Token / Token-2022 Balance Adapter、Helius Signature paginationとParsed Eventsから共通Balance / Activity Header / Legsへの変換を追加した。Solana / Helius仕様fixtureのMock HTTP Testを実行済み。Helius API keyは任意Backend環境変数であり、Live履歴requestは未確認。
+- **未実装:** Solana Provider結果のDB同期・Manual Sync API、bitbank / Hyperliquid Balance / Position / Activity Adapter、Portfolio評価、Portfolio業務API、デプロイ環境。Provider API keyを`.env`へ注入する設定は任意である。
 
 この一覧は本リポジトリのファイル・設定に基づく。以下の採用方針は、別途Existingと記載したものを除き、実装済みであることを意味しない。
 
@@ -436,7 +437,7 @@ Google Client Secret、Provider Credential、Encryption KeyをGitHub Actions log
 
 - Hyperliquid Account Mode / Perp Fill mappingは`provider-specifications.md`と`database-design.md`で確定済み。開発環境のDNS制限でLive Info API responseは未確認のため、Adapter fixture testsをStep 7-6で行う。
 - CoinGecko Demo APIのCredentialとExchangeRate-API Free planのCredentialは、Step 6-1でBackend Secretとして設定する。Market priceは共有Cache TTL 10分 / STALE判定15分、日次FXは72時間をMVP鮮度基準とする。API障害時の第二Provider fallbackは設けず、評価不能値を0にしない。Demo planのAttributionと外部ユーザー提供前のLicense確認を守る。
-- Solanaの初回Activity取得期間、Heliusの実利用Plan / 最新料金・Rate Limitの確認、定期同期間隔。
+- Solanaの初回Activity取得期間、Heliusの実利用Plan / 最新料金・Rate LimitのLive利用前確認、定期同期間隔。
 - 履歴・価格Snapshotの保持期間。
 - Google OAuthの本番Redirect URL、Domain、Session有効期間、暗号化鍵の本番保管とRotation。
 - AWS LightsailのRegion / instance size / backup方式、独自Domain、DNS、Caddy公開設定、月額上限。

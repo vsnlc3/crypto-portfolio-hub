@@ -35,6 +35,11 @@ app:
     price-freshness: ${MARKET_DATA_PRICE_FRESHNESS:PT15M}
     fx-freshness: ${MARKET_DATA_FX_FRESHNESS:PT72H}
     fx-maximum-request-interval: ${MARKET_DATA_FX_REQUEST_INTERVAL:PT24H}
+  solana:
+    rpc-url: ${SOLANA_RPC_URL:https://api.mainnet-beta.solana.com}
+    helius-api-key: ${HELIUS_API_KEY:}
+    connect-timeout: ${SOLANA_CONNECT_TIMEOUT:PT3S}
+    read-timeout: ${SOLANA_READ_TIMEOUT:PT5S}
 
 management:
   endpoints:

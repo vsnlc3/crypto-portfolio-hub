@@ -10,6 +10,7 @@ import java.time.Clock;
 import java.time.Instant;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -23,7 +24,8 @@ public class ExchangeRateApiClient {
     private final MarketDataProperties properties;
     private final Clock clock;
 
-    public ExchangeRateApiClient(RestClient marketDataRestClient, MarketDataProperties properties, Clock clock) {
+    public ExchangeRateApiClient(@Qualifier("marketDataRestClient") RestClient marketDataRestClient,
+            MarketDataProperties properties, Clock clock) {
         this.restClient = marketDataRestClient;
         this.properties = properties;
         this.clock = clock;
