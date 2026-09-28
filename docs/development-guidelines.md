@@ -252,9 +252,10 @@ Net Worth、Market Exposure、Position Value、Unrealized PnLの意味と二重�
 
 ### 9.2 Timeout、Retry、Rate Limit
 
-- Provider HTTP clientごとに接続・応答Timeoutを設定する。値はProviderの公式仕様・実測レイテンシに基づき設定値化し、無期限待機を許さない。
-- Network transient、5xx、429など再試行可能な失敗にだけ、上限付きの指数Backoffとjitterを使う。認証失敗、権限不足、入力不正は自動Retryしない。
-- `Retry-After` 等のProvider指示がある場合は尊重する。サービスごとのrate limitを守り、429後に即時連打しない。
+- 全Provider HTTP clientにConnection Timeout 3秒 / Response Timeout 5秒を設定する。SolanaとMarket Dataは環境設定で変更でき、bitbankとHyperliquidはこの値を固定する。無期限待機を許さない。
+- Providerのread-only HTTP clientは、通信I/O失敗（TLS / 証明書エラーを除く）、HTTP 408 / 429 / 500 / 502 / 503 / 504をRetryする。最大3回（初回を含む）とし、200ms開始の指数Backoffへfull jitterを適用する（待機上限2秒）。最大再試行回数を超えない。
+- HTTP 401 / 403およびその他の4xx、Provider validation / authentication / permission errorは自動Retryしない。`Retry-After`のdelta-seconds / HTTP-dateは次のRetry時刻として尊重する。指定待機が2秒を超える場合は早くRetryせず、そのresponseで失敗する。
+- Retry対象RestClientはbitbank / Solana RPC・Helius / Hyperliquid Info / Market Dataのread-only API専用とする。今後書込APIを追加する場合は、このRetry clientを流用せず独立したHTTP clientを設ける。Provider request URI・header・body・例外causeをログへ出さない。
 - MVPでは複雑なJob Queue / Message Brokerを導入しない。定期同期が必要になった段階ではSpring SchedulerからConnection単位のユースケースを呼び出す方式をまず検討する。
 
 ### 9.3 Partial Failureとstale data

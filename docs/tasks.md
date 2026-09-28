@@ -1584,17 +1584,14 @@ Provider Sync APIはStep 7-3で実装済み。Portfolio / Valuation後にConnect
 
 ## Step 13-1: Retry / Timeout
 
-Providerごとに、
+ProviderごとのHTTP clientで以下を実装する。
 
-- [ ] Connection Timeout
-- [ ] Response Timeout
-- [ ] Retry対象分類
-- [ ] Retry回数上限
-- [ ] exponential backoff
-- [ ] jitter
-- [ ] `Retry-After`
-
-を実装する。
+- [x] Connection Timeout 3秒 / Response Timeout 5秒を設定する。Solana / Market Dataは環境設定で変更可能。
+- [x] read-only Provider clientで通信I/O failure、HTTP 408 / 429 / 500 / 502 / 503 / 504をRetry対象に分類する。TLS / 証明書、認証、権限、Validation、その他4xxはRetryしない。
+- [x] 最大3回（初回を含む）に制限する。
+- [x] 200ms開始の指数backoff（上限2秒）にfull jitterを適用する。
+- [x] `Retry-After`のdelta-seconds / HTTP-dateを守る。指定待機が2秒を超える場合は早期Retryせず、そのresponseで失敗する。
+- [x] Provider request / responseやCredentialをlogへ出さない。
 
 以下を自動Retryしない。
 
@@ -1603,6 +1600,10 @@ Authentication Error
 Permission Error
 Validation Error
 ```
+
+Retryはbitbank、Solana RPC / Helius、Hyperliquid Info、Market Dataのread-only HTTP clientだけに適用する。書込APIを追加する場合は同じclientを流用しない。HTTP status以外のProvider response bodyに含まれるエラーはHTTP Retryへ通さず、Providerごとの明示的な仕様に従って分類する。JUnit fake-response TestでHTTP status分類、通信例外、3回上限、指数backoff / jitter、両方の`Retry-After`形式、指定待機上限、Interrupted時の処理を確認する。
+
+2026-09-28、Java 25 / Docker Testcontainersで`./mvnw -q clean verify`を実行し、178 tests、failures 0 / errors 0 / skipped 1（system property未指定のLive Smoke Test）を確認した。Retry専用Testは6 testsすべて成功した。
 
 ---
 

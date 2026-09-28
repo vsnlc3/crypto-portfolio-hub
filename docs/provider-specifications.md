@@ -47,7 +47,7 @@ Step 8-1の資産Identity対応:
 - CoinGeckoまたはFX API障害時に第二Providerへ自動fallbackしない。成功済みresponseは共有Cacheとして利用し、Provider observationからの経過時間が鮮度上限を超えたらSTALEとする。必要なPrice / FXがUnavailableまたは鮮度上限を超え、全体のNet Worthを正しく算出できないときはそのデータを0扱いせず、新しいSnapshotを作らない。前回成功済みの全体Current Stateを再利用する場合は既存方針に従いSTALEとして示す。
 - `price_change_percentage_24h`がnull / 欠落 / staleの場合は24h quoteだけをUnavailableにする。現在価格とFXが有効ならPortfolio valuationは継続できる。Comparison periodは`24h`、Quote sourceは`COINGECKO`、quote evaluatedAtはPriceと同じ`last_updated`とする。
 - Hyperliquid Perpetual PositionのPosition Value / Unrealized PnLでは、Hyperliquidから取得した当該PositionのMark Price / Provider PnLを使う。Spot向けCoinGecko価格へ置換・fallbackせず、価格通貨ごとのFX換算だけを適用する。
-- 429、timeout、5xx、認証・quota errorは別Providerへの切替やゼロ値にせず、Market Data capabilityの失敗状態として記録する。Bounded backoffはRate Limit / Retry共通方針に従い、同じ共有Cache keyへの同時Fetchを抑制する。
+- HTTP 408 / 429 / 500 / 502 / 503 / 504は専用のread-only HTTP clientでbounded retryする。最終的なtimeout / rate limit / provider errorは別Providerへの切替やゼロ値にせず、Market Data capabilityの失敗状態として記録する。同じ共有Cache keyへの同時Fetchも抑制する。
 - CoinGeckoのDemo planは公式Pricingで「testing and exploration」向けと説明され、Attribution requiredとなっている。Screen Designに従い`Powered by CoinGecko` attributionを読みやすく表示しAPI pageへリンクする。アプリを運営者の組織外のユーザーへ提供する前に、利用プラン・API Terms、User Agreement、Privacy Policy、データの制限事項 / 免責表示を確認し、Demo planが本番提供を許可すると推定しない。
 
 ### 参照した公式資料
@@ -70,7 +70,7 @@ Step 4-4では公式仕様およびIDを確認し、実価格値を検証Fixture
 - CoinGeckoでは`x-cg-demo-api-key` Header、USD建て`/coins/markets`、`last_updated`を使用する。価格がNULL、評価時刻が不正、またはresponse自体が解釈できない場合はその値を採用せず0にしない。
 - USD / JPYはExchangeRate-APIのUSD base responseから`conversion_rates.JPY`と`time_last_update_unix`を検証する。JPY→JPYはProvider呼び出しなしのRate `1` / `IDENTITY`。
 - PriceはBackend単一Instance内でユーザー間共有する10分のin-memory Cache、Provider評価時刻から15分をfreshness上限として判定する。FXはresponse更新時刻を保持し、Free planの1日更新を前提に最低24時間ごとの同Cache、72時間をfreshness上限とする。各上限は設定値。複数Backend Instance間のCache共有は将来のDeployment設計事項。
-- 429 / timeout等の失敗は分類し、bounded backoffの間は再Fetchしない。前回成功値は評価時刻からSTALE判定し、存在しなければUnavailableとする。別Providerやゼロ値へfallbackしない。
+- HTTP層で一時I/O failure / 408 / 429 / 500 / 502 / 503 / 504を最大3回まで共通方針のbounded backoffでRetryする。Provider response bodyに含まれるquota errorはHTTP status retry対象ではない。Retry完了後も失敗する場合は分類し、前回成功値を評価時刻からSTALE判定し、存在しなければUnavailableとする。別Providerやゼロ値へfallbackしない。
 - Provider Key未設定でもBackendは起動できる。CoinGecko Demo keyはHeaderからのみ送信し、ExchangeRate-API keyは要求Pathに含まれるためrequest URIをアプリケーションログ・例外メッセージへ記録しない。
 - 2026-09-28、`.env`から注入したCredentialで`MarketDataLiveSmokeTests`を実行・再確認し、CoinGecko DemoのCurrent PriceとExchangeRate-APIのUSD/JPY responseを取得してresponse shapeおよびProvider評価時刻の読み取りを確認した（今回の再実行も1 test成功）。値とCredentialはログ・文書へ記録しない。
 
@@ -150,7 +150,7 @@ Deposit historyはdestination tag、memo、bank accountを返さない。Withdra
 - Trade / deposit / withdrawal APIはcount上限とミリ秒 `since` / `end` 時間条件を公開する。REST資料にはoffset / cursorはなく、deposit / withdrawalの並び順指定も記載されていない。公式Node SDKにはdeposit / withdrawalの`order` request例があるがREST契約にないためAdapterは依存しない。
 - count上限へ達したwindowはミリ秒範囲を再帰分割する。境界のinclusive / exclusiveは公式REST資料で確認できないため、各queryを境界の前後1ms広げ、受信後に各windowの範囲へfilterし、dedup keyで重複を防ぐ。1つのミリ秒に上限件数が集中する場合、またはendpointあたり64 requestの上限内に完全取得できない場合は成功として扱わず、Activity Capabilityを失敗させる。欠けた履歴を完全なものとして表示しない。
 - REST資料は取得可能な最古の日付や保存期間を定義していない。MVPでAPIが提供する履歴の範囲を超えて存在すると約束しない。
-- 公式Rate Limitはユーザー単位・秒単位で、通常QUERYは10回/秒、UPDATEは6回/秒。超過時はHTTP 429またはerror code `10009`。Adapterはread-only QUERYだけを使い、HTTP/APIエラーはRATE_LIMITとして失敗状態へ渡す。Adapter自体は自動再試行しない。
+- 公式Rate Limitはユーザー単位・秒単位で、通常QUERYは10回/秒、UPDATEは6回/秒。超過時はHTTP 429またはerror code `10009`。Adapterはread-only QUERYだけを使う。HTTP 408 / 429 / 500 / 502 / 503 / 504は共通HTTP clientでbounded retryする。Provider response bodyの`10009`はRATE_LIMITとして失敗状態へ渡し、HTTP層では追加Retryしない。Adapter / Sync層でもRetryしない。
 - Deposit responseのamountはParameter表でnumberと記載される一方、response例ではstring。ParserはDecimal精度を失わず、数値JSON fixtureで確認する。Withdrawal responseはamount / feeをstringとして受ける。
 
 ### 設計影響
@@ -245,7 +245,7 @@ Deposit historyはdestination tag、memo、bank accountを返さない。Withdra
 - Helius履歴は`getTransactionsForAddress`のSignature page単位で取得し、同じpageのSignatureを最大100件ずつParsed Eventsへ送る。1ページ内のActivityを正規化して返し、next cursorを保持する。Adapter自身は初回Backfill範囲を決めず、全履歴を自動走査しない。
 - 取引transferはWallet視点でtoken / native transferをIN / OUTへ変換する。Providerが`summary.type=swap`と示し、実TransferにWalletからのOUTとWalletへのINの両方がある場合だけ`SWAP`にする。route内swap詳細は加えない。transferのどちらか一方向だけ、または他の明示分類のない移動は`TRANSFER`とする。Connection Wallet間の内部transferはActivity Legを作らない。
 - Failed Transactionには成功扱いの移動Legを作らず、Walletが実際のFee payerなら正のFeeだけSOL `FEE` Legとして加える。Parser失敗時も正確なblockTimeがSignature pageまたはParsed Eventにある場合は分類不能の`OTHER` Headerを返せる。両方に時間がなければ架空の時刻を作らずActivity pageを失敗させる。
-- Helius API keyは`HELIUS_API_KEY`からBackendだけへ注入する。キー未設定時はActivity取得を`UNAVAILABLE`にし、BalanceのSolana RPC取得やBackend起動は妨げない。API keyはHelius URLのquery parameterなので、request URL、例外cause、生responseをログへ出さない。3秒接続 / 5秒読取timeoutを使い、HTTP 429は`RATE_LIMIT`、timeoutは`TIMEOUT`として即時retryせずSync層へ返す。Mainnet RPC URLは`SOLANA_RPC_URL`で運用設定できるが、別clusterへ切り替えない。
+- Helius API keyは`HELIUS_API_KEY`からBackendだけへ注入する。キー未設定時はActivity取得を`UNAVAILABLE`にし、BalanceのSolana RPC取得やBackend起動は妨げない。API keyはHelius URLのquery parameterなので、request URL、例外cause、生responseをログへ出さない。3秒接続 / 5秒読取timeoutを使い、HTTP 408 / 429 / 500 / 502 / 503 / 504はread-only共通HTTP clientでbounded retryする。最終HTTP 429は`RATE_LIMIT`、timeoutは`TIMEOUT`としてSync層へ返す。Solana RPC URLは`SOLANA_RPC_URL`で運用設定できるが、別clusterへ切り替えない。
 - Addressのbase58 decode後32 bytes検証は既存Connection入力とAdapterで共通化した。curve判定や署名は要求しない。
 - Fixture TestではMainnet RPCとHelius形式のMock responseを使い、u64 lamports、2^53超raw token amount、Program横断Mint合算、Swap、failed Transaction、Fee payer、pagination cursor、Helius rate limitを確認した。実Helius API CredentialによるLive Smoke Testは行っていない。
 
@@ -348,7 +348,7 @@ Modeごとの集計:
 ### Rate Limit
 
 - Hyperliquid REST APIはIP単位で合計1,200 weight / minute。`clearinghouseState`と`spotClearinghouseState`は2 weight、その他多くのInfo queryは20 weight。`userFills`、`userFillsByTime`、`userFunding`等はResponse 20 itemsごとに追加weightがある。
-- Weight上限内であっても履歴APIの個別件数上限・直近10,000 fills保持範囲を超えて完全性を約束しない。Rate limit応答・timeout時はbounded backoff後に失敗/partialとし、前回Current State / Activityをstale保持する。
+- Weight上限内であっても履歴APIの個別件数上限・直近10,000 fills保持範囲を超えて完全性を約束しない。HTTP 408 / 429 / 500 / 502 / 503 / 504はread-only共通HTTP clientでbounded retryし、最終Rate limit応答・timeout時は失敗/partialとして前回Current State / Activityをstale保持する。
 
 ### 実装時の安全条件
 
