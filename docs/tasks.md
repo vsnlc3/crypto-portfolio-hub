@@ -1313,22 +1313,28 @@ API仕様を `api-design.md` に反映する。
 
 Dashboard上のPerpetual Position表示を実APIへ置き換える。
 
-- [ ] Entry
-- [ ] Mark
-- [ ] Liquidation
-- [ ] Position Value
-- [ ] Margin
-- [ ] Unrealized PnL
-- [ ] JPY / USD等のCurrency表示
-- [ ] Loading
-- [ ] Empty
-- [ ] stale
-- [ ] unavailable
+- [x] Entry
+- [x] Mark
+- [x] Liquidation
+- [x] Position Value
+- [x] Margin
+- [x] Unrealized PnL
+- [x] JPY / USD等のCurrency表示
+- [x] Loading
+- [x] Empty
+- [x] stale
+- [x] unavailable
 
 ### Frontend Test
 
-- [ ] JPY / USD通貨単位を正しく表示する
-- [ ] unavailable / stale表示を検証する
+- [x] JPY / USD通貨単位を正しく表示する
+- [x] unavailable / stale表示を検証する
+
+### 実装結果
+
+- DashboardのPerpetual Positions表を`GET /api/v1/positions`へ接続し、JPY合計、Position Value / Margin / Unrealized PnLの原通貨とJPY評価、Entry / Mark / Liquidation Priceの通貨、FX source / evaluation time、行と全体の状態を表示する。
+- Loading / Error / Retry / Empty / STALE / PARTIAL / UNAVAILABLEを実装した。JPY換算不能値は`Unavailable`とし、0円として表示しない。
+- Frontend Test 6件、全Frontend test、TypeScript typecheck、Webpack buildを確認した。
 
 ---
 

@@ -133,7 +133,7 @@ Googleアカウントでユーザーを認証し、本人のPortfolio画面へ�
 
 ### 現行UIとの差分
 
-- **要修正:** 現行モック金額とチャートはUSD表示。Net Worth、24時間変化、評価額、Market Exposure、Position Value、Unrealized PnLなど集計値はJPY基準にし、価格として自然なEntry / Mark / Liquidation PriceはUSD表示を許容する。
+- **要修正:** Dashboardの概要カード、Net Worthチャート、24時間変化などのモック金額はUSD表示。これら集計値はJPY基準にする。Perpetual Positions表は`GET /api/v1/positions`接続済みで、合計とJPY評価をJPY、Entry / Mark / Liquidation Priceを応答のCurrencyで表示する。
 - **要修正:** 「Synced 2m ago」は固定表示で、実際の同期状態を反映しない。実データの最終同期時刻と接続状態に置き換える。
 - **要修正:** 期間ボタンは選択表示だけ変わり、チャートは同じモック30日分のまま。期間に対応する履歴を表示し、データがない期間はその旨を示す。
 - **要修正:** 現行のExposure表示ではExposure Ratioを「leverage」と表記している。要件上は `Market Exposure ÷ Net Worth` の比率であり、Net Worthへの加算項目ではないため、誤解のない名称にする。
@@ -297,7 +297,7 @@ Googleアカウントでユーザーを認証し、本人のPortfolio画面へ�
 | --- | --- | --- |
 | 認証・ユーザー表示 | Sign inなし、固定プロフィール | Googleログインを必須にし、本人のデータだけを表示する。 |
 | 通貨 | 金額・評価額の大半がUSD | 集計値はJPY。価格として自然な単価・Perpetual建値はUSD表示可。 |
-| データ取得 | Dashboard / Activityは `mock-data.ts` の静的データ。Assets / ConnectionsはBackend API接続済み。 | 残る画面をユーザー単位の実データへ順次移行し、未取得とゼロを区別する。 |
+| データ取得 | Dashboardの概要カード・チャート・Activityは `mock-data.ts` の静的データ。Dashboard Perpetual Positions、Assets、ConnectionsはBackend API接続済み。 | 残る領域をユーザー単位の実データへ順次移行し、未取得とゼロを区別する。 |
 | 同期 | 時刻表示・ボタンが固定または未接続 | 接続先別の状態、最終同期時刻、部分失敗、再試行を扱う。 |
 | 履歴チャート | 期間ボタンがデータを切り替えない | 選択期間の履歴を表示し、データがない場合を明示する。 |
 | Solana接続 | ConnectionsのProviderは `SOLANA`、表示バッジはPhantom。旧Mock画面にはサービスID `phantom` が残る。 | 内部対象はSolana Wallet Address。UIラベルはPhantom可。 |
